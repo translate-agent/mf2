@@ -7,7 +7,7 @@ import (
 	"unicode/utf8"
 )
 
-// eof is the end of file token.
+// eof is the end of file item.
 const eof = -1
 
 // itemType is the type of an item.
@@ -346,7 +346,7 @@ func lexExpr(l *lexer) stateFn {
 	case isWhitespace(v):
 		l.backup()
 		return lexWhitespace(l)
-	case isReservedFirstChar(v):
+	case isReservedStart(v):
 		l.backup()
 		return lexReserved(l)
 	case v == '^', v == '&':
@@ -515,7 +515,7 @@ func lexReserved(l *lexer) stateFn {
 			l.backup()
 
 			return l.emitItem(mk(itemReserved, s))
-		case len(s) == 0 && isReservedFirstChar(v), isReservedChar(v):
+		case len(s) == 0 && isReservedStart(v), isReserved(v):
 			s += string(v)
 		}
 	}
@@ -523,7 +523,7 @@ func lexReserved(l *lexer) stateFn {
 
 // helpers
 
-// isAlpha returns true if r is alpha character.
+// isAlpha returns true if r is alphabetic character.
 func isAlpha(r rune) bool {
 	return ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z')
 }
@@ -589,8 +589,8 @@ func isWhitespace(r rune) bool {
 	}
 }
 
-// isReservedFirstChar returns true if r is the first reserved annotation character.
-func isReservedFirstChar(r rune) bool {
+// isReservedStart returns true if r is the first reserved annotation character.
+func isReservedStart(r rune) bool {
 	switch r {
 	default:
 		return false
@@ -599,7 +599,7 @@ func isReservedFirstChar(r rune) bool {
 	}
 }
 
-// isReservedChar returs true if r is reserved annotation character.
+// isReserved returs true if r is reserved annotation character.
 //
 // ABNF:
 //
@@ -610,7 +610,7 @@ func isReservedFirstChar(r rune) bool {
 //	              / %x5D-7A        ; omit { | }
 //	              / %x7E-D7FF      ; omit surrogates
 //	              / %xE000-10FFFF
-func isReservedChar(r rune) bool {
+func isReserved(r rune) bool {
 	return 0x00 <= r && r <= 0x08 || // omit HTAB and LF
 		0x0B <= r && r <= 0x0C || // omit CR
 		0x0E <= r && r <= 0x19 || // omit SP
