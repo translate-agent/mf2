@@ -91,7 +91,7 @@ func mk(typ itemType, val string) item {
 }
 
 // lex creates a new lexer for the given input string.
-func lex(input string) *lexer { return &lexer{input: input} }
+func lex(input string) *lexer { return &lexer{input: input, line: 1} }
 
 // lexer is a lexical analyzer for MessageFormat2.
 //
@@ -100,7 +100,9 @@ type lexer struct {
 	input     string
 	item      item
 	pos, line int
+	prev      item // prev non-whitespace item
 
+	isFunction,
 	isExpression,
 	isPattern,
 	isComplexMessage bool
@@ -167,8 +169,12 @@ func (l *lexer) nextItem() item {
 }
 
 // emitItem emits the given item and returns the next state function.
-func (l *lexer) emitItem(t item) stateFn {
-	l.item = t
+func (l *lexer) emitItem(i item) stateFn {
+	l.item = i
+
+	if i.typ != itemWhitespace && i.typ != itemEOF {
+		l.prev = i
+	}
 
 	return nil
 }
@@ -315,6 +321,7 @@ func lexExpr(l *lexer) stateFn {
 		return lexLiteral(l)
 	case v == ':', v == '+', v == '-':
 		l.backup()
+
 		return lexIdentifier(l)
 	case v == '{':
 		l.isExpression = true
@@ -322,17 +329,23 @@ func lexExpr(l *lexer) stateFn {
 		return l.emitItem(mk(itemExpressionOpen, "{"))
 	case v == '}':
 		l.isExpression = false
+		l.isFunction = false
 
 		return l.emitItem(mk(itemExpressionClose, "}"))
 	case isWhitespace(v):
 		l.backup()
 		return lexWhitespace(l)
+	case l.isFunction && (l.prev.typ == itemFunction || l.prev.typ == itemLiteral):
+		l.backup()
+		return lexIdentifier(l)
 	case isReservedStart(v):
 		l.backup()
 		return lexReserved(l)
 	case v == '^', v == '&':
 		// TODO(jhorsts): incomplete implementation
 		return l.emitItem(mk(itemPrivate, string(v)))
+	case v == '=':
+		return l.emitItem(mk(itemOperator, "="))
 	}
 }
 
@@ -479,8 +492,9 @@ func lexIdentifier(l *lexer) stateFn {
 		case len(s) == 0:
 			switch r {
 			default:
-				return l.emitErrorf("unknown identifier")
+				typ = itemOption
 			case '-', '+', ':':
+				l.isFunction = true
 				typ = itemFunction
 			}
 
