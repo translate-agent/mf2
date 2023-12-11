@@ -249,19 +249,21 @@ func lexComplexMessage(l *lexer) stateFn {
 
 			switch {
 			default: // reserved keyword
-				return lexName(l, itemKeyword)
+				l.backup()
+				return lexName(l)
 			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
-				return l.emitItem(mk(itemKeyword, keywordLocal))
+				return l.emitItem(mk(itemKeyword, "."+keywordLocal))
 			case strings.HasPrefix(l.input[l.pos:], keywordInput):
 				l.pos += len(keywordInput)
-				return l.emitItem(mk(itemKeyword, keywordInput))
+				return l.emitItem(mk(itemKeyword, "."+keywordInput))
 			case strings.HasPrefix(l.input[l.pos:], keywordMatch):
 				l.pos += len(keywordMatch)
-				return l.emitItem(mk(itemKeyword, keywordMatch))
+				return l.emitItem(mk(itemKeyword, "."+keywordMatch))
 			}
 		case r == '$':
-			return lexName(l, itemVariable)
+			l.backup()
+			return lexName(l)
 		case isWhitespace(r):
 			l.backup()
 
@@ -306,7 +308,8 @@ func lexExpr(l *lexer) stateFn {
 	case v == eof:
 		return l.emitItem(mkErrorf("")) // TODO: better error message
 	case v == '$':
-		return lexName(l, itemVariable)
+		l.backup()
+		return lexName(l)
 	case v == '|', v == '-' && isDigit(l.peek()):
 		l.backup()
 		return lexLiteral(l)
@@ -334,8 +337,10 @@ func lexExpr(l *lexer) stateFn {
 }
 
 // lexName is the state function for lexing names.
-func lexName(l *lexer, typ itemType) stateFn {
+func lexName(l *lexer) stateFn {
 	var s string
+
+	typ := itemLiteral
 
 	for {
 		r := l.next()
@@ -349,6 +354,12 @@ func lexName(l *lexer, typ itemType) stateFn {
 			return l.emitItem(mk(typ, s))
 		case len(s) == 0 && isNameStart(r):
 			s = string(r)
+		case len(s) == 0 && r == '$':
+			s = string(r)
+			typ = itemVariable
+		case len(s) == 0 && r == '.':
+			s = string(r)
+			typ = itemKeyword
 		case len(s) > 0 && isName(r):
 			s += string(r)
 		}
@@ -361,7 +372,7 @@ func lexLiteral(l *lexer) stateFn {
 
 	switch l.peek() {
 	default: // unquoted literal
-		return lexName(l, itemLiteral)
+		return lexName(l)
 	case '|': // quoted literal
 		var opening bool
 
