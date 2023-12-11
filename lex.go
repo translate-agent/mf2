@@ -164,28 +164,12 @@ func (l *lexer) nextItem() item {
 		state = lexExpr
 	case l.isPattern:
 		state = lexPattern(false)
-	// case l.isMatch:
-	// 	state = lexMatch
 	case l.isComplexMessage:
 		state = lexComplexMessage
 	}
 
 	for {
-		state := state(l)
-
-		f := func(b bool) string {
-			if b {
-				return "✓"
-			}
-
-			return " "
-		}
-
-		fmt.Printf("c%s p%s e%s %-50s %-12s %s\n",
-			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression),
-			"'"+l.input[l.pos:]+"'", "'"+l.item.val+"'", l.item.typ)
-
-		if state == nil {
+		if state := state(l); state == nil {
 			return l.item
 		}
 	}

@@ -300,6 +300,8 @@ func Test_lex(t *testing.T) {
 			for {
 				v := l.nextItem()
 
+				logNext(t, l, v)
+
 				items = append(items, v)
 				if v.typ == itemEOF || v.typ == itemError {
 					break
@@ -311,4 +313,20 @@ func Test_lex(t *testing.T) {
 			assert.Equal(t, test.expected, items)
 		})
 	}
+}
+
+func logNext(t *testing.T, l *lexer, i item) {
+	t.Helper()
+
+	f := func(b bool) string {
+		if b {
+			return "✓"
+		}
+
+		return " "
+	}
+
+	t.Logf("c%s p%s e%s %-50s %-12s %s\n",
+		f(l.isComplexMessage), f(l.isPattern), f(l.isExpression),
+		"'"+l.input[l.pos:]+"'", "'"+i.val+"'", i.typ)
 }
