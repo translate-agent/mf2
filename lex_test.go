@@ -221,14 +221,14 @@ func Test_lex(t *testing.T) {
 			name:  "input declaration",
 			input: ".input {$host} .input {$user}",
 			expected: []item{
-				// .input {$hostName}
+				// .input {$host}
 				mk(itemKeyword, "input"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "host"),
 				mk(itemExpressionClose, "}"),
 				mk(itemWhitespace, " "),
-				// .input ${host}
+				// .input ${user}
 				mk(itemKeyword, "input"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionOpen, "{"),
