@@ -90,11 +90,6 @@ func mk(typ itemType, val string) item {
 	return item{typ: typ, val: val}
 }
 
-// mkErrorf creates a new error item with the given message.
-func mkErrorf(s string, args ...any) item {
-	return item{typ: itemError, val: fmt.Sprintf(s, args...)}
-}
-
 // lex creates a new lexer for the given input string.
 func lex(input string) *lexer { return &lexer{input: input} }
 
@@ -178,6 +173,11 @@ func (l *lexer) emitItem(t item) stateFn {
 	return nil
 }
 
+// emitErrorf emits the error and returns the next state function.
+func (l *lexer) emitErrorf(s string, args ...any) stateFn {
+	return l.emitItem(item{typ: itemError, val: fmt.Sprintf(s, args...)})
+}
+
 // stateFn is a function that returns the next state function.
 type stateFn func(*lexer) stateFn
 
@@ -205,7 +205,7 @@ func lexPattern(singleMessage bool) func(*lexer) stateFn {
 			case r == '\\':
 				switch next := l.next(); next {
 				default:
-					return l.emitItem(mkErrorf("unexpected escaped char: %s", string(next)))
+					return l.emitErrorf("unexpected escaped char: %s", string(next))
 				case '\\', '{', '}': // text-escape = backslash ( backslash / "{" / "}" )
 					s += string(next)
 				}
@@ -306,7 +306,7 @@ func lexExpr(l *lexer) stateFn {
 
 		return lexLiteral(l)
 	case v == eof:
-		return l.emitItem(mkErrorf("")) // TODO: better error message
+		return l.emitErrorf("") // TODO: better error message
 	case v == '$':
 		l.backup()
 		return lexName(l)
@@ -350,6 +350,8 @@ func lexName(l *lexer) stateFn {
 			l.backup()
 
 			return l.emitItem(mk(typ, s))
+		case len(s) > 0 && isName(r):
+			s += string(r)
 		case r == eof:
 			return l.emitItem(mk(typ, s))
 		case len(s) == 0 && isNameStart(r):
@@ -360,8 +362,7 @@ func lexName(l *lexer) stateFn {
 		case len(s) == 0 && r == '.':
 			s = string(r)
 			typ = itemKeyword
-		case len(s) > 0 && isName(r):
-			s += string(r)
+
 		}
 	}
 }
@@ -381,7 +382,7 @@ func lexLiteral(l *lexer) stateFn {
 
 			switch {
 			default:
-				return l.emitItem(mkErrorf("unexpected end of quoted literal: %s", string(r)))
+				return l.emitErrorf("unexpected end of quoted literal: %s", string(r))
 			case isQuoted(r):
 				s += string(r)
 			case r == '|':
@@ -394,13 +395,13 @@ func lexLiteral(l *lexer) stateFn {
 
 				switch next {
 				default:
-					return l.emitItem(mkErrorf("only \\ or | can be escaped in literal")) // TODO: improve error message
+					return l.emitErrorf("only \\ or | can be escaped in literal") // TODO: improve error message
 				case '\\', '|':
 					s += string(r) + string(next)
 
 					return l.emitItem(mk(itemLiteral, s))
 				case eof:
-					return l.emitItem(mkErrorf("unexpected eof in literal"))
+					return l.emitErrorf("unexpected eof in literal")
 				}
 			}
 		}
@@ -413,7 +414,7 @@ func lexLiteral(l *lexer) stateFn {
 				var number float64
 
 				if err := json.Unmarshal([]byte(s), &number); err != nil {
-					return l.emitItem(mkErrorf("invalid number literal: %s", s))
+					return l.emitErrorf("invalid number literal: %s", s)
 				}
 
 				l.backup()
@@ -469,16 +470,16 @@ func lexIdentifier(l *lexer) stateFn {
 				ns = true
 				s += string(r)
 			case len(s) == 0:
-				return l.emitItem(mkErrorf("namespace not set"))
+				return l.emitErrorf("namespace not set")
 			case ns:
-				return l.emitItem(mkErrorf("only one namespace can be present"))
+				return l.emitErrorf("only one namespace can be present")
 			}
 		case r == eof:
-			return l.emitItem(mkErrorf("unexpected eof"))
+			return l.emitErrorf("unexpected eof")
 		case len(s) == 0:
 			switch r {
 			default:
-				return l.emitItem(mkErrorf("unknown identifier"))
+				return l.emitErrorf("unknown identifier")
 			case '-', '+', ':':
 				typ = itemFunction
 			}
@@ -498,15 +499,15 @@ func lexReserved(l *lexer) stateFn {
 
 		switch {
 		default:
-			return l.emitItem(mkErrorf("unexpected reserved character %s", string(v))) // TODO: better error message
+			return l.emitErrorf("unexpected reserved character %s", string(v)) // TODO: better error message
 		case v == eof:
-			return l.emitItem(mkErrorf("eof")) // TODO
+			return l.emitErrorf("eof") // TODO
 		case v == '\\':
 			v = l.next()
 
 			switch v {
 			default:
-				return l.emitItem(mkErrorf("unexpected reserved escaped: %s", string(v))) // TODO: better error message
+				return l.emitErrorf("unexpected reserved escaped: %s", string(v)) // TODO: better error message
 			case '\\', '{', '|', '}':
 				s += string(v)
 			}
