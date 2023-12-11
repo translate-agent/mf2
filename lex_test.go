@@ -204,7 +204,7 @@ func Test_lex(t *testing.T) {
 				mk(itemVariable, "host"),
 				mk(itemExpressionClose, "}"),
 				mk(itemWhitespace, " "),
-				// .local $h = {$hostName}
+				// .local $h = {$host}
 				mk(itemKeyword, "local"),
 				mk(itemWhitespace, " "),
 				mk(itemVariable, "h"),
