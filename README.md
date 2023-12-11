@@ -1,4 +1,4 @@
-[CI](https://github.com/expect-digital/go-mf2/actions/workflows/ci.yaml/badge.svg)
+![CI](https://github.com/expect-digital/go-mf2/actions/workflows/ci.yaml/badge.svg)
 
 # Message Format 2 Parser
 
