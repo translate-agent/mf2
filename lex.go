@@ -211,7 +211,7 @@ func lexPattern(singleMessage bool) func(*lexer) stateFn {
 			case r == '\\':
 				switch next := l.next(); next {
 				default:
-					return l.emitErrorf("unexpected escaped char: %s", string(next))
+					return l.emitErrorf("unexpected escaped char in pattern: %s", string(next))
 				case '\\', '{', '}': // text-escape = backslash ( backslash / "{" / "}" )
 					s += string(next)
 				}
@@ -312,7 +312,7 @@ func lexExpr(l *lexer) stateFn {
 
 		return lexLiteral(l)
 	case v == eof:
-		return l.emitErrorf("") // TODO: better error message
+		return l.emitErrorf("unexpected eof in expression")
 	case v == '$':
 		l.backup()
 		return lexName(l)
@@ -395,7 +395,7 @@ func lexLiteral(l *lexer) stateFn {
 
 			switch {
 			default:
-				return l.emitErrorf("unexpected end of quoted literal: %s", string(r))
+				return l.emitErrorf("unknown character in quoted literal: %s", string(r))
 			case isQuoted(r):
 				s += string(r)
 			case r == '|':
@@ -408,13 +408,13 @@ func lexLiteral(l *lexer) stateFn {
 
 				switch next {
 				default:
-					return l.emitErrorf("only \\ or | can be escaped in literal") // TODO: improve error message
+					return l.emitErrorf("unexpected escaped character in quoted literal: %s", string(r))
 				case '\\', '|':
 					s += string(r) + string(next)
 
 					return l.emitItem(mk(itemLiteral, s))
 				case eof:
-					return l.emitErrorf("unexpected eof in literal")
+					return l.emitErrorf("unexpected eof in quoted literal")
 				}
 			}
 		}
@@ -478,17 +478,14 @@ func lexIdentifier(l *lexer) stateFn {
 		case len(s) > 0 && isName(r):
 			s += string(r)
 		case len(s) > 0 && r == ':':
-			switch {
-			default:
-				ns = true
-				s += string(r)
-			case len(s) == 0:
-				return l.emitErrorf("namespace not set")
-			case ns:
-				return l.emitErrorf("only one namespace can be present")
+			if ns {
+				return l.emitErrorf("namespace already defined in identifier: %s", s)
 			}
+
+			ns = true
+			s += string(r)
 		case r == eof:
-			return l.emitErrorf("unexpected eof")
+			return l.emitErrorf("unexpected eof in identifier")
 		case len(s) == 0:
 			switch r {
 			default:
@@ -513,15 +510,15 @@ func lexReserved(l *lexer) stateFn {
 
 		switch {
 		default:
-			return l.emitErrorf("unexpected reserved character %s", string(v)) // TODO: better error message
+			return l.emitErrorf("unexpected reserved character: %s", string(v))
 		case v == eof:
-			return l.emitErrorf("eof") // TODO
+			return l.emitErrorf("unexpected eof in reserved")
 		case v == '\\':
 			v = l.next()
 
 			switch v {
 			default:
-				return l.emitErrorf("unexpected reserved escaped: %s", string(v)) // TODO: better error message
+				return l.emitErrorf("unexpected escaped character in reserved: %s", string(v))
 			case '\\', '{', '|', '}':
 				s += string(v)
 			}
