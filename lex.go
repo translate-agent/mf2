@@ -23,8 +23,6 @@ const (
 	itemQuotedPatternOpen
 	itemQuotedPatternClose
 	itemText
-	itemOpeningFunction
-	itemClosingFunction
 	itemKeyword
 	itemLiteral
 	itemOption
@@ -57,10 +55,6 @@ func (t itemType) String() string {
 		return "quoted pattern close"
 	case itemText:
 		return "text"
-	case itemOpeningFunction:
-		return "opening function"
-	case itemClosingFunction:
-		return "closing function"
 	case itemKeyword:
 		return "keyword"
 	case itemLiteral:
@@ -159,6 +153,8 @@ func (l *lexer) nextItem() item {
 
 	state := lexPattern(true)
 
+	// Sorted by children first - expression can be inside pattern but pattern
+	// cannot be inside expression. And so on.
 	switch {
 	case l.isExpression:
 		state = lexExpr
@@ -195,18 +191,17 @@ func lexPattern(singleMessage bool) func(*lexer) stateFn {
 		for {
 			r := l.next()
 
+			// cases sorted based on the frequency of rune occurance
 			switch {
 			default:
 				l.backup()
 				l.isPattern = false
 
 				return l.emitItem(mk(itemText, s))
-			case r == eof:
-				if len(s) > 0 {
-					return l.emitItem(mk(itemText, s))
-				}
-
-				return nil
+			case singleMessage && len(s) == 0 && isSimpleStart(r),
+				singleMessage && len(s) >= 1 && isText(r),
+				!singleMessage && isText(r):
+				s += string(r)
 			case r == '\\':
 				switch next := l.next(); next {
 				default:
@@ -224,14 +219,16 @@ func lexPattern(singleMessage bool) func(*lexer) stateFn {
 				}
 
 				return lexExpr(l)
-			case singleMessage && len(s) == 0 && isSimpleStart(r),
-				singleMessage && len(s) >= 1 && isText(r),
-				!singleMessage && isText(r):
-				s += string(r)
 			case len(s) == 0 && r == '.':
 				l.backup()
 
 				return lexComplexMessage(l)
+			case r == eof:
+				if len(s) > 0 {
+					return l.emitItem(mk(itemText, s))
+				}
+
+				return nil
 			}
 		}
 	}
@@ -310,15 +307,12 @@ func lexExpr(l *lexer) stateFn {
 		return l.emitItem(mkErrorf("")) // TODO: better error message
 	case v == '$':
 		return lexName(l, itemVariable)
-	case v == ':':
-		return lexIdentifier(l, itemFunction)
-	case v == '+':
-		return lexIdentifier(l, itemOpeningFunction)
 	case v == '|', v == '-' && isDigit(l.peek()):
 		l.backup()
 		return lexLiteral(l)
-	case v == '-':
-		return lexIdentifier(l, itemClosingFunction)
+	case v == ':', v == '+', v == '-':
+		l.backup()
+		return lexIdentifier(l)
 	case v == '{':
 		l.isExpression = true
 
@@ -441,10 +435,11 @@ func lexWhitespace(l *lexer) stateFn {
 }
 
 // lexIdentifier is the state function for lexing identifiers.
-func lexIdentifier(l *lexer, typ itemType) stateFn {
+func lexIdentifier(l *lexer) stateFn {
 	var (
-		s  string
-		ns bool
+		s   string
+		ns  bool
+		typ itemType
 	)
 
 	for {
@@ -457,7 +452,7 @@ func lexIdentifier(l *lexer, typ itemType) stateFn {
 			return l.emitItem(mk(typ, s))
 		case len(s) > 0 && isName(r):
 			s += string(r)
-		case r == ':':
+		case len(s) > 0 && r == ':':
 			switch {
 			default:
 				ns = true
@@ -469,7 +464,16 @@ func lexIdentifier(l *lexer, typ itemType) stateFn {
 			}
 		case r == eof:
 			return l.emitItem(mkErrorf("unexpected eof"))
-		case len(s) == 0 && isNameStart(r):
+		case len(s) == 0:
+			switch r {
+			default:
+				return l.emitItem(mkErrorf("unknown identifier"))
+			case '-', '+', ':':
+				typ = itemFunction
+			}
+
+			s += string(r)
+		case len(s) == 1 && isNameStart(r):
 			s = string(r)
 		}
 	}
