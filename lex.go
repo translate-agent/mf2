@@ -95,7 +95,7 @@ func lex(input string) *lexer { return &lexer{input: input} }
 
 // lexer is a lexical analyzer for MessageFormat2.
 //
-// See https://github.com/unicode-org/message-format-wg/blob/main/spec/syntax.md
+// See https://github.com/unicode-org/message-format-wg/blob/7c00820a0462679eba696181c45bfadb43d2eedd/spec/message.abnf
 type lexer struct {
 	input     string
 	item      item
