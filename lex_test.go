@@ -293,42 +293,43 @@ func Test_lex(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			l := lex(test.input)
-
-			// collect items
-
-			var items []item
-
-			for {
-				v := l.nextItem()
-
-				logNext(t, l, v)
-
-				items = append(items, v)
-				if v.typ == itemEOF || v.typ == itemError {
-					break
-				}
-			}
-
-			// assert
-
-			assert.Equal(t, test.expected, items)
+			assertItems(t, test.expected, lex(test.input))
 		})
 	}
 }
 
-func logNext(t *testing.T, l *lexer, i item) {
+func assertItems(t *testing.T, expected []item, l *lexer) {
 	t.Helper()
 
-	f := func(b bool) string {
-		if b {
-			return "✓"
+	var logItems []func()
+
+	for _, exp := range expected {
+		v := l.nextItem()
+
+		logItems = append(logItems, logItem(t, exp, *l))
+
+		if !assert.Equal(t, exp, v) {
+			for _, f := range logItems {
+				f()
+			}
+		}
+	}
+}
+
+func logItem(t *testing.T, expected item, l lexer) func() {
+	t.Helper()
+
+	return func() {
+		f := func(b bool) string {
+			if b {
+				return "✓"
+			}
+
+			return " "
 		}
 
-		return " "
+		t.Logf("c%s p%s e%s %-60s e%s(%s) a%s(%s)\n",
+			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression),
+			"'"+l.input[l.pos:]+"'", "'"+expected.val+"'", expected.typ, "'"+l.item.val+"'", l.item.typ)
 	}
-
-	t.Logf("c%s p%s e%s %-50s %-12s %s\n",
-		f(l.isComplexMessage), f(l.isPattern), f(l.isExpression),
-		"'"+l.input[l.pos:]+"'", "'"+i.val+"'", i.typ)
 }
