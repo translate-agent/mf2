@@ -1,0 +1,6 @@
+{
+  "go.lintOnSave": "workspace",
+  "go.coverOnSave": true,
+  "go.testOnSave": true,
+  "go.lintTool": "golangci-lint"
+}
