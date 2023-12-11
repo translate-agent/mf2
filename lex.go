@@ -79,7 +79,7 @@ const (
 	keywordInput = "input"
 )
 
-// item is a token returned by the lexer.
+// item is an item returned by the lexer.
 type item struct {
 	val string
 	typ itemType

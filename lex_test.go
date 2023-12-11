@@ -9,12 +9,6 @@ import (
 func Test_lex(t *testing.T) {
 	t.Parallel()
 
-	var (
-		tokenEOF             = mk(itemEOF, "")
-		tokenExpressionOpen  = mk(itemExpressionOpen, "{")
-		tokenExpressionClose = mk(itemExpressionClose, "}")
-	)
-
 	for _, test := range []struct {
 		name     string
 		input    string // MessageFormat2 formatted string
@@ -23,24 +17,24 @@ func Test_lex(t *testing.T) {
 		{
 			name:     "empty simple message",
 			input:    "",
-			expected: []item{tokenEOF},
+			expected: []item{mk(itemEOF, "")},
 		},
 		{
 			name:  "text",
 			input: `escaped text: \\ \} \{`,
 			expected: []item{
 				mk(itemText, `escaped text: \ } {`),
-				tokenEOF,
+				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "function",
 			input: "{:rand}",
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemFunction, ":rand"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 
@@ -48,46 +42,46 @@ func Test_lex(t *testing.T) {
 			name:  "opening function",
 			input: "{+button}",
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemFunction, "+button"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "closing function",
 			input: "{-button}",
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemFunction, "-button"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "opening and closing functions",
 			input: "{+button}Submit{-button}",
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemFunction, "+button"),
-				tokenExpressionClose,
+				mk(itemExpressionClose, "}"),
 				mk(itemText, "Submit"),
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemFunction, "-button"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "variable",
 			input: "{$count :math:round}",
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "$count"),
 				mk(itemWhitespace, " "),
 				mk(itemFunction, ":math:round"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -95,11 +89,11 @@ func Test_lex(t *testing.T) {
 			input: "Hello, {$guest}!",
 			expected: []item{
 				mk(itemText, "Hello, "),
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "$guest"),
-				tokenExpressionClose,
+				mk(itemExpressionClose, "}"),
 				mk(itemText, "!"),
-				tokenEOF,
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -109,50 +103,50 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemLiteral, ""),
 				mk(itemExpressionClose, "}"),
-				tokenEOF,
+				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "quoted literal",
 			input: "{|Hello, world!| :uppercase}",
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemLiteral, "Hello, world!"),
 				mk(itemWhitespace, " "),
 				mk(itemFunction, ":uppercase"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "number literal",
 			input: "{-1.9e+10 :odd}",
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemLiteral, "-1.9e+10"),
 				mk(itemWhitespace, " "),
 				mk(itemFunction, ":odd"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "unquoted literal",
 			input: "{hello :uppercase}",
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemLiteral, "hello"),
 				mk(itemWhitespace, " "),
 				mk(itemFunction, ":uppercase"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "reserved",
 			input: `{!a @b #c %d *e <|hello| > /\{ ?\| ~\}}`,
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemReserved, "!a"),
 				mk(itemWhitespace, " "),
 				mk(itemReserved, "@b"),
@@ -173,20 +167,20 @@ func Test_lex(t *testing.T) {
 				mk(itemReserved, "?|"),
 				mk(itemWhitespace, " "),
 				mk(itemReserved, "~}"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "private use", // TODO: incomplete
 			input: "{^ &}",
 			expected: []item{
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemPrivate, "^"),
 				mk(itemWhitespace, " "),
 				mk(itemPrivate, "&"),
-				tokenExpressionClose,
-				tokenEOF,
+				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -214,7 +208,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "$host"),
 				mk(itemExpressionClose, "}"),
-				tokenEOF,
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -234,7 +228,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "$user"),
 				mk(itemExpressionClose, "}"),
-				tokenEOF,
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -242,7 +236,7 @@ func Test_lex(t *testing.T) {
 			input: ".output",
 			expected: []item{
 				mk(itemKeyword, ".output"),
-				tokenEOF,
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -251,9 +245,9 @@ func Test_lex(t *testing.T) {
 			expected: []item{
 				mk(itemKeyword, ".match"),
 				mk(itemWhitespace, " "),
-				tokenExpressionOpen,
+				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "$n"),
-				tokenExpressionClose,
+				mk(itemExpressionClose, "}"),
 				mk(itemWhitespace, " "),
 				// 0 {{no apples}}
 				mk(itemLiteral, "0"),
@@ -282,7 +276,7 @@ func Test_lex(t *testing.T) {
 				mk(itemText, " apples"),
 				mk(itemQuotedPatternClose, "}}"),
 
-				tokenEOF,
+				mk(itemEOF, ""),
 			},
 		},
 	} {
