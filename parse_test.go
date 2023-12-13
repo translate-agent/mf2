@@ -51,7 +51,7 @@ func TestParseSimpleMessage(t *testing.T) {
 								Function: Function{
 									Prefix: ':',
 									Identifier: Identifier{
-										Namespace: nil,
+										Namespace: "",
 										Name:      "function",
 									},
 								},
@@ -75,7 +75,7 @@ func TestParseSimpleMessage(t *testing.T) {
 								Function: Function{
 									Prefix: ':',
 									Identifier: Identifier{
-										Namespace: nil,
+										Namespace: "",
 										Name:      "function",
 									},
 								},
@@ -83,21 +83,21 @@ func TestParseSimpleMessage(t *testing.T) {
 									LiteralOption{
 										Literal: UnquotedLiteral{Value: NumberLiteral[float64]{Number: -3.14}},
 										Identifier: Identifier{
-											Namespace: nil,
+											Namespace: "",
 											Name:      "option1",
 										},
 									},
 									LiteralOption{
 										Literal: QuotedLiteral{Value: "value2"},
 										Identifier: Identifier{
-											Namespace: ptr("ns"),
+											Namespace: "ns",
 											Name:      "option2",
 										},
 									},
 									VariableOption{
 										Variable: Variable("variable2"),
 										Identifier: Identifier{
-											Namespace: nil,
+											Namespace: "",
 											Name:      "option3",
 										},
 									},
@@ -167,7 +167,7 @@ func TestParseSimpleMessage(t *testing.T) {
 								Function: Function{
 									Prefix: ':',
 									Identifier: Identifier{
-										Namespace: nil,
+										Namespace: "",
 										Name:      "function",
 									},
 								},
@@ -191,7 +191,7 @@ func TestParseSimpleMessage(t *testing.T) {
 								Function: Function{
 									Prefix: ':',
 									Identifier: Identifier{
-										Namespace: nil,
+										Namespace: "",
 										Name:      "function",
 									},
 								},
@@ -199,21 +199,21 @@ func TestParseSimpleMessage(t *testing.T) {
 									LiteralOption{
 										Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: -1}},
 										Identifier: Identifier{
-											Namespace: ptr("ns1"),
+											Namespace: "ns1",
 											Name:      "option1",
 										},
 									},
 									LiteralOption{
 										Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: +1}},
 										Identifier: Identifier{
-											Namespace: ptr("ns2"),
+											Namespace: "ns2",
 											Name:      "option2",
 										},
 									},
 									LiteralOption{
 										Literal: QuotedLiteral{Value: "value3"},
 										Identifier: Identifier{
-											Namespace: nil,
+											Namespace: "",
 											Name:      "option3",
 										},
 									},
@@ -237,7 +237,7 @@ func TestParseSimpleMessage(t *testing.T) {
 								Function: Function{
 									Prefix: ':',
 									Identifier: Identifier{
-										Namespace: nil,
+										Namespace: "",
 										Name:      "function",
 									},
 								},
@@ -249,8 +249,8 @@ func TestParseSimpleMessage(t *testing.T) {
 			},
 		},
 		{
-			name:  "annotation expression with options",
-			input: "Hello { :function option999=999 } World!",
+			name:  "annotation expression with options and namespace",
+			input: "Hello { :namespace:function namespace:option999=999 } World!",
 			expected: SimpleMessage{
 				Pattern: []Pattern{
 					TextPattern{Text: "Hello "},
@@ -260,7 +260,7 @@ func TestParseSimpleMessage(t *testing.T) {
 								Function: Function{
 									Prefix: ':',
 									Identifier: Identifier{
-										Namespace: nil,
+										Namespace: "namespace",
 										Name:      "function",
 									},
 								},
@@ -268,7 +268,7 @@ func TestParseSimpleMessage(t *testing.T) {
 									LiteralOption{
 										Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: 999}},
 										Identifier: Identifier{
-											Namespace: nil,
+											Namespace: "namespace",
 											Name:      "option999",
 										},
 									},
@@ -294,5 +294,3 @@ func TestParseSimpleMessage(t *testing.T) {
 		})
 	}
 }
-
-func ptr[T any](v T) *T { return &v }

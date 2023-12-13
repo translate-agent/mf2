@@ -94,7 +94,6 @@ type AnnotationExpression struct {
 type QuotedLiteral struct {
 	Literal
 
-	// todo: curly braces?
 	Value string
 }
 
@@ -156,7 +155,7 @@ type VariableOption struct {
 type Identifier struct {
 	Node
 
-	Namespace *string // Optional
+	Namespace string // Optional
 	Name      string
 }
 
@@ -164,5 +163,5 @@ type Function struct {
 	Node
 
 	Prefix     rune       // One of: ':', '+', '-'
-	Identifier Identifier // Namespace is always nil: not implemented
+	Identifier Identifier // Namespace is always nil: not implemented by lexer
 }
