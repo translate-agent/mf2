@@ -162,6 +162,6 @@ type Identifier struct {
 type Function struct {
 	Node
 
-	Prefix     rune       // One of: ':', '+', '-'
-	Identifier Identifier // Namespace is always nil: not implemented by lexer
+	Prefix     rune // One of: ':', '+', '-'
+	Identifier Identifier
 }

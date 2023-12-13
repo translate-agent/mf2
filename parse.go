@@ -10,24 +10,19 @@ type parser struct {
 	lexer *lexer
 	items []item
 	pos   int
-
-	currentItem *item
 }
 
-func (p *parser) next() {
+func (p *parser) next() item {
 	if p.pos >= len(p.items) {
-		return
-	}
-
-	p.pos++
-	p.currentItem = &p.items[p.pos]
-}
-
-func (p *parser) current() item {
-	if p.pos >= len(p.items) {
+		// todo: error or check elsewhere
 		return item{}
 	}
 
+	p.pos++
+	return p.items[p.pos]
+}
+
+func (p *parser) current() item {
 	return p.items[p.pos]
 }
 
@@ -44,8 +39,6 @@ func (p *parser) collect() error {
 			break
 		}
 	}
-
-	p.currentItem = &p.items[0]
 
 	return nil
 }
@@ -108,16 +101,16 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 func (p *parser) parsePattern() ([]Pattern, error) {
 	var pattern []Pattern
 
-	for ; p.currentItem.typ != itemEOF; p.next() {
-		switch p.currentItem.typ {
+	for item := p.current(); p.current().typ != itemEOF; item = p.next() {
+		switch item.typ {
 		case itemText:
-			pattern = append(pattern, TextPattern{Text: p.currentItem.val})
+			pattern = append(pattern, TextPattern{Text: item.val})
 		case itemExpressionOpen:
-			p.next() // we move omit the "{"
+			item = p.next() // we move omit the "{"
 
 			pattern = append(pattern, PlaceholderPattern{Expression: p.parseExpression()})
 		default:
-			return nil, fmt.Errorf("unexpected token: %v", p.current())
+			return nil, fmt.Errorf("unexpected token: %v", item.typ)
 		}
 	}
 
@@ -131,11 +124,11 @@ func (p *parser) parseExpression() Expression {
 	var expression Expression
 
 	// move to next significant token
-	for p.currentItem.typ == itemWhitespace {
+	for p.current().typ == itemWhitespace {
 		p.next()
 	}
 
-	switch p.currentItem.typ {
+	switch p.current().typ {
 	case itemVariable:
 		expression = p.parseVariableExpression()
 	case itemLiteral:
@@ -150,10 +143,10 @@ func (p *parser) parseExpression() Expression {
 func (p *parser) parseVariableExpression() VariableExpression {
 	var expression VariableExpression
 
-	for ; p.currentItem.typ != itemExpressionClose; p.next() {
-		switch p.currentItem.typ {
+	for item := p.current(); p.current().typ != itemExpressionClose; item = p.next() {
+		switch item.typ {
 		case itemVariable:
-			expression.Variable = Variable(p.currentItem.val[1:])
+			expression.Variable = Variable(item.val[1:])
 		case itemFunction, itemPrivate, itemReserved:
 			expression.Annotation = p.parseAnnotation()
 
@@ -168,8 +161,8 @@ func (p *parser) parseVariableExpression() VariableExpression {
 func (p *parser) parseLiteralExpression() LiteralExpression {
 	var expression LiteralExpression
 
-	for ; p.currentItem.typ != itemExpressionClose; p.next() {
-		switch p.currentItem.typ {
+	for item := p.current(); item.typ != itemExpressionClose; item = p.next() {
+		switch item.typ {
 		case itemLiteral:
 			expression.Literal = p.parseLiteral()
 		case itemFunction:
@@ -209,8 +202,8 @@ func (p *parser) parseAnnotation() Annotation {
 func (p *parser) parseFunctionAnnotation() FunctionAnnotation {
 	var annotation FunctionAnnotation
 
-	for ; p.currentItem.typ != itemExpressionClose; p.next() {
-		switch p.currentItem.typ {
+	for item := p.current(); item.typ != itemExpressionClose; item = p.next() {
+		switch item.typ {
 		case itemFunction:
 			annotation.Function = p.parseFunction()
 		case itemOption:
@@ -234,8 +227,8 @@ func (p *parser) parseReservedAnnotation() ReservedAnnotation {
 func (p *parser) parseOption() Option {
 	var identifier Identifier
 
-	for ; p.currentItem.typ != itemExpressionClose; p.next() {
-		switch p.currentItem.typ {
+	for item := p.current(); item.typ != itemExpressionClose; item = p.next() {
+		switch item.typ {
 		case itemOption:
 			identifier = p.parseIdentifier()
 
@@ -245,7 +238,7 @@ func (p *parser) parseOption() Option {
 
 			return option
 		case itemVariable:
-			option := VariableOption{Variable: Variable(p.currentItem.val[1:]), Identifier: identifier}
+			option := VariableOption{Variable: Variable(p.current().val[1:]), Identifier: identifier}
 			p.next()
 
 			return option
@@ -258,29 +251,29 @@ func (p *parser) parseOption() Option {
 
 func (p *parser) parseLiteral() Literal {
 	// If there is prefix "$" then it is unquoted name literal.
-	if strings.HasPrefix(p.currentItem.val, "$") {
-		return UnquotedLiteral{Value: NameLiteral{Name: p.currentItem.val[1:]}}
+	if strings.HasPrefix(p.current().val, "$") {
+		return UnquotedLiteral{Value: NameLiteral{Name: p.current().val[1:]}}
 	}
 
 	// If it possible to parse the value as a integer or float then it is unquoted number literal.
-	if num, err := strconv.ParseInt(p.currentItem.val, 10, 64); err == nil {
+	if num, err := strconv.ParseInt(p.current().val, 10, 64); err == nil {
 		return UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}
 	}
 
-	if num, err := strconv.ParseFloat(p.currentItem.val, 64); err == nil {
+	if num, err := strconv.ParseFloat(p.current().val, 64); err == nil {
 		return UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}
 	}
 
 	// Else it is quoted literal.
-	return QuotedLiteral{Value: p.currentItem.val}
+	return QuotedLiteral{Value: p.current().val}
 }
 
 func (p *parser) parseFunction() Function {
-	return Function{Prefix: rune(p.currentItem.val[0]), Identifier: p.parseIdentifier()}
+	return Function{Prefix: rune(p.current().val[0]), Identifier: p.parseIdentifier()}
 }
 
 func (p *parser) parseIdentifier() Identifier {
-	full := strings.Split(p.currentItem.val, ":")
+	full := strings.Split(p.current().val, ":")
 
 	var (
 		ns   string
