@@ -56,7 +56,7 @@ func Parse(input string) (AST, error) {
 		return nil, fmt.Errorf("collect tokens: %w", err)
 	}
 
-	if len(p.items) == 0 {
+	if len(p.items) == 1 && p.items[0].typ == itemEOF {
 		return nil, nil
 	}
 
