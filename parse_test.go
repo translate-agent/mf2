@@ -478,6 +478,55 @@ func TestParseComplexMessage(t *testing.T) {
 				},
 			},
 		},
+		// TODO: valid syntax: lexer stuck on infinite loop
+		// 		{
+		// 			name: "simple matcher with newlines",
+		// 			input: `
+		// .match { $variable :number }
+
+		// 1 {{Hello { $variable} world}}
+		// * {{Hello { $variable } worlds}}`,
+		// 			expected: ComplexMessage{
+		// 				Declarations: nil,
+		// 				ComplexBody: Matcher{
+		// 					MatchStatement: MatchStatement{
+		// 						Selectors: []Selector{
+		// 							VariableExpression{
+		// 								Variable: Variable("variable"),
+		// 								Annotation: FunctionAnnotation{
+		// 									Function: Function{
+		// 										Prefix:     ':',
+		// 										Identifier: Identifier{Namespace: "", Name: "number"},
+		// 									},
+		// 								},
+		// 							},
+		// 						},
+		// 					},
+		// 					Variants: []Variant{
+		// 						{
+		// 							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: 1}}},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Patterns: []Pattern{
+		// 									TextPattern{Text: "Hello "},
+		// 									PlaceholderPattern{Expression: VariableExpression{Variable: Variable("variable")}},
+		// 									TextPattern{Text: " world"},
+		// 								},
+		// 							},
+		// 						},
+		// 						{
+		// 							Key: WildcardKey{Wildcard: '*'},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Patterns: []Pattern{
+		// 									TextPattern{Text: "Hello "},
+		// 									PlaceholderPattern{Expression: VariableExpression{Variable: Variable("variable")}},
+		// 									TextPattern{Text: " worlds"},
+		// 								},
+		// 							},
+		// 						},
+		// 					},
+		// 				},
+		// 			},
+		// 		},
 		{
 			name: "matcher with declarations",
 			input: "" +
