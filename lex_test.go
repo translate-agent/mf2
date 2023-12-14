@@ -301,7 +301,7 @@ func Test_lex(t *testing.T) {
 func assertItems(t *testing.T, expected []item, l *lexer) {
 	t.Helper()
 
-	var logItems []func()
+	logItems := make([]func(), 0, len(expected))
 
 	for _, exp := range expected {
 		v := l.nextItem()

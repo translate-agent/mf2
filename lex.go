@@ -97,10 +97,9 @@ func lex(input string) *lexer { return &lexer{input: input, line: 1} }
 //
 // See https://github.com/unicode-org/message-format-wg/blob/7c00820a0462679eba696181c45bfadb43d2eedd/spec/message.abnf
 type lexer struct {
-	input     string
-	item      item
-	pos, line int
-	prev      item // prev non-whitespace item
+	input      string
+	item, prev item // prev non-whitespace
+	pos, line  int
 
 	isFunction,
 	isExpression,
@@ -197,7 +196,7 @@ func lexPattern(singleMessage bool) func(*lexer) stateFn {
 		for {
 			r := l.next()
 
-			// cases sorted based on the frequency of rune occurance
+			// cases sorted based on the frequency of rune occurrence
 			switch {
 			default:
 				l.backup()
@@ -375,7 +374,6 @@ func lexName(l *lexer) stateFn {
 		case len(s) == 0 && r == '.':
 			s = string(r)
 			typ = itemKeyword
-
 		}
 	}
 }
