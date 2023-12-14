@@ -62,9 +62,7 @@ func Parse(input string) (AST, error) {
 
 	// Determine if the input is a complex or simple message.
 	isFirstKeyword := p.items[0].typ == itemKeyword
-	isFirstQuotedPattern := len(p.items) > 1 &&
-		p.items[0].typ == itemQuotedPatternOpen &&
-		p.items[1].typ == itemQuotedPatternOpen
+	isFirstQuotedPattern := p.items[0].typ == itemQuotedPatternOpen
 
 	var message Message
 
