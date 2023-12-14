@@ -284,8 +284,8 @@ func lexComplexMessage(l *lexer) stateFn {
 			return l.emitItem(mk(itemOperator, "="))
 		case r == '{':
 			if l.peek() == '{' {
-				l.isComplexMessage = true // complex message without declarations
 				l.next()
+				l.isComplexMessage = true // complex message without declarations
 				l.isPattern = true
 
 				return l.emitItem(mk(itemQuotedPatternOpen, "{{"))
