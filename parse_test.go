@@ -24,6 +24,15 @@ func TestParseSimpleMessage(t *testing.T) {
 			},
 		},
 		{
+			name:  "text only with escaped chars",
+			input: "Hello, \\{World!\\}",
+			expected: SimpleMessage{
+				Patterns: []Pattern{
+					TextPattern{Text: "Hello, {World!}"},
+				},
+			},
+		},
+		{
 			name:  "variable expression in the middle",
 			input: "Hello, { $variable }  World!",
 			expected: SimpleMessage{
