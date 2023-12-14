@@ -4,14 +4,17 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+// AST is the abstract syntax tree of a MessageFormat 2.0 source file.
 type AST Message
 
 // --------------------------------Interfaces----------------------------------
 
+// Node is the interface implemented by all AST nodes.
 type Node interface {
 	node()
 }
 
+// Message is the top-level node
 type Message interface {
 	Node
 	message()
@@ -64,6 +67,8 @@ type VariantKey interface {
 
 // ---------------------------------Structs------------------------------------
 
+// ---------------------------------Message------------------------------------
+
 type SimpleMessage struct {
 	Message
 
@@ -77,6 +82,8 @@ type ComplexMessage struct {
 	ComplexBody  ComplexBody   // Matcher or QuotedPattern
 }
 
+// ---------------------------------Pattern------------------------------------
+
 type TextPattern struct {
 	Pattern
 
@@ -88,6 +95,8 @@ type PlaceholderPattern struct {
 
 	Expression Expression // LiteralExpression, VariableExpression, or AnnotationExpression
 }
+
+// --------------------------------Expression----------------------------------
 
 type LiteralExpression struct {
 	Expression
@@ -108,6 +117,8 @@ type AnnotationExpression struct {
 
 	Annotation Annotation // FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
 }
+
+// ---------------------------------Literal------------------------------------
 
 type QuotedLiteral struct {
 	Literal
@@ -133,6 +144,8 @@ type NumberLiteral[T constraints.Integer | constraints.Float] struct {
 	Number T
 }
 
+// --------------------------------Annotation----------------------------------
+
 type FunctionAnnotation struct {
 	Annotation
 
@@ -143,18 +156,16 @@ type FunctionAnnotation struct {
 type PrivateUseAnnotation struct {
 	Annotation
 
-	// todo
+	// TODO: Implementation
 }
 
 type ReservedAnnotation struct {
 	Annotation
 
-	// todo
+	// TODO: Implementation
 }
 
-type Variable string
-
-func (Variable) node() {}
+// ---------------------------------Option-------------------------------------
 
 type LiteralOption struct {
 	Option
@@ -170,19 +181,7 @@ type VariableOption struct {
 	Variable   Variable
 }
 
-type Identifier struct {
-	Node
-
-	Namespace string // Optional
-	Name      string
-}
-
-type Function struct {
-	Node
-
-	Prefix     rune // One of: ':', '+', '-'
-	Identifier Identifier
-}
+// --------------------------------Declaration---------------------------------
 
 type InputDeclaration struct {
 	Declaration
@@ -203,6 +202,22 @@ type ReservedDeclaration struct {
 	// todo: Implementation
 }
 
+// --------------------------------VariantKey----------------------------------
+
+type LiteralKey struct {
+	VariantKey
+
+	Literal Literal // QuotedLiteral or UnquotedLiteral
+}
+
+type WildcardKey struct {
+	VariantKey
+
+	Wildcard rune // '*'
+}
+
+// ---------------------------------ComplexBody--------------------------------------
+
 type QuotedPattern struct {
 	ComplexBody
 
@@ -214,6 +229,26 @@ type Matcher struct {
 
 	MatchStatement MatchStatement
 	Variants       []Variant // At least one
+}
+
+// ---------------------------------Node---------------------------------
+
+type Variable string
+
+func (Variable) node() {}
+
+type Identifier struct {
+	Node
+
+	Namespace string // Optional
+	Name      string
+}
+
+type Function struct {
+	Node
+
+	Prefix     rune // One of: ':', '+', '-'
+	Identifier Identifier
 }
 
 type MatchStatement struct {
@@ -229,16 +264,4 @@ type Variant struct {
 
 	Key           VariantKey // At least one: LiteralKey or WildcardKey
 	QuotedPattern QuotedPattern
-}
-
-type LiteralKey struct {
-	VariantKey
-
-	Literal Literal // QuotedLiteral or UnquotedLiteral
-}
-
-type WildcardKey struct {
-	VariantKey
-
-	Wildcard rune // '*'
 }
