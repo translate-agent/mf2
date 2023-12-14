@@ -66,8 +66,10 @@ func Parse(input string) (AST, error) {
 		p.items[0].typ == itemQuotedPatternOpen &&
 		p.items[1].typ == itemQuotedPatternOpen
 
-	var message Message
-	var err error
+	var (
+		message Message
+		err     error
+	)
 
 	if isFirstKeyword || isFirstQuotedPattern {
 		message, err = p.parseComplexMessage()
