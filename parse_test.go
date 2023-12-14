@@ -24,7 +24,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			},
 		},
 		{
-			name:  "variable expression",
+			name:  "variable expression in the middle",
 			input: "Hello, { $variable }  World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
@@ -35,6 +35,34 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 					},
 					TextPattern{Text: "  World!"},
+				},
+			},
+		},
+		{
+			name:  "variable expression at the start",
+			input: "{ $variable } Hello, World!",
+			expected: SimpleMessage{
+				Patterns: []Pattern{
+					PlaceholderPattern{
+						Expression: VariableExpression{
+							Variable: Variable("variable"),
+						},
+					},
+					TextPattern{Text: " Hello, World!"},
+				},
+			},
+		},
+		{
+			name:  "variable expression at the end",
+			input: "Hello, World! { $variable }",
+			expected: SimpleMessage{
+				Patterns: []Pattern{
+					TextPattern{Text: "Hello, World! "},
+					PlaceholderPattern{
+						Expression: VariableExpression{
+							Variable: Variable("variable"),
+						},
+					},
 				},
 			},
 		},
