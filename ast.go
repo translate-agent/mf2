@@ -8,6 +8,11 @@ import (
 type AST Message
 
 // --------------------------------Interfaces----------------------------------
+//
+// Here we define the Nodes that can have multiple types.
+// For example Message could be either a SimpleMessage or a ComplexMessage.
+// Pattern could be either a TextPattern or a PlaceholderPattern.
+// etc.
 
 // Node is the interface implemented by all AST nodes.
 type Node interface {
@@ -36,7 +41,7 @@ type Literal interface {
 }
 
 type Unquoted interface {
-	Node
+	Literal
 	unquoted()
 }
 
@@ -66,6 +71,8 @@ type VariantKey interface {
 }
 
 // ---------------------------------Structs------------------------------------
+//
+// Here we define the structs that implement the interfaces defined above.
 
 // ---------------------------------Message------------------------------------
 
@@ -78,7 +85,7 @@ type SimpleMessage struct {
 type ComplexMessage struct {
 	Message
 
-	Declarations []Declaration // Optional: InputDeclaration or LocalDeclaration
+	Declarations []Declaration // Optional: InputDeclaration, LocalDeclaration or ReservedStatement
 	ComplexBody  ComplexBody   // Matcher or QuotedPattern
 }
 
@@ -196,7 +203,7 @@ type LocalDeclaration struct {
 	Expression Expression // LiteralExpression, VariableExpression, or AnnotationExpression
 }
 
-type ReservedDeclaration struct {
+type ReservedStatement struct {
 	Declaration
 
 	// todo: Implementation
@@ -221,7 +228,7 @@ type WildcardKey struct {
 type QuotedPattern struct {
 	ComplexBody
 
-	Patterns []Pattern
+	Patterns []Pattern // TextPattern or PlaceholderPattern
 }
 
 type Matcher struct {
