@@ -66,89 +66,73 @@ func Parse(input string) (AST, error) {
 		p.items[0].typ == itemQuotedPatternOpen &&
 		p.items[1].typ == itemQuotedPatternOpen
 
-	var (
-		message Message
-		err     error
-	)
+	var message Message
 
+	// TODO: parse error handling
 	if isFirstKeyword || isFirstQuotedPattern {
-		message, err = p.parseComplexMessage()
+		message = p.parseComplexMessage()
 	} else {
-		message, err = p.parseSimpleMessage()
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("parse message: %w", err)
+		message = p.parseSimpleMessage()
 	}
 
 	return message, nil
 }
 
-func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
-	var message SimpleMessage
-	var err error
-
-	message.Patterns, err = p.parsePatterns()
-	if err != nil {
-		return SimpleMessage{}, fmt.Errorf("parse pattern: %w", err)
-	}
-
-	return message, nil
+func (p *parser) parseSimpleMessage() SimpleMessage {
+	return SimpleMessage{Patterns: p.parsePatterns()}
 }
 
-func (p *parser) parseComplexMessage() (ComplexMessage, error) {
+func (p *parser) parseComplexMessage() ComplexMessage {
 	var message ComplexMessage
 
 	for item := p.current(); p.current().typ != itemEOF; item = p.next() {
 		switch item.typ {
 		case itemKeyword:
 			switch item.val {
+			// TODO: case ReservedKeyword:
 			case "." + keywordInput:
-				// todo: implement
+				// TODO: implementation
 			case "." + keywordLocal:
 				message.Declarations = append(message.Declarations, p.parseLocalDeclaration())
 			case "." + keywordMatch:
 				message.ComplexBody = p.parseMatcher()
 
 				// last possible element
-				return message, nil
+				return message
 			}
 
 		case itemQuotedPatternOpen:
-			patterns, err := p.parsePatterns()
-			if err != nil {
-				return ComplexMessage{}, fmt.Errorf("parse pattern: %w", err)
-			}
-
-			message.ComplexBody = QuotedPattern{Patterns: patterns}
+			message.ComplexBody = QuotedPattern{Patterns: p.parsePatterns()}
 
 			// last possible element
-			return message, nil
+			return message
+
+			// TODO: Error handling: case unexpected token
 		}
 	}
 
-	// todo: error no quoted pattern found
-	return message, nil
+	// TODO: error (loop should end with match or quoted pattern item)
+	return message
 }
 
 // ------------------------------Pattern------------------------------
 
 // parsePatterns parses a slice of patterns.
-func (p *parser) parsePatterns() ([]Pattern, error) {
+func (p *parser) parsePatterns() []Pattern {
 	var pattern []Pattern
 
+	// Loop until the end, or closing pattern quote, if parsing complex message.
 	for item := p.current(); item.typ != itemEOF && item.typ != itemQuotedPatternClose; item = p.next() {
 		switch item.typ {
 		case itemText:
 			pattern = append(pattern, TextPattern{Text: item.val})
 		case itemExpressionOpen:
-			item = p.next() // we move omit the "{"
-
 			pattern = append(pattern, PlaceholderPattern{Expression: p.parseExpression()})
+			// TODO: Error handling: case unexpected token
 		}
 	}
 
-	return pattern, nil
+	return pattern
 }
 
 // ------------------------------Expression------------------------------
@@ -163,11 +147,12 @@ func (p *parser) parseExpression() Expression {
 		case itemLiteral:
 			return p.parseLiteralExpression()
 		case itemFunction:
-			return p.parseAnnotationExpression()
+			return AnnotationExpression{Annotation: p.parseAnnotation()}
+			// TODO: Error handling: case unexpected token
 		}
 	}
 
-	// todo: error. Reason: no expression start found.
+	// TODO: error. Reason: no expression start found.
 	return nil
 }
 
@@ -183,6 +168,7 @@ func (p *parser) parseVariableExpression() VariableExpression {
 
 			// last possible element
 			return expression
+			// TODO: Error handling: case unexpected token
 		}
 	}
 
@@ -201,15 +187,12 @@ func (p *parser) parseLiteralExpression() LiteralExpression {
 
 			// return with function annotation
 			return expression
+			// TODO: Error handling: case unexpected token
 		}
 	}
 
 	// return without function annotation
 	return expression
-}
-
-func (p *parser) parseAnnotationExpression() AnnotationExpression {
-	return AnnotationExpression{Annotation: p.parseAnnotation()}
 }
 
 // ------------------------------Annotation------------------------------
@@ -269,10 +252,11 @@ func (p *parser) parseLocalDeclaration() LocalDeclaration {
 
 			// last possible element
 			return declaration
+			// TODO: Error handling: case unexpected token
 		}
 	}
 
-	// todo: error. Reason: no expression found.
+	// TODO: error. Reason: no expression found.
 	return declaration
 }
 
@@ -286,24 +270,17 @@ func (p *parser) parseMatcher() Matcher {
 		case itemExpressionOpen:
 			matcher.MatchStatement.Selectors = append(matcher.MatchStatement.Selectors, p.parseExpression())
 		case itemLiteral:
-			matcher.Variants = append(matcher.Variants, p.parseVariant())
+			matcher.Variants = append(matcher.Variants, Variant{
+				Key: p.parseVariantKey(),
+				QuotedPattern: QuotedPattern{
+					Patterns: p.parsePatterns(),
+				},
+			})
+			// TODO: Error handling: unexpected token
 		}
 	}
 
 	return matcher
-}
-
-func (p *parser) parseVariant() Variant {
-	key := p.parseVariantKey()
-
-	patterns, err := p.parsePatterns()
-	if err != nil {
-		panic(err)
-	}
-
-	pattern := QuotedPattern{Patterns: patterns}
-
-	return Variant{Key: key, QuotedPattern: pattern}
 }
 
 func (p *parser) parseVariantKey() VariantKey {
@@ -312,21 +289,19 @@ func (p *parser) parseVariantKey() VariantKey {
 		return WildcardKey{Wildcard: '*'}
 	}
 
-	num, err := strAsNumber(value)
-	if err != nil {
-		return LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral{Name: value}}}
-	}
+	var key VariantKey
 
-	var literal Literal
-
-	switch num := num.(type) {
+	// Try to parse the literal as a number, if it fails then it is a name literal.
+	switch num := strAsNumber(value).(type) {
+	case nil:
+		key = LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral{Name: value}}}
 	case int64:
-		literal = UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}
+		key = LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}}
 	case float64:
-		literal = UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}
+		key = LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}}
 	}
 
-	return LiteralKey{Literal: literal}
+	return key
 }
 
 func (p *parser) parseOption() Option {
@@ -339,14 +314,14 @@ func (p *parser) parseOption() Option {
 
 		case itemLiteral:
 			option := LiteralOption{Literal: p.parseLiteral(), Identifier: identifier}
-			p.next()
 
 			return option
 		case itemVariable:
 			option := VariableOption{Variable: Variable(p.current().val[1:]), Identifier: identifier}
-			p.next()
 
 			return option
+
+			// TODO: Error handling: unexpected token
 		}
 	}
 
@@ -360,14 +335,12 @@ func (p *parser) parseLiteral() Literal {
 		return UnquotedLiteral{Value: NameLiteral{Name: p.current().val[1:]}}
 	}
 
-	num, err := strAsNumber(p.current().val)
-	if err != nil {
-		return QuotedLiteral{Value: p.current().val}
-	}
-
 	var literal Literal
 
-	switch num := num.(type) {
+	// Try to parse the literal as a number, if nil then it is a quoted literal, otherwise it is a number literal.
+	switch num := strAsNumber(p.current().val).(type) {
+	case nil:
+		literal = QuotedLiteral{Value: p.current().val}
 	case int64:
 		literal = UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}
 	case float64:
@@ -375,17 +348,6 @@ func (p *parser) parseLiteral() Literal {
 	}
 
 	return literal
-
-	// // If it possible to parse the value as a integer or float then it is unquoted number literal.
-	// if num, err := strconv.ParseInt(p.current().val, 10, 64); err == nil {
-	// 	return UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}
-	// }
-
-	// if num, err := strconv.ParseFloat(p.current().val, 64); err == nil {
-	// 	return UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}
-	// }
-
-	// // Else it is quoted literal.
 }
 
 func (p *parser) parseFunction() Function {
@@ -412,6 +374,7 @@ func (p *parser) parseIdentifier() Identifier {
 	case 3:
 		ns = full[1]
 		name = full[2]
+		// TODO: error handling: case unexpected length
 	}
 
 	return Identifier{Namespace: ns, Name: name}
@@ -419,14 +382,16 @@ func (p *parser) parseIdentifier() Identifier {
 
 // helpers
 
-func strAsNumber(s string) (interface{}, error) {
+// strAsNumber tries to parse a string as a number.
+// Returns int64 or float64 if successful, otherwise returns nil.
+func strAsNumber(s string) interface{} {
 	if num, err := strconv.ParseInt(s, 10, 64); err == nil {
-		return num, nil
+		return num
 	}
 
 	if num, err := strconv.ParseFloat(s, 64); err == nil {
-		return num, nil
+		return num
 	}
 
-	return nil, errors.New("not a number")
+	return nil
 }
