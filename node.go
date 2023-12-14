@@ -1,6 +1,8 @@
 package mf2
 
-import "golang.org/x/exp/constraints"
+import (
+	"golang.org/x/exp/constraints"
+)
 
 type AST Message
 
@@ -45,18 +47,34 @@ type Option interface {
 	option()
 }
 
+type Declaration interface {
+	Node
+	declaration()
+}
+
+type ComplexBody interface {
+	Node
+	complexBody()
+}
+
+type VariantKey interface {
+	Node
+	variantKey()
+}
+
 // ---------------------------------Structs------------------------------------
 
 type SimpleMessage struct {
 	Message
 
-	Pattern []Pattern // TextPattern or PlaceholderPattern
+	Patterns []Pattern // TextPattern or PlaceholderPattern
 }
 
 type ComplexMessage struct {
 	Message
 
-	// todo: implementation
+	Declarations []Declaration // Optional: InputDeclaration or LocalDeclaration
+	ComplexBody  ComplexBody   // Matcher or QuotedPattern
 }
 
 type TextPattern struct {
@@ -164,4 +182,63 @@ type Function struct {
 
 	Prefix     rune // One of: ':', '+', '-'
 	Identifier Identifier
+}
+
+type InputDeclaration struct {
+	Declaration
+
+	Expression VariableExpression
+}
+
+type LocalDeclaration struct {
+	Declaration
+
+	Variable   Variable
+	Expression Expression // LiteralExpression, VariableExpression, or AnnotationExpression
+}
+
+type ReservedDeclaration struct {
+	Declaration
+
+	// todo: Implementation
+}
+
+type QuotedPattern struct {
+	ComplexBody
+
+	Patterns []Pattern
+}
+
+type Matcher struct {
+	ComplexBody
+
+	MatchStatement MatchStatement
+	Variants       []Variant // At least one
+}
+
+type MatchStatement struct {
+	Node
+
+	Selectors []Selector // At least one
+}
+
+type Selector Expression
+
+type Variant struct {
+	Node
+
+	Key           VariantKey // At least one: LiteralKey or WildcardKey
+	QuotedPattern QuotedPattern
+}
+
+type LiteralKey struct {
+	VariantKey
+
+	Literal Literal // QuotedLiteral or UnquotedLiteral
+}
+
+type WildcardKey struct {
+	VariantKey
+
+	Wildcard rune // '*'
 }

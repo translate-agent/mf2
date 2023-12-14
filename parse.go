@@ -1,6 +1,7 @@
 package mf2
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,7 +28,8 @@ func (p *parser) current() item {
 }
 
 func (p *parser) collect() error {
-	for {
+	// sanity check, avoid infinite loop
+	for i := 0; i < 1000; i++ {
 		item := p.lexer.nextItem()
 		if item.typ == itemError {
 			return fmt.Errorf("got error token: %s", item.val)
@@ -36,11 +38,12 @@ func (p *parser) collect() error {
 		p.items = append(p.items, item)
 
 		if item.typ == itemEOF {
-			break
+			return nil
 		}
+
 	}
 
-	return nil
+	return errors.New("too many tokens. infinite loop ?")
 }
 
 func new(lexer *lexer) *parser {
@@ -83,7 +86,7 @@ func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
 	var message SimpleMessage
 	var err error
 
-	message.Pattern, err = p.parsePattern()
+	message.Patterns, err = p.parsePatterns()
 	if err != nil {
 		return SimpleMessage{}, fmt.Errorf("parse pattern: %w", err)
 	}
@@ -92,16 +95,47 @@ func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
 }
 
 func (p *parser) parseComplexMessage() (ComplexMessage, error) {
-	return ComplexMessage{}, nil
+	var message ComplexMessage
+
+	for item := p.current(); p.current().typ != itemEOF; item = p.next() {
+		switch item.typ {
+		case itemKeyword:
+			switch item.val {
+			case "." + keywordInput:
+				// todo: implement
+			case "." + keywordLocal:
+				message.Declarations = append(message.Declarations, p.parseLocalDeclaration())
+			case "." + keywordMatch:
+				message.ComplexBody = p.parseMatcher()
+
+				// last possible element
+				return message, nil
+			}
+
+		case itemQuotedPatternOpen:
+			patterns, err := p.parsePatterns()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse pattern: %w", err)
+			}
+
+			message.ComplexBody = QuotedPattern{Patterns: patterns}
+
+			// last possible element
+			return message, nil
+		}
+	}
+
+	// todo: error no quoted pattern found
+	return message, nil
 }
 
 // ------------------------------Pattern------------------------------
 
-// parsePattern parses a slice of patterns.
-func (p *parser) parsePattern() ([]Pattern, error) {
+// parsePatterns parses a slice of patterns.
+func (p *parser) parsePatterns() ([]Pattern, error) {
 	var pattern []Pattern
 
-	for item := p.current(); p.current().typ != itemEOF; item = p.next() {
+	for item := p.current(); item.typ != itemEOF && item.typ != itemQuotedPatternClose; item = p.next() {
 		switch item.typ {
 		case itemText:
 			pattern = append(pattern, TextPattern{Text: item.val})
@@ -109,8 +143,6 @@ func (p *parser) parsePattern() ([]Pattern, error) {
 			item = p.next() // we move omit the "{"
 
 			pattern = append(pattern, PlaceholderPattern{Expression: p.parseExpression()})
-		default:
-			return nil, fmt.Errorf("unexpected token: %v", item.typ)
 		}
 	}
 
@@ -121,23 +153,20 @@ func (p *parser) parsePattern() ([]Pattern, error) {
 
 // parseExpression chooses the correct expression to parse and then parses it.
 func (p *parser) parseExpression() Expression {
-	var expression Expression
-
-	// move to next significant token
-	for p.current().typ == itemWhitespace {
-		p.next()
+	// Move to the significant token. I.e, variable, literal or function.
+	for item := p.current(); p.current().typ != itemExpressionClose; item = p.next() {
+		switch item.typ {
+		case itemVariable:
+			return p.parseVariableExpression()
+		case itemLiteral:
+			return p.parseLiteralExpression()
+		case itemFunction:
+			return p.parseAnnotationExpression()
+		}
 	}
 
-	switch p.current().typ {
-	case itemVariable:
-		expression = p.parseVariableExpression()
-	case itemLiteral:
-		expression = p.parseLiteralExpression()
-	case itemFunction:
-		expression = p.parseAnnotationExpression()
-	}
-
-	return expression
+	// todo: error. Reason: no expression start found.
+	return nil
 }
 
 func (p *parser) parseVariableExpression() VariableExpression {
@@ -224,6 +253,80 @@ func (p *parser) parseReservedAnnotation() ReservedAnnotation {
 	return ReservedAnnotation{}
 }
 
+// ------------------------------Declaration------------------------------
+
+func (p *parser) parseLocalDeclaration() LocalDeclaration {
+	var declaration LocalDeclaration
+
+	for item := p.current(); item.typ != itemExpressionClose; item = p.next() {
+		switch item.typ {
+		case itemVariable:
+			declaration.Variable = Variable(item.val[1:])
+		case itemExpressionOpen:
+			declaration.Expression = p.parseExpression()
+
+			// last possible element
+			return declaration
+		}
+	}
+
+	// todo: error. Reason: no expression found.
+	return declaration
+}
+
+// ---------------------------------------------------------------------
+
+func (p *parser) parseMatcher() Matcher {
+	var matcher Matcher
+
+	for item := p.current(); item.typ != itemEOF; item = p.next() {
+		switch item.typ {
+		case itemExpressionOpen:
+			matcher.MatchStatement.Selectors = append(matcher.MatchStatement.Selectors, p.parseExpression())
+		case itemLiteral:
+			matcher.Variants = append(matcher.Variants, p.parseVariant())
+		}
+	}
+
+	return matcher
+}
+
+func (p *parser) parseVariant() Variant {
+	key := p.parseVariantKey()
+
+	patterns, err := p.parsePatterns()
+	if err != nil {
+		panic(err)
+	}
+
+	pattern := QuotedPattern{Patterns: patterns}
+
+	return Variant{Key: key, QuotedPattern: pattern}
+}
+
+func (p *parser) parseVariantKey() VariantKey {
+	value := p.current().val
+	if value == "*" {
+		return WildcardKey{Wildcard: '*'}
+	}
+
+	num, err := strAsNumber(value)
+	if err != nil {
+		return LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral{Name: value}}}
+	}
+
+	var literal Literal
+
+	switch num := num.(type) {
+	case int64:
+		literal = UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}
+	case float64:
+		literal = UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}
+	}
+
+	return LiteralKey{Literal: literal}
+}
+
 func (p *parser) parseOption() Option {
 	var identifier Identifier
 
@@ -255,17 +358,32 @@ func (p *parser) parseLiteral() Literal {
 		return UnquotedLiteral{Value: NameLiteral{Name: p.current().val[1:]}}
 	}
 
-	// If it possible to parse the value as a integer or float then it is unquoted number literal.
-	if num, err := strconv.ParseInt(p.current().val, 10, 64); err == nil {
-		return UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}
+	num, err := strAsNumber(p.current().val)
+	if err != nil {
+		return QuotedLiteral{Value: p.current().val}
 	}
 
-	if num, err := strconv.ParseFloat(p.current().val, 64); err == nil {
-		return UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}
+	var literal Literal
+
+	switch num := num.(type) {
+	case int64:
+		literal = UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}
+	case float64:
+		literal = UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}
 	}
 
-	// Else it is quoted literal.
-	return QuotedLiteral{Value: p.current().val}
+	return literal
+
+	// // If it possible to parse the value as a integer or float then it is unquoted number literal.
+	// if num, err := strconv.ParseInt(p.current().val, 10, 64); err == nil {
+	// 	return UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}
+	// }
+
+	// if num, err := strconv.ParseFloat(p.current().val, 64); err == nil {
+	// 	return UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}
+	// }
+
+	// // Else it is quoted literal.
 }
 
 func (p *parser) parseFunction() Function {
@@ -295,4 +413,18 @@ func (p *parser) parseIdentifier() Identifier {
 	}
 
 	return Identifier{Namespace: ns, Name: name}
+}
+
+// helpers
+
+func strAsNumber(s string) (interface{}, error) {
+	if num, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return num, nil
+	}
+
+	if num, err := strconv.ParseFloat(s, 64); err == nil {
+		return num, nil
+	}
+
+	return nil, errors.New("not a number")
 }
