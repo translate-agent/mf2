@@ -340,25 +340,24 @@ func TestParseComplexMessage(t *testing.T) {
 		expected Message
 		input    string
 	}{
-		// TODO: valid syntax: lexer stuck on infinite loop
-		// {
-		// 	name:  "no declarations",
-		// 	input: "{{Hello, { |literal| } World!}}",
-		// 	expected: ComplexMessage{
-		// 		Declarations: nil,
-		// 		ComplexBody: QuotedPattern{
-		// 			Patterns: []Pattern{
-		// 				TextPattern("Hello, "),
-		// 				PlaceholderPattern{
-		// 					Expression: LiteralExpression{
-		// 						Literal: QuotedLiteral("literal"),
-		// 					},
-		// 				},
-		// 				TextPattern("World! "),
-		// 			},
-		// 		},
-		// 	},
-		// },
+		{
+			name:  "no declarations",
+			input: "{{Hello, { |literal| } World!}}",
+			expected: ComplexMessage{
+				Declarations: nil,
+				ComplexBody: QuotedPattern{
+					Patterns: []Pattern{
+						TextPattern("Hello, "),
+						PlaceholderPattern{
+							Expression: LiteralExpression{
+								Literal: QuotedLiteral("literal"),
+							},
+						},
+						TextPattern(" World!"),
+					},
+				},
+			},
+		},
 		{
 			name:  "local declaration simple text",
 			input: ".local $var={2} {{Hello world}}",
