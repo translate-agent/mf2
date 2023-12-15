@@ -77,7 +77,7 @@ func (p *parser) parseSimpleMessage() SimpleMessage {
 }
 
 func (p *parser) parseComplexMessage() ComplexMessage {
-	var message ComplexMessage
+	var declarations []Declaration
 
 	for itm := p.current(); p.current().typ != itemEOF; itm = p.next() {
 		// TODO: Error handling: case unexpected token
@@ -89,24 +89,20 @@ func (p *parser) parseComplexMessage() ComplexMessage {
 			case "." + keywordInput:
 				// TODO: implementation
 			case "." + keywordLocal:
-				message.Declarations = append(message.Declarations, p.parseLocalDeclaration())
+				declarations = append(declarations, p.parseLocalDeclaration())
 			case "." + keywordMatch:
-				message.ComplexBody = p.parseMatcher()
-
-				// last possible element
-				return message
+				// Declarations + Matcher
+				return ComplexMessage{Declarations: declarations, ComplexBody: p.parseMatcher()}
 			}
 
 		case itemQuotedPatternOpen:
-			message.ComplexBody = QuotedPattern{Patterns: p.parsePatterns()}
-
-			// last possible element
-			return message
+			// Declarations + QuotedPattern
+			return ComplexMessage{Declarations: declarations, ComplexBody: QuotedPattern{Patterns: p.parsePatterns()}}
 		}
 	}
 
-	// TODO: error (loop should end with match or quoted pattern item)
-	return message
+	// TODO: error: No complex body found.
+	return ComplexMessage{}
 }
 
 // ------------------------------Pattern------------------------------
@@ -153,63 +149,61 @@ func (p *parser) parseExpression() Expression { //nolint:ireturn
 }
 
 func (p *parser) parseVariableExpression() VariableExpression {
-	var expression VariableExpression
+	var variable Variable
 
 	for itm := p.current(); p.current().typ != itemExpressionClose; itm = p.next() {
 		// TODO: Error handling: case unexpected token
 		//nolint:exhaustive
 		switch itm.typ {
 		case itemVariable:
-			expression.Variable = Variable(itm.val[1:])
+			variable = Variable(itm.val[1:])
+			// TODO: error handling: this case should happen exactly once
 		case itemFunction, itemPrivate, itemReserved:
-			expression.Annotation = p.parseAnnotation()
-
-			// last possible element
-			return expression
+			// Variable expression with annotation.
+			return VariableExpression{Variable: variable, Annotation: p.parseAnnotation()}
 		}
 	}
 
-	return expression
+	// Variable expression without annotation.
+	return VariableExpression{Variable: variable}
 }
 
 func (p *parser) parseLiteralExpression() LiteralExpression {
-	var expression LiteralExpression
+	var literal Literal
 
 	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
 		// TODO: Error handling: case unexpected token
 		//nolint:exhaustive
 		switch itm.typ {
 		case itemLiteral:
-			expression.Literal = p.parseLiteral()
+			literal = p.parseLiteral()
+			// TODO: error handling: this case should happen exactly once
 		case itemFunction:
-			expression.Annotation = p.parseAnnotation()
-
-			// return with function annotation
-			return expression
+			// Literal expression with annotation.
+			return LiteralExpression{Literal: literal, Annotation: p.parseAnnotation()}
 		}
 	}
 
-	// return without function annotation
-	return expression
+	// Literal expression without annotation.
+	return LiteralExpression{Literal: literal}
 }
 
 // ------------------------------Annotation------------------------------
 
 // parseAnnotation determines annotation type and then parses it accordingly.
 func (p *parser) parseAnnotation() Annotation { //nolint:ireturn
-	var annotation Annotation
-
 	//nolint:exhaustive
 	switch p.current().typ {
+	default:
+		// TODO: error. Reason: unexpected token
+		return nil
 	case itemFunction:
-		annotation = p.parseFunctionAnnotation()
+		return p.parseFunctionAnnotation()
 	case itemPrivate:
-		annotation = p.parsePrivateUseAnnotation()
+		return p.parsePrivateUseAnnotation()
 	case itemReserved:
-		annotation = p.parseReservedAnnotation()
+		return p.parseReservedAnnotation()
 	}
-
-	return annotation
 }
 
 func (p *parser) parseFunctionAnnotation() FunctionAnnotation {
@@ -241,24 +235,22 @@ func (p *parser) parseReservedAnnotation() ReservedAnnotation {
 // ------------------------------Declaration------------------------------
 
 func (p *parser) parseLocalDeclaration() LocalDeclaration {
-	var declaration LocalDeclaration
+	var variable Variable
 
 	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
 		// TODO: Error handling: case unexpected token
 		//nolint:exhaustive
 		switch itm.typ {
 		case itemVariable:
-			declaration.Variable = Variable(itm.val[1:])
+			variable = Variable(itm.val[1:])
+			// TODO: error handling: this case should happen exactly once
 		case itemExpressionOpen:
-			declaration.Expression = p.parseExpression()
-
-			// last possible element
-			return declaration
+			return LocalDeclaration{Variable: variable, Expression: p.parseExpression()}
 		}
 	}
 
 	// TODO: error. Reason: no expression found.
-	return declaration
+	return LocalDeclaration{}
 }
 
 // ---------------------------------------------------------------------
