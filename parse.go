@@ -46,12 +46,8 @@ func (p *parser) collect() error {
 	return errors.New("too many tokens. infinite loop ?")
 }
 
-func new(lexer *lexer) *parser {
-	return &parser{lexer: lexer}
-}
-
 func Parse(input string) (AST, error) {
-	p := new(lex(input))
+	p := &parser{lexer: lex(input)}
 	if err := p.collect(); err != nil {
 		return nil, fmt.Errorf("collect tokens: %w", err)
 	}
