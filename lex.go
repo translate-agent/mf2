@@ -215,6 +215,12 @@ func lexPattern(singleMessage bool) func(*lexer) stateFn {
 					s += string(next)
 				}
 			case r == '{':
+				if l.peek() == '{' { // complex message without declarations
+					l.backup()
+
+					return lexComplexMessage(l)
+				}
+
 				l.backup()
 
 				if len(s) > 0 {
@@ -278,6 +284,7 @@ func lexComplexMessage(l *lexer) stateFn {
 		case r == '{':
 			if l.peek() == '{' {
 				l.next()
+				l.isComplexMessage = true // complex message without declarations
 				l.isPattern = true
 
 				return l.emitItem(mk(itemQuotedPatternOpen, "{{"))

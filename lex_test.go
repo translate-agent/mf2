@@ -287,6 +287,19 @@ func Test_lex(t *testing.T) {
 				mk(itemEOF, ""),
 			},
 		},
+		{
+			name:  "complex message without declaration",
+			input: "{{Hello, {|literal|} World!}}",
+			expected: []item{
+				mk(itemQuotedPatternOpen, "{{"),
+				mk(itemText, "Hello, "),
+				mk(itemExpressionOpen, "{"),
+				mk(itemLiteral, "literal"),
+				mk(itemExpressionClose, "}"),
+				mk(itemText, " World!"),
+				mk(itemQuotedPatternClose, "}}"),
+			},
+		},
 	} {
 		test := test
 
