@@ -46,7 +46,53 @@ func (p *parser) collect() error {
 	return errors.New("too many tokens. infinite loop ?")
 }
 
-// TODO: godoc.
+/*
+Parse parses the input string and returns an AST tree of MessageFormat2.
+Empty input string returns a SimpleMessage with no patterns.
+
+Examples:
+
+	mf2.Parse("Hello World!")
+	// result
+	SimpleMessage{Patterns: []Pattern{TextPattern("Hello World!")}}
+
+	// -----------------------------------------------------------
+
+	mf2.Parse("Hello {name}!")
+	// result
+	SimpleMessage{
+		Patterns: []Pattern{
+			TextPattern("Hello "),
+			PlaceholderPattern{Expression: VariableExpression{Variable: "name"}},
+		},
+	}
+
+	// -----------------------------------------------------------
+
+	mf2.Parse(".match {$count} 1 {{Hello world}} * {{Hello worlds}}")
+	// result
+	ComplexMessage{
+		ComplexBody: Matcher{
+			MatchStatements: []Expression{
+				VariableExpression{Variable: "count"},
+			},
+			Variants: []Variant{
+				{
+					Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}},
+					QuotedPattern: QuotedPattern{
+						Patterns: []Pattern{TextPattern("Hello world")},
+					},
+				},
+				{
+					Key: WildcardKey{},
+					QuotedPattern: QuotedPattern{
+						Patterns: []Pattern{TextPattern("Hello worlds")},
+					},
+				},
+			},
+		},
+	}
+*/
 func Parse(input string) (AST, error) { //nolint:ireturn
 	p := &parser{lexer: lex(input)}
 	if err := p.collect(); err != nil {
