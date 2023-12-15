@@ -56,20 +56,12 @@ func Parse(input string) (AST, error) {
 		return nil, nil
 	}
 
-	// Determine if the input is a complex or simple message.
-	isFirstKeyword := p.items[0].typ == itemKeyword
-	isFirstQuotedPattern := p.items[0].typ == itemQuotedPatternOpen
-
-	var message Message
-
 	// TODO: parse error handling
-	if isFirstKeyword || isFirstQuotedPattern {
-		message = p.parseComplexMessage()
-	} else {
-		message = p.parseSimpleMessage()
+	if typ := p.items[0].typ; typ == itemKeyword || typ == itemQuotedPatternOpen {
+		return p.parseComplexMessage(), nil
 	}
 
-	return message, nil
+	return p.parseSimpleMessage(), nil
 }
 
 func (p *parser) parseSimpleMessage() SimpleMessage {
