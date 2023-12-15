@@ -69,6 +69,10 @@ type VariantKey interface {
 // ---------------------------------Structs------------------------------------
 //
 // Here we define the structs that implement the interfaces defined above.
+//
+// Types with one concrete field (string, int, ...) are defined as types
+// Types with one interface field are defined as structs
+// Types with multiple fields are defined as structs
 
 // ---------------------------------Message------------------------------------
 
@@ -87,11 +91,10 @@ type ComplexMessage struct {
 
 // ---------------------------------Pattern------------------------------------
 
-type TextPattern struct {
-	Pattern
+type TextPattern string
 
-	Text string
-}
+func (TextPattern) node()    {}
+func (TextPattern) pattern() {}
 
 type PlaceholderPattern struct {
 	Pattern
@@ -123,11 +126,10 @@ type AnnotationExpression struct {
 
 // ---------------------------------Literal------------------------------------
 
-type QuotedLiteral struct {
-	Literal
+type QuotedLiteral string
 
-	Value string
-}
+func (QuotedLiteral) node()    {}
+func (QuotedLiteral) literal() {}
 
 type UnquotedLiteral struct {
 	Literal
@@ -135,17 +137,17 @@ type UnquotedLiteral struct {
 	Value Unquoted // NameLiteral or NumberLiteral
 }
 
-type NameLiteral struct {
-	Unquoted
+type NameLiteral string
 
-	Name string
-}
+func (NameLiteral) node()     {}
+func (NameLiteral) literal()  {}
+func (NameLiteral) unquoted() {}
 
-type NumberLiteral struct {
-	Unquoted
+type NumberLiteral float64
 
-	Number float64
-}
+func (NumberLiteral) node()     {}
+func (NumberLiteral) literal()  {}
+func (NumberLiteral) unquoted() {}
 
 // --------------------------------Annotation----------------------------------
 
@@ -202,7 +204,7 @@ type LocalDeclaration struct {
 type ReservedStatement struct {
 	Declaration
 
-	// todo: Implementation
+	// TODO: Implementation
 }
 
 // --------------------------------VariantKey----------------------------------
@@ -213,11 +215,10 @@ type LiteralKey struct {
 	Literal Literal // QuotedLiteral or UnquotedLiteral
 }
 
-type WildcardKey struct {
-	VariantKey
+type WildcardKey rune
 
-	Wildcard rune // '*'
-}
+func (WildcardKey) node()       {}
+func (WildcardKey) variantKey() {}
 
 // ---------------------------------ComplexBody--------------------------------------
 
@@ -230,8 +231,8 @@ type QuotedPattern struct {
 type Matcher struct {
 	ComplexBody
 
-	MatchStatement MatchStatement
-	Variants       []Variant // At least one
+	MatchStatements []Expression // At least one
+	Variants        []Variant    // At least one
 }
 
 // ---------------------------------Node---------------------------------
@@ -253,14 +254,6 @@ type Function struct {
 	Prefix     rune // One of: ':', '+', '-'
 	Identifier Identifier
 }
-
-type MatchStatement struct {
-	Node
-
-	Selectors []Selector // At least one
-}
-
-type Selector Expression
 
 type Variant struct {
 	Node
