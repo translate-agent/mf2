@@ -287,6 +287,19 @@ func Test_lex(t *testing.T) {
 				mk(itemEOF, ""),
 			},
 		},
+		{
+			name:  "complex message without declaration",
+			input: "{{Hello, {|literal|} World!}}",
+			expected: []item{
+				mk(itemQuotedPatternOpen, "{{"),
+				mk(itemText, "Hello, "),
+				mk(itemExpressionOpen, "{"),
+				mk(itemLiteral, "literal"),
+				mk(itemExpressionClose, "}"),
+				mk(itemText, " World!"),
+				mk(itemQuotedPatternClose, "}}"),
+			},
+		},
 	} {
 		test := test
 
@@ -301,7 +314,7 @@ func Test_lex(t *testing.T) {
 func assertItems(t *testing.T, expected []item, l *lexer) {
 	t.Helper()
 
-	var logItems []func()
+	logItems := make([]func(), 0, len(expected))
 
 	for _, exp := range expected {
 		v := l.nextItem()
