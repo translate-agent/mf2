@@ -11,8 +11,8 @@ func TestParseSimpleMessage(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    string
 		expected Message
+		input    string
 	}{
 		{
 			name:  "text only",
@@ -337,8 +337,8 @@ func TestParseComplexMessage(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    string
 		expected Message
+		input    string
 	}{
 		// TODO: valid syntax: lexer stuck on infinite loop
 		// {

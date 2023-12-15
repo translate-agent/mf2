@@ -15,7 +15,7 @@ type Node interface {
 	node()
 }
 
-// Message is the top-level node
+// Message is the top-level node.
 type Message interface {
 	Node
 	message()
@@ -85,8 +85,8 @@ type SimpleMessage struct {
 type ComplexMessage struct {
 	Message
 
-	Declarations []Declaration // Optional: InputDeclaration, LocalDeclaration or ReservedStatement
 	ComplexBody  ComplexBody   // Matcher or QuotedPattern
+	Declarations []Declaration // Optional: InputDeclaration, LocalDeclaration or ReservedStatement
 }
 
 // ---------------------------------Pattern------------------------------------
@@ -114,8 +114,8 @@ type LiteralExpression struct {
 type VariableExpression struct {
 	Expression
 
-	Variable   Variable
 	Annotation Annotation // Optional: FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
+	Variable   Variable
 }
 
 type AnnotationExpression struct {
@@ -175,8 +175,8 @@ type ReservedAnnotation struct {
 type LiteralOption struct {
 	Option
 
-	Identifier Identifier
 	Literal    Literal // QuotedLiteral or UnquotedLiteral
+	Identifier Identifier
 }
 
 type VariableOption struct {
@@ -197,8 +197,8 @@ type InputDeclaration struct {
 type LocalDeclaration struct {
 	Declaration
 
-	Variable   Variable
 	Expression Expression // LiteralExpression, VariableExpression, or AnnotationExpression
+	Variable   Variable
 }
 
 type ReservedStatement struct {
@@ -251,8 +251,8 @@ type Identifier struct {
 type Function struct {
 	Node
 
-	Prefix     rune // One of: ':', '+', '-'
 	Identifier Identifier
+	Prefix     rune // One of: ':', '+', '-'
 }
 
 type Variant struct {
