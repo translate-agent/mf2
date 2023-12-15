@@ -280,7 +280,7 @@ func (p *parser) parseMatcher() Matcher {
 func (p *parser) parseVariantKey() VariantKey { //nolint:ireturn
 	val := p.current().val
 	if val == "*" {
-		return WildcardKey('*')
+		return WildcardKey{}
 	}
 
 	var key VariantKey

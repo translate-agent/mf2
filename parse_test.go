@@ -496,7 +496,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: WildcardKey('*'),
+							Key: WildcardKey{},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -540,7 +540,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: WildcardKey('*'),
+							Key: WildcardKey{},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -584,7 +584,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: WildcardKey('*'),
+							Key: WildcardKey{},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -648,7 +648,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: WildcardKey('*'),
+							Key: WildcardKey{},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),

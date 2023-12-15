@@ -215,10 +215,10 @@ type LiteralKey struct {
 	Literal Literal // QuotedLiteral or UnquotedLiteral
 }
 
-type WildcardKey rune
-
-func (WildcardKey) node()       {}
-func (WildcardKey) variantKey() {}
+// WildcardKey is a special "catch-all" key, that matches any value.
+type WildcardKey struct {
+	VariantKey
+}
 
 // ---------------------------------ComplexBody--------------------------------------
 
