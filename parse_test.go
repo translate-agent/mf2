@@ -118,7 +118,7 @@ func TestParseSimpleMessage(t *testing.T) {
 								},
 								Options: []Option{
 									LiteralOption{
-										Literal: UnquotedLiteral{Value: NumberLiteral[float64]{Number: -3.14}},
+										Literal: UnquotedLiteral{Value: NumberLiteral{Number: -3.14}},
 										Identifier: Identifier{
 											Namespace: "",
 											Name:      "option1",
@@ -169,7 +169,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern{Text: "Hello, "},
 					PlaceholderPattern{
 						Expression: LiteralExpression{
-							Literal: UnquotedLiteral{Value: NumberLiteral[float64]{Number: 1e3}},
+							Literal: UnquotedLiteral{Value: NumberLiteral{Number: 1e3}},
 						},
 					},
 					TextPattern{Text: "  World!"},
@@ -234,14 +234,14 @@ func TestParseSimpleMessage(t *testing.T) {
 								},
 								Options: []Option{
 									LiteralOption{
-										Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: -1}},
+										Literal: UnquotedLiteral{Value: NumberLiteral{Number: -1}},
 										Identifier: Identifier{
 											Namespace: "ns1",
 											Name:      "option1",
 										},
 									},
 									LiteralOption{
-										Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: +1}},
+										Literal: UnquotedLiteral{Value: NumberLiteral{Number: +1}},
 										Identifier: Identifier{
 											Namespace: "ns2",
 											Name:      "option2",
@@ -303,7 +303,7 @@ func TestParseSimpleMessage(t *testing.T) {
 								},
 								Options: []Option{
 									LiteralOption{
-										Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: 999}},
+										Literal: UnquotedLiteral{Value: NumberLiteral{Number: 999}},
 										Identifier: Identifier{
 											Namespace: "namespace",
 											Name:      "option999",
@@ -367,7 +367,7 @@ func TestParseComplexMessage(t *testing.T) {
 					LocalDeclaration{
 						Variable: Variable("var"),
 						Expression: LiteralExpression{
-							Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: 2}},
+							Literal: UnquotedLiteral{Value: NumberLiteral{Number: 2}},
 						},
 					},
 				},
@@ -427,7 +427,7 @@ func TestParseComplexMessage(t *testing.T) {
 								Options: []Option{
 									LiteralOption{
 										Identifier: Identifier{Namespace: "", Name: "opt1"},
-										Literal:    UnquotedLiteral{Value: NumberLiteral[int64]{Number: 1}},
+										Literal:    UnquotedLiteral{Value: NumberLiteral{Number: 1}},
 									},
 									LiteralOption{
 										Identifier: Identifier{Namespace: "", Name: "opt2"},
@@ -440,7 +440,7 @@ func TestParseComplexMessage(t *testing.T) {
 					LocalDeclaration{
 						Variable: Variable("var"),
 						Expression: LiteralExpression{
-							Literal:    UnquotedLiteral{Value: NumberLiteral[int64]{Number: 2}},
+							Literal:    UnquotedLiteral{Value: NumberLiteral{Number: 2}},
 							Annotation: nil,
 						},
 					},
@@ -489,7 +489,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: 1}}},
+							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral{Number: 1}}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern{Text: "Hello "},
@@ -535,7 +535,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: 1}}},
+							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral{Number: 1}}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern{Text: "Hello "},
@@ -581,7 +581,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: 1}}},
+							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral{Number: 1}}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern{Text: "Hello "},

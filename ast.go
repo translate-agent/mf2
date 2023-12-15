@@ -1,9 +1,5 @@
 package mf2
 
-import (
-	"golang.org/x/exp/constraints"
-)
-
 // AST is the abstract syntax tree of a MessageFormat 2.0 source file.
 type AST Message
 
@@ -145,10 +141,10 @@ type NameLiteral struct {
 	Name string
 }
 
-type NumberLiteral[T constraints.Integer | constraints.Float] struct {
+type NumberLiteral struct {
 	Unquoted
 
-	Number T
+	Number float64
 }
 
 // --------------------------------Annotation----------------------------------

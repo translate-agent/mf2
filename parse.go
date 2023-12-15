@@ -1,9 +1,9 @@
 package mf2
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -270,21 +270,19 @@ func (p *parser) parseMatcher() Matcher {
 }
 
 func (p *parser) parseVariantKey() VariantKey {
-	value := p.current().val
-	if value == "*" {
+	val := p.current().val
+	if val == "*" {
 		return WildcardKey{Wildcard: '*'}
 	}
 
 	var key VariantKey
 
-	// Try to parse the literal as a number, if it fails then it is a name literal.
-	switch num := strAsNumber(value).(type) {
-	case nil:
-		key = LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral{Name: value}}}
-	case int64:
-		key = LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}}
-	case float64:
-		key = LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}}
+	// If the literal is not a number then it is a unquoted literal. Otherwise it is a number literal.
+	// TODO: Would be nice if lexer could distinguish between quoted and unquoted literals. e.g. two item types: itemQuotedLiteral and itemUnquotedLiteral, instead of itemLiteral.
+	// That means, for now it always be a unquoted literal if it is not a number. But it could be a quoted literal too.
+	key = LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral{Name: val}}}
+	if num := float64(0); json.Unmarshal([]byte(val), &num) == nil {
+		key = LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral{Number: num}}}
 	}
 
 	return key
@@ -316,21 +314,21 @@ func (p *parser) parseOption() Option {
 }
 
 func (p *parser) parseLiteral() Literal {
+	val := p.current().val
+
 	// If there is prefix "$" then it is unquoted name literal.
-	if strings.HasPrefix(p.current().val, "$") {
+	if strings.HasPrefix(val, "$") {
 		return UnquotedLiteral{Value: NameLiteral{Name: p.current().val[1:]}}
 	}
 
 	var literal Literal
 
-	// Try to parse the literal as a number, if nil then it is a quoted literal, otherwise it is a number literal.
-	switch num := strAsNumber(p.current().val).(type) {
-	case nil:
-		literal = QuotedLiteral{Value: p.current().val}
-	case int64:
-		literal = UnquotedLiteral{Value: NumberLiteral[int64]{Number: num}}
-	case float64:
-		literal = UnquotedLiteral{Value: NumberLiteral[float64]{Number: num}}
+	// If the literal is not a number then it is a quoted literal. Otherwise it is a number literal.
+	// TODO: Would be nice if lexer could distinguish between quoted and unquoted literals. e.g. two item types: itemQuotedLiteral and itemUnquotedLiteral, instead of itemLiteral.
+	// That means, for now it always be a quoted literal if it is not a number. But it could be a unquoted literal too.
+	literal = QuotedLiteral{Value: val}
+	if num := float64(0); json.Unmarshal([]byte(val), &num) == nil {
+		literal = UnquotedLiteral{Value: NumberLiteral{Number: num}}
 	}
 
 	return literal
@@ -364,20 +362,4 @@ func (p *parser) parseIdentifier() Identifier {
 	}
 
 	return Identifier{Namespace: ns, Name: name}
-}
-
-// helpers
-
-// strAsNumber tries to parse a string as a number.
-// Returns int64 or float64 if successful, otherwise returns nil.
-func strAsNumber(s string) interface{} {
-	if num, err := strconv.ParseInt(s, 10, 64); err == nil {
-		return num
-	}
-
-	if num, err := strconv.ParseFloat(s, 64); err == nil {
-		return num
-	}
-
-	return nil
 }
