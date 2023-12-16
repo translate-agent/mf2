@@ -24,7 +24,10 @@ const (
 	itemQuotedPatternClose
 	itemText
 	itemKeyword
-	itemLiteral
+	itemCatchAllKey
+	itemNumberLiteral
+	itemQuotedLiteral
+	itemUnquotedLiteral
 	itemOption
 	itemWhitespace
 	itemReserved
@@ -37,38 +40,44 @@ func (t itemType) String() string {
 	switch t {
 	default:
 		return "unknown"
-	case itemError:
-		return "error"
+	case itemCatchAllKey:
+		return "catch all key"
 	case itemEOF:
 		return "eof"
-	case itemVariable:
-		return "variable"
-	case itemFunction:
-		return "function"
-	case itemExpressionOpen:
-		return "expression open"
+	case itemError:
+		return "error"
 	case itemExpressionClose:
 		return "expression close"
-	case itemQuotedPatternOpen:
-		return "quoted pattern open"
-	case itemQuotedPatternClose:
-		return "quoted pattern close"
+	case itemExpressionOpen:
+		return "expression open"
+	case itemFunction:
+		return "function"
 	case itemText:
 		return "text"
 	case itemKeyword:
 		return "keyword"
-	case itemLiteral:
-		return "literal"
-	case itemOption:
-		return "option"
-	case itemWhitespace:
-		return "whitespace"
-	case itemReserved:
-		return "reserved"
+	case itemNumberLiteral:
+		return "number literal"
 	case itemOperator:
 		return "operator"
+	case itemOption:
+		return "option"
 	case itemPrivate:
 		return "private"
+	case itemQuotedLiteral:
+		return "quoted literal"
+	case itemQuotedPatternClose:
+		return "quoted pattern close"
+	case itemQuotedPatternOpen:
+		return "quoted pattern open"
+	case itemReserved:
+		return "reserved"
+	case itemUnquotedLiteral:
+		return "unquoted literal"
+	case itemVariable:
+		return "variable"
+	case itemWhitespace:
+		return "whitespace"
 	}
 }
 
@@ -301,7 +310,7 @@ func lexComplexMessage(l *lexer) stateFn {
 				return l.emitItem(mk(itemQuotedPatternClose, "}}"))
 			}
 		case r == '*':
-			return l.emitItem(mk(itemLiteral, "*"))
+			return l.emitItem(mk(itemCatchAllKey, "*"))
 		case r == eof:
 			return nil
 		}
@@ -341,7 +350,11 @@ func lexExpr(l *lexer) stateFn {
 	case isWhitespace(v):
 		l.backup()
 		return lexWhitespace(l)
-	case l.isFunction && (l.prev.typ == itemFunction || l.prev.typ == itemLiteral):
+	case l.isFunction &&
+		(l.prev.typ == itemFunction ||
+			l.prev.typ == itemQuotedLiteral ||
+			l.prev.typ == itemUnquotedLiteral ||
+			l.prev.typ == itemNumberLiteral):
 		l.backup()
 		return lexIdentifier(l)
 	case isReservedStart(v):
@@ -359,7 +372,7 @@ func lexExpr(l *lexer) stateFn {
 func lexName(l *lexer) stateFn {
 	var s string
 
-	typ := itemLiteral
+	typ := itemUnquotedLiteral
 
 	for {
 		r := l.next()
@@ -406,7 +419,7 @@ func lexLiteral(l *lexer) stateFn {
 			case r == '|':
 				opening = !opening
 				if !opening {
-					return l.emitItem(mk(itemLiteral, s))
+					return l.emitItem(mk(itemQuotedLiteral, s))
 				}
 			case r == '\\':
 				next := l.next()
@@ -417,7 +430,7 @@ func lexLiteral(l *lexer) stateFn {
 				case '\\', '|':
 					s += string(r) + string(next)
 
-					return l.emitItem(mk(itemLiteral, s))
+					return l.emitItem(mk(itemQuotedLiteral, s))
 				case eof:
 					return l.emitErrorf("unexpected eof in quoted literal")
 				}
@@ -437,7 +450,7 @@ func lexLiteral(l *lexer) stateFn {
 
 				l.backup()
 
-				return l.emitItem(mk(itemLiteral, s))
+				return l.emitItem(mk(itemNumberLiteral, s))
 			case '-', '+', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'e', 'E':
 				s += string(r)
 			}
