@@ -183,7 +183,7 @@ func (p *parser) parseExpression() Expression { //nolint:ireturn
 		switch itm.typ {
 		case itemVariable:
 			return p.parseVariableExpression()
-		case itemLiteral:
+		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			return p.parseLiteralExpression()
 		case itemFunction:
 			return AnnotationExpression{Annotation: p.parseAnnotation()}
@@ -221,7 +221,7 @@ func (p *parser) parseLiteralExpression() LiteralExpression {
 		// TODO: Error handling: case unexpected token
 		//nolint:exhaustive
 		switch itm.typ {
-		case itemLiteral:
+		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			literal = p.parseLiteral()
 			// TODO: error handling: this case should happen exactly once
 		case itemFunction:
@@ -310,7 +310,7 @@ func (p *parser) parseMatcher() Matcher {
 		switch itm.typ {
 		case itemExpressionOpen:
 			matcher.MatchStatements = append(matcher.MatchStatements, p.parseExpression())
-		case itemLiteral:
+		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			matcher.Variants = append(matcher.Variants, Variant{
 				Key: p.parseVariantKey(),
 				QuotedPattern: QuotedPattern{
@@ -324,23 +324,11 @@ func (p *parser) parseMatcher() Matcher {
 }
 
 func (p *parser) parseVariantKey() VariantKey { //nolint:ireturn
-	val := p.current().val
-	if val == "*" {
+	if p.current().typ == itemCatchAllKey {
 		return WildcardKey{}
 	}
 
-	var key VariantKey
-
-	// If the literal is not a number then it is a unquoted literal. Otherwise it is a number literal.
-	// TODO: Would be nice if lexer could distinguish between quoted and unquoted literals
-	// . e.g. two item types: itemQuotedLiteral and itemUnquotedLiteral, instead of itemLiteral.
-	// That means, for now it always be a unquoted literal if it is not a number. But it could be a quoted literal too.
-	key = LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral(val)}}
-	if num := float64(0); json.Unmarshal([]byte(val), &num) == nil {
-		key = LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(num)}}
-	}
-
-	return key
+	return LiteralKey{Literal: p.parseLiteral()}
 }
 
 func (p *parser) parseOption() Option { //nolint:ireturn
@@ -353,7 +341,7 @@ func (p *parser) parseOption() Option { //nolint:ireturn
 		case itemOption:
 			identifier = p.parseIdentifier()
 
-		case itemLiteral:
+		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			option := LiteralOption{Literal: p.parseLiteral(), Identifier: identifier}
 
 			return option
@@ -369,25 +357,25 @@ func (p *parser) parseOption() Option { //nolint:ireturn
 }
 
 func (p *parser) parseLiteral() Literal { //nolint:ireturn
-	val := p.current().val
+	// TODO: Error handling: unexpected token
+	//nolint:exhaustive
+	switch itm := p.current(); itm.typ {
+	case itemNumberLiteral:
+		var num float64
+		if err := json.Unmarshal([]byte(itm.val), &num); err != nil {
+			// TODO: Return error instead of panic
+			panic(err)
+		}
 
-	// If there is prefix "$" then it is unquoted name literal.
-	if strings.HasPrefix(val, "$") {
-		return UnquotedLiteral{Value: NameLiteral(p.current().val[1:])}
+		return UnquotedLiteral{Value: NumberLiteral(num)}
+	case itemQuotedLiteral:
+		return QuotedLiteral(p.current().val)
+	case itemUnquotedLiteral:
+		return UnquotedLiteral{Value: NameLiteral(p.current().val)}
 	}
 
-	var literal Literal
-
-	// If the literal is not a number then it is a quoted literal. Otherwise it is a number literal.
-	// TODO: Would be nice if lexer could distinguish between quoted and unquoted literals.
-	// e.g. two item types: itemQuotedLiteral and itemUnquotedLiteral, instead of itemLiteral.
-	// That means, for now it always be a quoted literal if it is not a number. But it could be a unquoted literal too.
-	literal = QuotedLiteral(val)
-	if num := float64(0); json.Unmarshal([]byte(val), &num) == nil {
-		literal = UnquotedLiteral{Value: NumberLiteral(num)}
-	}
-
-	return literal
+	// TODO: error. Reason: unexpected token
+	return nil
 }
 
 func (p *parser) parseFunction() Function {

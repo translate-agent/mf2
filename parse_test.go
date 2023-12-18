@@ -177,14 +177,14 @@ func TestParseSimpleMessage(t *testing.T) {
 			},
 		},
 		{
-			name:  "unquoted name literal expression", // parse converts to quoted, but that's fine
+			name:  "unquoted name literal expression",
 			input: "Hello, { name } World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					TextPattern("Hello, "),
 					PlaceholderPattern{
 						Expression: LiteralExpression{
-							Literal: QuotedLiteral("name"),
+							Literal: UnquotedLiteral{Value: NameLiteral("name")},
 						},
 					},
 					TextPattern(" World!"),
@@ -604,13 +604,13 @@ func TestParseComplexMessage(t *testing.T) {
 				".local $var2 = { |female| }" +
 				".match { :gender }" +
 				"male {{Hello sir!}}" +
-				"female {{Hello madam!}}" +
+				"|female| {{Hello madam!}}" +
 				"* {{Hello { $var1 } or { $var2 }!}}",
 			expected: ComplexMessage{
 				Declarations: []Declaration{
 					LocalDeclaration{
 						Variable:   Variable("var1"),
-						Expression: LiteralExpression{Literal: QuotedLiteral("male")},
+						Expression: LiteralExpression{Literal: UnquotedLiteral{Value: NameLiteral("male")}},
 					},
 					LocalDeclaration{
 						Variable:   Variable("var2"),
@@ -640,7 +640,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("female")}},
+							Key: LiteralKey{Literal: QuotedLiteral("female")},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello madam!"),
