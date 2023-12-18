@@ -311,7 +311,7 @@ type CatchAllKey struct {
 	VariantKey
 }
 
-func (ck CatchAllKey) String() string { return catchAllKey }
+func (ck CatchAllKey) String() string { return catchAllSymbol }
 
 // ---------------------------------ComplexBody--------------------------------------
 
@@ -383,7 +383,7 @@ func (v Variant) String() string { return fmt.Sprintf("%s %s", v.Key, v.QuotedPa
 
 const (
 	variablePrefix = '$'
-	catchAllKey    = "*"
+	catchAllSymbol = "*"
 	match          = "." + keywordMatch
 	local          = "." + keywordLocal
 )
