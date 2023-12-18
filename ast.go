@@ -215,8 +215,8 @@ type LiteralKey struct {
 	Literal Literal // QuotedLiteral or UnquotedLiteral
 }
 
-// WildcardKey is a special "catch-all" key, that matches any value.
-type WildcardKey struct {
+// CatchAllKey is a special key, that matches any value.
+type CatchAllKey struct {
 	VariantKey
 }
 

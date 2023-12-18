@@ -325,7 +325,7 @@ func (p *parser) parseMatcher() Matcher {
 
 func (p *parser) parseVariantKey() VariantKey { //nolint:ireturn
 	if p.current().typ == itemCatchAllKey {
-		return WildcardKey{}
+		return CatchAllKey{}
 	}
 
 	return LiteralKey{Literal: p.parseLiteral()}
