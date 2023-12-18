@@ -78,9 +78,9 @@ type VariantKey interface {
 	variantKey()
 }
 
-// ---------------------------------Structs------------------------------------
+// ---------------------------------Types------------------------------------
 //
-// Here we define the structs that implement the interfaces defined above.
+// Here we define the types that implement the interfaces defined above.
 //
 // Types with one concrete field (string, int, ...) are defined as types
 // Types with one interface field are defined as structs
