@@ -11,7 +11,7 @@ type AST struct {
 }
 
 // String returns the string representation of the AST, i.e. MF2 formatted message.
-func (ast AST) String() string { return fmt.Sprint(ast.Message) }
+func (a AST) String() string { return fmt.Sprint(a.Message) }
 
 // --------------------------------Interfaces----------------------------------
 //
