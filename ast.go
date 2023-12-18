@@ -1,7 +1,9 @@
 package mf2
 
 // AST is the abstract syntax tree of a MessageFormat 2.0 source file.
-type AST Message
+type AST struct {
+	Message Message
+}
 
 // --------------------------------Interfaces----------------------------------
 //

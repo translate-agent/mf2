@@ -93,17 +93,17 @@ Examples:
 		},
 	}
 */
-func Parse(input string) (AST, error) { //nolint:ireturn
+func Parse(input string) (AST, error) {
 	p := &parser{lexer: lex(input)}
 	if err := p.collect(); err != nil {
-		return nil, fmt.Errorf("collect tokens: %w", err)
+		return AST{}, fmt.Errorf("collect tokens: %w", err)
 	}
 
 	if len(p.items) == 1 && p.items[0].typ == itemEOF {
-		return SimpleMessage{}, nil
+		return AST{}, nil
 	}
 
-	return p.parseMessage(), nil
+	return AST{Message: p.parseMessage()}, nil
 }
 
 // ------------------------------Message------------------------------

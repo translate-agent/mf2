@@ -327,7 +327,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			actual, err := Parse(tt.input)
 			require.NoError(t, err)
 
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, tt.expected, actual.Message)
 		})
 	}
 }
@@ -673,7 +673,7 @@ func TestParseComplexMessage(t *testing.T) {
 			actual, err := Parse(tt.input)
 			require.NoError(t, err)
 
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, tt.expected, actual.Message)
 		})
 	}
 }
