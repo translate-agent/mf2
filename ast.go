@@ -521,7 +521,7 @@ type CatchAllKey struct {
 	VariantKey
 }
 
-func (ck CatchAllKey) String() string  { return catchAllKey }
+func (ck CatchAllKey) String() string  { return catchAllSymbol }
 func (ck CatchAllKey) Validate() error { return nil }
 
 // ---------------------------------ComplexBody--------------------------------------
@@ -666,7 +666,7 @@ func (v Variant) Validate() error {
 
 const (
 	variablePrefix = '$'
-	catchAllKey    = "*"
+	catchAllSymbol = "*"
 	match          = "." + keywordMatch
 	local          = "." + keywordLocal
 )
