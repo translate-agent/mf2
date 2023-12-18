@@ -202,7 +202,7 @@ func (p *parser) parseVariableExpression() VariableExpression {
 		//nolint:exhaustive
 		switch itm.typ {
 		case itemVariable:
-			variable = Variable(itm.val[1:])
+			variable = Variable(itm.val[1:]) // omit "$" prefix //TODO: Lexer should not capture variable prefix
 			// TODO: error handling: this case should happen exactly once
 		case itemFunction, itemPrivate, itemReserved:
 			// Variable expression with annotation.
@@ -288,7 +288,7 @@ func (p *parser) parseLocalDeclaration() LocalDeclaration {
 		//nolint:exhaustive
 		switch itm.typ {
 		case itemVariable:
-			variable = Variable(itm.val[1:])
+			variable = Variable(itm.val[1:]) // omit "$" prefix //TODO: Lexer should not capture variable prefix
 			// TODO: error handling: this case should happen exactly once
 		case itemExpressionOpen:
 			return LocalDeclaration{Variable: variable, Expression: p.parseExpression()}
@@ -342,13 +342,13 @@ func (p *parser) parseOption() Option { //nolint:ireturn
 			identifier = p.parseIdentifier()
 
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
-			option := LiteralOption{Literal: p.parseLiteral(), Identifier: identifier}
+			return LiteralOption{Literal: p.parseLiteral(), Identifier: identifier}
 
-			return option
 		case itemVariable:
-			option := VariableOption{Variable: Variable(p.current().val[1:]), Identifier: identifier}
-
-			return option
+			return VariableOption{
+				Variable:   Variable(p.current().val[1:]), // omit "$" prefix //TODO: Lexer should not capture variable prefix
+				Identifier: identifier,
+			}
 		}
 	}
 
