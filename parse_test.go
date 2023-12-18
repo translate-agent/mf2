@@ -10,9 +10,10 @@ func TestParseSimpleMessage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name     string
-		expected Message
-		input    string
+		name        string
+		expected    Message
+		input       string
+		convertBack bool // if true, convert the expected message back to string and compare with input.
 	}{
 		{
 			name:  "text only",
@@ -22,6 +23,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("Hello, World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "text only with escaped chars",
@@ -31,10 +33,11 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("Hello, {World!}"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "variable expression in the middle",
-			input: "Hello, { $variable }  World!",
+			input: "Hello, { $variable } World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					TextPattern("Hello, "),
@@ -43,9 +46,10 @@ func TestParseSimpleMessage(t *testing.T) {
 							Variable: Variable("variable"),
 						},
 					},
-					TextPattern("  World!"),
+					TextPattern(" World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "variable expression at the start",
@@ -60,6 +64,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" Hello, World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "variable expression at the end",
@@ -74,6 +79,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					},
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "variable expression with annotation",
@@ -98,10 +104,11 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("  World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "variable expression with annotation and options",
-			input: "Hello, { $variable :function option1 = -3.14 ns:option2=|value2| option3=$variable2 } World!",
+			input: "Hello, { $variable :function option1 = -3.14 ns:option2 = |value2| option3 = $variable2 } World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					TextPattern("Hello, "),
@@ -145,6 +152,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "quoted literal expression",
@@ -160,6 +168,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("  World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "unquoted number literal expression",
@@ -175,6 +184,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("  World!"),
 				},
 			},
+			convertBack: false, // will fail as 1e3 will be converted to 1000
 		},
 		{
 			name:  "unquoted name literal expression",
@@ -190,6 +200,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "quoted name literal expression with annotation",
@@ -214,10 +225,11 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "quoted name literal expression with annotation and options",
-			input: "Hello, { |name| :function ns1:option1 = -1 ns2:option2=1 option3=|value3| } World!",
+			input: "Hello, { |name| :function ns1:option1 = -1 ns2:option2 = 1 option3 = |value3| } World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					TextPattern("Hello, "),
@@ -261,6 +273,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "annotation expression",
@@ -284,10 +297,11 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "annotation expression with options and namespace",
-			input: "Hello { :namespace:function namespace:option999=999 } World!",
+			input: "Hello { :namespace:function namespace:option999 = 999 } World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					TextPattern("Hello "),
@@ -316,6 +330,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
+			convertBack: true,
 		},
 	}
 
@@ -328,6 +343,10 @@ func TestParseSimpleMessage(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, tt.expected, actual.Message)
+
+			if tt.convertBack {
+				require.Equal(t, tt.input, actual.String())
+			}
 		})
 	}
 }
@@ -336,9 +355,10 @@ func TestParseComplexMessage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name     string
-		expected Message
-		input    string
+		name        string
+		expected    Message
+		input       string
+		convertBack bool // if true, convert the expected message back to string and compare with input.
 	}{
 		{
 			name:  "no declarations",
@@ -357,6 +377,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name:  "local declaration simple text",
@@ -376,6 +397,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
+			convertBack: false, // will fail, as input is one line, but output will be multiline
 		},
 		{
 			name:  "local declaration and expressions",
@@ -403,13 +425,11 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
+			convertBack: false, // will fail, as input is one line, but output will be multiline
 		},
 		{
-			name: "multiple local declaration",
-			input: "" +
-				".local $var = { :ns1:function opt1=1 opt2=|val2| }" +
-				".local $var={2}" +
-				"{{Hello { $var :ns2:function2 } world}}",
+			name:  "multiple local declaration one line",
+			input: ".local $var = { :ns1:function opt1 = 1 opt2 = |val2| } .local $var = { 2 } {{Hello { $var :ns2:function2 } world}}", //nolint:lll
 			expected: ComplexMessage{
 				Declarations: []Declaration{
 					LocalDeclaration{
@@ -465,6 +485,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
+			convertBack: false, // will fail, as input is one line, but output will be multiline
 		},
 		// Matcher
 		{
@@ -508,11 +529,12 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
+			convertBack: false, // will fail, as input is one line, but output will be multiline
 		},
 		{
 			name: "simple matcher with newline variants",
 			input: `.match { $variable :number }
-1 {{Hello { $variable} world}}
+1 {{Hello { $variable } world}}
 * {{Hello { $variable } worlds}}`,
 			expected: ComplexMessage{
 				Declarations: nil,
@@ -552,6 +574,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
+			convertBack: true,
 		},
 		{
 			name: "simple matcher with newline variants in one line",
@@ -596,16 +619,16 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
+			convertBack: false, // will fail, as input chaotically formatted
 		},
 		{
 			name: "matcher with declarations",
-			input: "" +
-				".local $var1 = { male }" +
-				".local $var2 = { |female| }" +
-				".match { :gender }" +
-				"male {{Hello sir!}}" +
-				"|female| {{Hello madam!}}" +
-				"* {{Hello { $var1 } or { $var2 }!}}",
+			input: `.local $var1 = { male }
+.local $var2 = { |female| }
+.match { :gender }
+male {{Hello sir!}}
+|female| {{Hello madam!}}
+* {{Hello { $var1 } or { $var2 }!}}`,
 			expected: ComplexMessage{
 				Declarations: []Declaration{
 					LocalDeclaration{
@@ -662,6 +685,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
+			convertBack: true,
 		},
 	}
 
@@ -674,6 +698,10 @@ func TestParseComplexMessage(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, tt.expected, actual.Message)
+
+			if tt.convertBack {
+				require.Equal(t, tt.input, actual.String())
+			}
 		})
 	}
 }
