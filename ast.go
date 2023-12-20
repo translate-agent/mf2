@@ -408,11 +408,11 @@ const (
 // ---------------------------------Helpers---------------------------------
 
 // sliceToString converts a slice of Nodes to a string, separated by sep.
-func sliceToString[T Node](slice []T, sep string) string {
-	stringSlice := make([]string, len(slice))
-	for i, node := range slice {
-		stringSlice[i] = fmt.Sprint(node)
+func sliceToString[T Node](s []T, sep string) string {
+	nodeStrings := make([]string, len(s))
+	for i, node := range s {
+		nodeStrings[i] = fmt.Sprint(node)
 	}
 
-	return strings.Join(stringSlice, sep)
+	return strings.Join(nodeStrings, sep)
 }
