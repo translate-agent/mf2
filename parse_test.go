@@ -690,7 +690,7 @@ male {{Hello sir!}}
 		{
 			name: "double matcher",
 			//nolint:dupword
-			input: `.match {$var1} {$var2}
+			input: `.match { $var1 } { $var2 }
 yes yes {{Hello beautiful world!}}
 yes no {{Hello beautiful!}}
 no yes {{Hello world!}}
@@ -742,6 +742,7 @@ no no {{Hello!}}`,
 					},
 				},
 			},
+			convertBack: true,
 		},
 	}
 

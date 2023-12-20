@@ -393,7 +393,9 @@ type Variant struct {
 	QuotedPattern QuotedPattern
 }
 
-func (v Variant) String() string { return fmt.Sprintf("%s %s", v.Key, v.QuotedPattern) }
+func (v Variant) String() string {
+	return fmt.Sprintf("%s %s", sliceToString(v.Keys, " "), v.QuotedPattern)
+}
 
 // ---------------------------------Constants---------------------------------
 
