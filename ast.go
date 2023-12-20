@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// AST is the abstract syntax tree of a MessageFormat 2.0 specification.
+// AST is the abstract syntax tree of a MessageFormat 2.0 message.
 type AST struct {
 	Message Message
 }
@@ -25,7 +25,7 @@ Example:
 		},
 	}
 
-	fmt.Println(ast) // Hello, { $variable } World!
+	fmt.Print(ast) // Hello, { $variable } World!
 */
 func (a AST) String() string { return fmt.Sprint(a.Message) }
 
