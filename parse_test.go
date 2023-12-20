@@ -1,6 +1,7 @@
 package mf2
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		},
 		{
 			name:  "variable expression in the middle",
-			input: "Hello, { $variable }  World!",
+			input: "Hello, { $variable } World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					TextPattern("Hello, "),
@@ -43,7 +44,7 @@ func TestParseSimpleMessage(t *testing.T) {
 							Variable: Variable("variable"),
 						},
 					},
-					TextPattern("  World!"),
+					TextPattern(" World!"),
 				},
 			},
 		},
@@ -101,7 +102,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		},
 		{
 			name:  "variable expression with annotation and options",
-			input: "Hello, { $variable :function option1 = -3.14 ns:option2=|value2| option3=$variable2 } World!",
+			input: "Hello, { $variable :function option1 = -3.14 ns:option2 = |value2| option3 = $variable2 } World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					TextPattern("Hello, "),
@@ -162,7 +163,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			},
 		},
 		{
-			name:  "unquoted number literal expression",
+			name:  "unquoted scientific notation number literal expression",
 			input: "Hello, { 1e3 }  World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
@@ -217,7 +218,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		},
 		{
 			name:  "quoted name literal expression with annotation and options",
-			input: "Hello, { |name| :function ns1:option1 = -1 ns2:option2=1 option3=|value3| } World!",
+			input: "Hello, { |name| :function ns1:option1 = -1 ns2:option2 = 1 option3 = |value3| } World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					TextPattern("Hello, "),
@@ -287,7 +288,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		},
 		{
 			name:  "annotation expression with options and namespace",
-			input: "Hello { :namespace:function namespace:option999=999 } World!",
+			input: "Hello { :namespace:function namespace:option999 = 999 } World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					TextPattern("Hello "),
@@ -327,7 +328,22 @@ func TestParseSimpleMessage(t *testing.T) {
 			actual, err := Parse(tt.input)
 			require.NoError(t, err)
 
-			require.Equal(t, tt.expected, actual)
+			// Check that AST message is equal to expected one.
+			require.Equal(t, tt.expected, actual.Message)
+
+			// Check that AST message converted back to string is equal to input.
+
+			// Edge case: scientific notation number is converted to normal notation, hence comparison is bound to fail.
+			// I.E. input string has 1e3, output string has 1000.
+			if tt.name == "unquoted scientific notation number literal expression" {
+				return
+			}
+
+			// If strings already match, we're done.
+			// Otherwise check both sanitized strings.
+			if actualStr := actual.String(); actualStr != tt.input {
+				requireEqualMF2String(t, tt.input, actualStr)
+			}
 		})
 	}
 }
@@ -405,11 +421,8 @@ func TestParseComplexMessage(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple local declaration",
-			input: "" +
-				".local $var = { :ns1:function opt1=1 opt2=|val2| }" +
-				".local $var={2}" +
-				"{{Hello { $var :ns2:function2 } world}}",
+			name:  "multiple local declaration one line",
+			input: ".local $var = { :ns1:function opt1 = 1 opt2 = |val2| } .local $var = { 2 } {{Hello { $var :ns2:function2 } world}}", //nolint:lll
 			expected: ComplexMessage{
 				Declarations: []Declaration{
 					LocalDeclaration{
@@ -512,7 +525,7 @@ func TestParseComplexMessage(t *testing.T) {
 		{
 			name: "simple matcher with newline variants",
 			input: `.match { $variable :number }
-1 {{Hello { $variable} world}}
+1 {{Hello { $variable } world}}
 * {{Hello { $variable } worlds}}`,
 			expected: ComplexMessage{
 				Declarations: nil,
@@ -599,13 +612,12 @@ func TestParseComplexMessage(t *testing.T) {
 		},
 		{
 			name: "matcher with declarations",
-			input: "" +
-				".local $var1 = { male }" +
-				".local $var2 = { |female| }" +
-				".match { :gender }" +
-				"male {{Hello sir!}}" +
-				"|female| {{Hello madam!}}" +
-				"* {{Hello { $var1 } or { $var2 }!}}",
+			input: `.local $var1 = { male }
+.local $var2 = { |female| }
+.match { :gender }
+male {{Hello sir!}}
+|female| {{Hello madam!}}
+* {{Hello { $var1 } or { $var2 }!}}`,
 			expected: ComplexMessage{
 				Declarations: []Declaration{
 					LocalDeclaration{
@@ -666,7 +678,7 @@ func TestParseComplexMessage(t *testing.T) {
 		{
 			name: "double matcher",
 			//nolint:dupword
-			input: `.match {$var1} {$var2}
+			input: `.match { $var1 } { $var2 }
 yes yes {{Hello beautiful world!}}
 yes no {{Hello beautiful!}}
 no yes {{Hello world!}}
@@ -729,7 +741,31 @@ no no {{Hello!}}`,
 			actual, err := Parse(tt.input)
 			require.NoError(t, err)
 
-			require.Equal(t, tt.expected, actual)
+			// Check that AST message is equal to expected one.
+			require.Equal(t, tt.expected, actual.Message)
+
+			// Check that AST message converted back to string is equal to input.
+
+			// If strings already match, we're done.
+			// Otherwise check both sanitized strings.
+			if actualStr := actual.String(); actualStr != tt.input {
+				requireEqualMF2String(t, tt.input, actualStr)
+			}
 		})
 	}
+}
+
+// helpers
+
+// requireEqualMF2String compares two strings, but ignores whitespace, tabs, and newlines.
+func requireEqualMF2String(t *testing.T, expected, actual string) {
+	t.Helper()
+
+	r := strings.NewReplacer(
+		"\n", "",
+		"\t", "",
+		" ", "",
+	)
+
+	require.Equal(t, r.Replace(expected), r.Replace(actual))
 }

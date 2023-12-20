@@ -54,16 +54,18 @@ Examples:
 
 	mf2.Parse("Hello World!")
 	// result
-	SimpleMessage{Patterns: []Pattern{TextPattern("Hello World!")}}
+	AST{Message: SimpleMessage{Patterns: []Pattern{TextPattern("Hello World!")}}}
 
 	// -----------------------------------------------------------
 
 	mf2.Parse("Hello {name}!")
 	// result
-	SimpleMessage{
-		Patterns: []Pattern{
-			TextPattern("Hello "),
-			PlaceholderPattern{Expression: VariableExpression{Variable: "name"}},
+	AST{
+		Message: SimpleMessage{
+			Patterns: []Pattern{
+				TextPattern("Hello "),
+				PlaceholderPattern{Expression: VariableExpression{Variable: "name"}},
+			},
 		},
 	}
 
@@ -71,39 +73,39 @@ Examples:
 
 	mf2.Parse(".match {$count} 1 {{Hello world}} * {{Hello worlds}}")
 	// result
-	ComplexMessage{
-		ComplexBody: Matcher{
-			MatchStatements: []Expression{
-				VariableExpression{Variable: "count"},
-			},
-			Variants: []Variant{
-				{
-					Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}},
-					QuotedPattern: QuotedPattern{
-						Patterns: []Pattern{TextPattern("Hello world")},
+	AST{
+		Message: ComplexMessage{
+			ComplexBody: Matcher{
+				MatchStatements: []Expression{VariableExpression{Variable: "count"}},
+				Variants: []Variant{
+					{
+						Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}},
+						QuotedPattern: QuotedPattern{
+							Patterns: []Pattern{TextPattern("Hello world")},
+						},
 					},
-				},
-				{
-					Key: WildcardKey{},
-					QuotedPattern: QuotedPattern{
-						Patterns: []Pattern{TextPattern("Hello worlds")},
+					{
+						Key: WildcardKey{},
+						QuotedPattern: QuotedPattern{
+							Patterns: []Pattern{TextPattern("Hello worlds")},
+						},
 					},
 				},
 			},
 		},
 	}
 */
-func Parse(input string) (AST, error) { //nolint:ireturn
+func Parse(input string) (AST, error) {
 	p := &parser{lexer: lex(input)}
 	if err := p.collect(); err != nil {
-		return nil, fmt.Errorf("collect tokens: %w", err)
+		return AST{}, fmt.Errorf("collect tokens: %w", err)
 	}
 
 	if len(p.items) == 1 && p.items[0].typ == itemEOF {
-		return SimpleMessage{}, nil
+		return AST{}, nil
 	}
 
-	return p.parseMessage(), nil
+	return AST{Message: p.parseMessage()}, nil
 }
 
 // ------------------------------Message------------------------------
