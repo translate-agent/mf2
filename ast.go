@@ -14,9 +14,31 @@ type AST struct {
 // String returns the string representation of the AST, i.e. MF2 formatted message.
 func (a AST) String() string { return fmt.Sprint(a.Message) }
 
-// Validate returns an error if the AST is invalid according to the MessageFormat 2.0 specification.
-// For example, when matcher has no selectors or variants.
-// Or variable is zero value, i.e $.
+/*
+Validate returns an error if the AST is invalid according to the MessageFormat 2.0 specification.
+For example, when matcher has no selectors or variants.
+Or variable is zero value, i.e $.
+
+If one of the nodes is invalid, the error will contain path to the node which failed validation, and
+the string representation of the node.
+
+Example:
+
+	// Hello, { $ } World! // MF2 formatted message
+	ast := AST{
+		Message: SimpleMessage{
+			Patterns: []Pattern{
+				TextPattern("Hello, "),
+				PlaceholderPattern{
+					Expression: VariableExpression{Variable: Variable("")},
+				},
+				TextPattern(" World!"),
+			},
+		},
+	},
+
+	err := ast.Validate() // err: ast.message.patterns.placeholderPattern.expression.variable: name is empty '{ $ }'
+*/
 func (a AST) Validate() error {
 	if a.Message == nil {
 		return errors.New("ast: message is required")
