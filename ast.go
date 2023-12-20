@@ -389,7 +389,7 @@ func (f Function) String() string { return fmt.Sprintf("%c%s", f.Prefix, f.Ident
 type Variant struct {
 	Node
 
-	Key           VariantKey // At least one: LiteralKey or WildcardKey
+	Keys          []VariantKey // At least one: LiteralKey or WildcardKey
 	QuotedPattern QuotedPattern
 }
 
