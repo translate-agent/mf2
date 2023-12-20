@@ -10,7 +10,23 @@ type AST struct {
 	Message Message
 }
 
-// String returns the string representation of the AST, i.e. MF2 formatted message.
+/*
+String returns the string representation of the AST, i.e. MF2 formatted message.
+
+Example:
+
+	ast := AST{
+		Message: SimpleMessage{
+			Patterns: []Pattern{
+				TextPattern("Hello, "),
+				PlaceholderPattern{Expression: VariableExpression{Variable: Variable("variable")}},
+				TextPattern(" World!"),
+			},
+		},
+	}
+
+	fmt.Println(ast) // Hello, { $variable } World!
+*/
 func (a AST) String() string { return fmt.Sprint(a.Message) }
 
 // --------------------------------Interfaces----------------------------------
