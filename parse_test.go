@@ -486,7 +486,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}},
+							Keys: []VariantKey{LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -496,7 +496,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: CatchAllKey{},
+							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -530,7 +530,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}},
+							Keys: []VariantKey{LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -540,7 +540,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: CatchAllKey{},
+							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -574,7 +574,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}},
+							Keys: []VariantKey{LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -584,7 +584,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: CatchAllKey{},
+							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -632,7 +632,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Key: LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("male")}},
+							Keys: []VariantKey{LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("male")}}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello sir!"),
@@ -640,7 +640,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: LiteralKey{Literal: QuotedLiteral("female")},
+							Keys: []VariantKey{LiteralKey{Literal: QuotedLiteral("female")}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello madam!"),
@@ -648,7 +648,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						{
-							Key: CatchAllKey{},
+							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
 								Patterns: []Pattern{
 									TextPattern("Hello "),
@@ -657,6 +657,62 @@ func TestParseComplexMessage(t *testing.T) {
 									PlaceholderPattern{Expression: VariableExpression{Variable: Variable("var2")}},
 									TextPattern("!"),
 								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "double matcher",
+			//nolint:dupword
+			input: `.match {$var1} {$var2}
+yes yes {{Hello beautiful world!}}
+yes no {{Hello beautiful!}}
+no yes {{Hello world!}}
+no no {{Hello!}}`,
+			expected: ComplexMessage{
+				Declarations: nil,
+				ComplexBody: Matcher{
+					MatchStatements: []Expression{
+						VariableExpression{Variable: Variable("var1")},
+						VariableExpression{Variable: Variable("var2")},
+					},
+					Variants: []Variant{
+						{
+							Keys: []VariantKey{
+								LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("yes")}},
+								LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("yes")}},
+							},
+							QuotedPattern: QuotedPattern{
+								Patterns: []Pattern{TextPattern("Hello beautiful world!")},
+							},
+						},
+						{
+							Keys: []VariantKey{
+								LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("yes")}},
+								LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("no")}},
+							},
+							QuotedPattern: QuotedPattern{
+								Patterns: []Pattern{TextPattern("Hello beautiful!")},
+							},
+						},
+						{
+							Keys: []VariantKey{
+								LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("no")}},
+								LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("yes")}},
+							},
+							QuotedPattern: QuotedPattern{
+								Patterns: []Pattern{TextPattern("Hello world!")},
+							},
+						},
+						{
+							Keys: []VariantKey{
+								LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("no")}},
+								LiteralKey{Literal: UnquotedLiteral{Value: NameLiteral("no")}},
+							},
+							QuotedPattern: QuotedPattern{
+								Patterns: []Pattern{TextPattern("Hello!")},
 							},
 						},
 					},
