@@ -1,6 +1,7 @@
 package mf2
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,10 +11,9 @@ func TestParseSimpleMessage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		expected    Message
-		input       string
-		convertBack bool // if true, convert the expected message back to string and compare with input.
+		name     string
+		expected Message
+		input    string
 	}{
 		{
 			name:  "text only",
@@ -23,7 +23,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("Hello, World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "text only with escaped chars",
@@ -33,7 +32,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("Hello, {World!}"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "variable expression in the middle",
@@ -49,7 +47,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "variable expression at the start",
@@ -64,7 +61,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" Hello, World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "variable expression at the end",
@@ -79,7 +75,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					},
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "variable expression with annotation",
@@ -104,7 +99,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("  World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "variable expression with annotation and options",
@@ -152,7 +146,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "quoted literal expression",
@@ -168,10 +161,9 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("  World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
-			name:  "unquoted number literal expression",
+			name:  "unquoted scientific notation number literal expression",
 			input: "Hello, { 1e3 }  World!",
 			expected: SimpleMessage{
 				Patterns: []Pattern{
@@ -184,7 +176,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern("  World!"),
 				},
 			},
-			convertBack: false, // will fail as 1e3 will be converted to 1000
 		},
 		{
 			name:  "unquoted name literal expression",
@@ -200,7 +191,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "quoted name literal expression with annotation",
@@ -225,7 +215,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "quoted name literal expression with annotation and options",
@@ -273,7 +262,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "annotation expression",
@@ -297,7 +285,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "annotation expression with options and namespace",
@@ -330,7 +317,6 @@ func TestParseSimpleMessage(t *testing.T) {
 					TextPattern(" World!"),
 				},
 			},
-			convertBack: true,
 		},
 	}
 
@@ -342,10 +328,21 @@ func TestParseSimpleMessage(t *testing.T) {
 			actual, err := Parse(tt.input)
 			require.NoError(t, err)
 
+			// Check that AST message is equal to expected one.
 			require.Equal(t, tt.expected, actual.Message)
 
-			if tt.convertBack {
-				require.Equal(t, tt.input, actual.String())
+			// Check that AST message converted back to string is equal to input.
+
+			// Edge case: scientific notation number is converted to normal notation, hence comparison is bound to fail.
+			// I.E. input string has 1e3, output string has 1000.
+			if tt.name == "unquoted scientific notation number literal expression" {
+				return
+			}
+
+			// If strings already match, we're done.
+			// Otherwise check both sanitized strings.
+			if actualStr := actual.String(); actualStr != tt.input {
+				requireEqualMF2String(t, tt.input, actualStr)
 			}
 		})
 	}
@@ -355,10 +352,9 @@ func TestParseComplexMessage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		expected    Message
-		input       string
-		convertBack bool // if true, convert the expected message back to string and compare with input.
+		name     string
+		expected Message
+		input    string
 	}{
 		{
 			name:  "no declarations",
@@ -377,7 +373,6 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name:  "local declaration simple text",
@@ -397,7 +392,6 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
-			convertBack: false, // will fail, as input is one line, but output will be multiline
 		},
 		{
 			name:  "local declaration and expressions",
@@ -425,7 +419,6 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
-			convertBack: false, // will fail, as input is one line, but output will be multiline
 		},
 		{
 			name:  "multiple local declaration one line",
@@ -485,7 +478,6 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
-			convertBack: false, // will fail, as input is one line, but output will be multiline
 		},
 		// Matcher
 		{
@@ -529,7 +521,6 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
-			convertBack: false, // will fail, as input is one line, but output will be multiline
 		},
 		{
 			name: "simple matcher with newline variants",
@@ -574,7 +565,6 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name: "simple matcher with newline variants in one line",
@@ -619,7 +609,6 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 				},
 			},
-			convertBack: false, // will fail, as input chaotically formatted
 		},
 		{
 			name: "matcher with declarations",
@@ -685,7 +674,6 @@ male {{Hello sir!}}
 					},
 				},
 			},
-			convertBack: true,
 		},
 		{
 			name: "double matcher",
@@ -742,7 +730,6 @@ no no {{Hello!}}`,
 					},
 				},
 			},
-			convertBack: true,
 		},
 	}
 
@@ -754,11 +741,31 @@ no no {{Hello!}}`,
 			actual, err := Parse(tt.input)
 			require.NoError(t, err)
 
+			// Check that AST message is equal to expected one.
 			require.Equal(t, tt.expected, actual.Message)
 
-			if tt.convertBack {
-				require.Equal(t, tt.input, actual.String())
+			// Check that AST message converted back to string is equal to input.
+
+			// If strings already match, we're done.
+			// Otherwise check both sanitized strings.
+			if actualStr := actual.String(); actualStr != tt.input {
+				requireEqualMF2String(t, tt.input, actualStr)
 			}
 		})
 	}
+}
+
+// helpers
+
+// requireEqualMF2String compares two strings, but ignores whitespace, tabs, and newlines.
+func requireEqualMF2String(t *testing.T, expected, actual string) {
+	t.Helper()
+
+	r := strings.NewReplacer(
+		"\n", "",
+		"\t", "",
+		" ", "",
+	)
+
+	require.Equal(t, r.Replace(expected), r.Replace(actual))
 }
