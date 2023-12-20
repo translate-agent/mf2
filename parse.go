@@ -319,7 +319,7 @@ func (p *parser) parseMatcher() Matcher {
 			matcher.MatchStatements = append(matcher.MatchStatements, p.parseExpression())
 		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			matcher.Variants = append(matcher.Variants, Variant{
-				Key: p.parseVariantKey(),
+				Keys: p.parseVariantKeys(),
 				QuotedPattern: QuotedPattern{
 					Patterns: p.parsePatterns(),
 				},
@@ -330,12 +330,21 @@ func (p *parser) parseMatcher() Matcher {
 	return matcher
 }
 
-func (p *parser) parseVariantKey() VariantKey { //nolint:ireturn
-	if p.current().typ == itemCatchAllKey {
-		return CatchAllKey{}
+func (p *parser) parseVariantKeys() []VariantKey {
+	var keys []VariantKey
+
+	for itm := p.current(); itm.typ != itemQuotedPatternOpen; itm = p.next() {
+		// TODO: Error handling: unexpected token
+		//nolint:exhaustive
+		switch itm.typ {
+		case itemCatchAllKey:
+			keys = append(keys, CatchAllKey{})
+		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
+			keys = append(keys, LiteralKey{Literal: p.parseLiteral()})
+		}
 	}
 
-	return LiteralKey{Literal: p.parseLiteral()}
+	return keys
 }
 
 func (p *parser) parseOption() Option { //nolint:ireturn

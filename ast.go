@@ -6,12 +6,28 @@ import (
 	"strings"
 )
 
-// AST is the abstract syntax tree of a MessageFormat 2.0 specification.
+// AST is the abstract syntax tree of a MessageFormat 2.0 message.
 type AST struct {
 	Message Message
 }
 
-// String returns the string representation of the AST, i.e. MF2 formatted message.
+/*
+String returns the string representation of the AST, i.e. MF2 formatted message.
+
+Example:
+
+	ast := AST{
+		Message: SimpleMessage{
+			Patterns: []Pattern{
+				TextPattern("Hello, "),
+				PlaceholderPattern{Expression: VariableExpression{Variable: Variable("variable")}},
+				TextPattern(" World!"),
+			},
+		},
+	}
+
+	fmt.Print(ast) // Hello, { $variable } World!
+*/
 func (a AST) String() string { return fmt.Sprint(a.Message) }
 
 /*
@@ -472,7 +488,7 @@ type InputDeclaration struct {
 	Expression VariableExpression
 }
 
-func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", keywordInput, id.Expression) }
+func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, id.Expression) }
 func (id InputDeclaration) Validate() error {
 	if err := id.Expression.Validate(); err != nil {
 		return fmt.Errorf("inputDeclaration.%w", err)
@@ -662,18 +678,20 @@ func (f Function) Validate() error {
 type Variant struct {
 	Node
 
-	Key           VariantKey // LiteralKey or WildcardKey
+	Keys          []VariantKey // At least one: LiteralKey or WildcardKey
 	QuotedPattern QuotedPattern
 }
 
-func (v Variant) String() string { return fmt.Sprintf("%s %s", v.Key, v.QuotedPattern) }
+func (v Variant) String() string {
+	return fmt.Sprintf("%s %s", sliceToString(v.Keys, " "), v.QuotedPattern)
+}
 
 func (v Variant) Validate() error {
-	if v.Key == nil {
-		return errors.New("variant: key is required")
+	if len(v.Keys) == 0 {
+		return errors.New("variant: at least one key is required")
 	}
 
-	if err := v.Key.Validate(); err != nil {
+	if err := validateSlice(v.Keys); err != nil {
 		return fmt.Errorf("variant.%w", err)
 	}
 
@@ -691,18 +709,19 @@ const (
 	catchAllSymbol = "*"
 	match          = "." + keywordMatch
 	local          = "." + keywordLocal
+	input          = "." + keywordInput
 )
 
 // ---------------------------------Helpers---------------------------------
 
 // sliceToString converts a slice of Nodes to a string, separated by sep.
-func sliceToString[T Node](slice []T, sep string) string {
-	stringSlice := make([]string, len(slice))
-	for i, node := range slice {
-		stringSlice[i] = fmt.Sprint(node)
+func sliceToString[T Node](s []T, sep string) string {
+	nodeStrings := make([]string, len(s))
+	for i, node := range s {
+		nodeStrings[i] = fmt.Sprint(node)
 	}
 
-	return strings.Join(stringSlice, sep)
+	return strings.Join(nodeStrings, sep)
 }
 
 // isZeroValue returns true if v is the zero value of its type.
