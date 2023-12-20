@@ -275,7 +275,7 @@ type InputDeclaration struct {
 	Expression VariableExpression
 }
 
-func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", keywordInput, id.Expression) }
+func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, id.Expression) }
 
 type LocalDeclaration struct {
 	Declaration
@@ -386,6 +386,7 @@ const (
 	catchAllSymbol = "*"
 	match          = "." + keywordMatch
 	local          = "." + keywordLocal
+	input          = "." + keywordInput
 )
 
 // ---------------------------------Helpers---------------------------------
