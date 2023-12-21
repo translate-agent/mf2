@@ -389,7 +389,7 @@ func lexName(l *lexer) stateFn {
 			l.backup()
 
 			return l.emitItem(mk(typ, s))
-		case i > 0 && isName(r):
+		case len(s) > 0 && isName(r):
 			s += string(r)
 		case r == eof:
 			return l.emitItem(mk(typ, s))
