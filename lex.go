@@ -282,13 +282,13 @@ func lexComplexMessage(l *lexer) stateFn {
 				return lexName(l)
 			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
-				return l.emitItem(mk(itemLocalKeyword, "."+keywordLocal))
+				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
 			case strings.HasPrefix(l.input[l.pos:], keywordInput):
 				l.pos += len(keywordInput)
-				return l.emitItem(mk(itemInputKeyword, "."+keywordInput))
+				return l.emitItem(mk(itemInputKeyword, keywordInput))
 			case strings.HasPrefix(l.input[l.pos:], keywordMatch):
 				l.pos += len(keywordMatch)
-				return l.emitItem(mk(itemMatchKeyword, "."+keywordMatch))
+				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
 			}
 		case r == '$':
 			l.backup()
