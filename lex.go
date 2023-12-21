@@ -608,12 +608,12 @@ func isQuoted(r rune) bool {
 
 // isWhitespace returns true if r is whitespace character.
 //
-// s = 1*( SP / HTAB / CR / LF ).
+// s = 1*( SP / HTAB / CR / LF / %x3000 ).
 func isWhitespace(r rune) bool {
 	switch r {
 	default:
 		return false
-	case ' ', '\t', '\r', '\n':
+	case ' ', '\t', '\r', '\n', '\u3000':
 		return true
 	}
 }
@@ -632,20 +632,22 @@ func isReservedStart(r rune) bool {
 //
 // ABNF:
 //
-//	reserved-char = %x00-08        ; omit HTAB and LF
-//	              / %x0B-0C        ; omit CR
-//	              / %x0E-19        ; omit SP
-//	              / %x21-5B        ; omit \
-//	              / %x5D-7A        ; omit { | }
-//	              / %x7E-D7FF      ; omit surrogates
-//	              / %xE000-10FFFF
+//	reserved-char  = %x00-08        ; omit HTAB and LF
+//	               / %x0B-0C        ; omit CR
+//	               / %x0E-19        ; omit SP
+//	               / %x21-5B        ; omit \
+//	               / %x5D-7A        ; omit { | }
+//	               / %x7E-2FFF      ; omit IDEOGRAPHIC SPACE
+//	               / %x3001-D7FF    ; omit surrogates
+//	               / %xE000-10FFFF
 func isReserved(r rune) bool {
 	return 0x00 <= r && r <= 0x08 || // omit HTAB and LF
 		0x0B <= r && r <= 0x0C || // omit CR
 		0x0E <= r && r <= 0x19 || // omit SP
 		0x21 <= r && r <= 0x5B || // omit \
 		0x5D <= r && r <= 0x7A || // omit { | }
-		0x7E <= r && r <= 0xD7FF || // omit surrogates
+		0x7E <= r && r <= 0x2FFF || // omit IDEOGRAPHIC SPACE
+		0x3001 <= r && r <= 0xD7FF || // omit surrogates
 		0xE000 <= r && r <= 0x10FFFF
 }
 
