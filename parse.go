@@ -667,7 +667,7 @@ func (p *parser) parseOption() (Option, error) { //nolint:ireturn
 			err := UnexpectedTokenError{
 				Expected: []itemType{
 					itemWhitespace, itemOperator, itemOption, itemVariable,
-					itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral, itemVariable,
+					itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
 				},
 				Actual: itm.typ,
 			}
