@@ -327,7 +327,7 @@ func (p *parser) parseVariableExpression() (VariableExpression, error) {
 			}
 
 			foundVariable = true
-			variable = Variable(itm.val[1:]) // omit "$" prefix //TODO: Lexer should not capture variable prefix
+			variable = Variable(itm.val)
 		case itemFunction, itemPrivate, itemReserved:
 			// Variable expression with annotation.
 			annotation, err := p.parseAnnotation()
@@ -500,7 +500,7 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 			}
 
 			foundVariable = true
-			variable = Variable(itm.val[1:]) // omit "$" prefix //TODO: Lexer should not capture variable prefix
+			variable = Variable(itm.val)
 		case itemExpressionOpen:
 			p.next() // skip opening brace
 
@@ -638,7 +638,7 @@ func (p *parser) parseOption() (Option, error) { //nolint:ireturn
 
 		case itemVariable:
 			return VariableOption{
-				Variable:   Variable(p.current().val[1:]), // omit "$" prefix //TODO: Lexer should not capture variable prefix
+				Variable:   Variable(itm.val),
 				Identifier: identifier,
 			}, nil
 			// bad tokens

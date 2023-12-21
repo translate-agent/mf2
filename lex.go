@@ -383,25 +383,21 @@ func lexName(l *lexer) stateFn {
 
 	typ := itemUnquotedLiteral
 
-	for {
-		r := l.next()
-
+	for i, r := 0, l.next(); ; i, r = i+1, l.next() {
 		switch {
 		default:
 			l.backup()
 
 			return l.emitItem(mk(typ, s))
-		case len(s) > 0 && isName(r):
+		case i > 0 && isName(r):
 			s += string(r)
 		case r == eof:
 			return l.emitItem(mk(typ, s))
-		case len(s) == 0 && isNameStart(r):
+		case i == 0 && isNameStart(r):
 			s = string(r)
-		case len(s) == 0 && r == '$':
-			s = string(r)
+		case i == 0 && r == '$':
 			typ = itemVariable
-		case len(s) == 0 && r == '.':
-			s = string(r)
+		case i == 0 && r == '.':
 			typ = itemReservedKeyword
 		}
 	}
