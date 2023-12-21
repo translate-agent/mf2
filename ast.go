@@ -310,7 +310,7 @@ type ReservedStatement struct {
 	// TODO: Implementation
 }
 
-func (ReservedStatement) String() string { return "TODO" }
+func (ReservedStatement) String() string { return ".RESERVED NOT IMPLEMENTED { TODO }" } // TODO: Implement
 
 // --------------------------------VariantKey----------------------------------
 
