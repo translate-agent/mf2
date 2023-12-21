@@ -253,7 +253,7 @@ type PrivateUseAnnotation struct {
 	// TODO: Implementation
 }
 
-func (PrivateUseAnnotation) String() string { return "^ PRIVATE USE ANNOTATION NOT IMPLEMENTED" } // TODO: Implement
+func (PrivateUseAnnotation) String() string { return "^ PRIVATE_USE_ANNOTATION_NOT_IMPLEMENTED" } // TODO: Implement
 
 type ReservedAnnotation struct {
 	Annotation
@@ -261,7 +261,7 @@ type ReservedAnnotation struct {
 	// TODO: Implementation
 }
 
-func (ReservedAnnotation) String() string { return "! RESERVED ANNOTATION NOT IMPLEMENTED" } // TODO: Implement
+func (ReservedAnnotation) String() string { return "! RESERVED_ANNOTATION_NOT_IMPLEMENTED" } // TODO: Implement
 
 // ---------------------------------Option-------------------------------------
 
@@ -310,7 +310,7 @@ type ReservedStatement struct {
 	// TODO: Implementation
 }
 
-func (ReservedStatement) String() string { return ".RESERVED NOT IMPLEMENTED { TODO }" } // TODO: Implement
+func (ReservedStatement) String() string { return ".RESERVED STATEMENT_NOT_IMPLEMENTED { TODO }" } // TODO: Implement
 
 // --------------------------------VariantKey----------------------------------
 
