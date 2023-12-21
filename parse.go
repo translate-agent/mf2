@@ -105,7 +105,12 @@ func Parse(input string) (AST, error) {
 		return AST{}, nil
 	}
 
-	return AST{Message: p.parseMessage()}, nil
+	ast := AST{Message: p.parseMessage()}
+	if err := ast.Validate(); err != nil {
+		return AST{}, fmt.Errorf("validate AST: %w", err)
+	}
+
+	return ast, nil
 }
 
 // ------------------------------Message------------------------------
@@ -402,6 +407,7 @@ func (p *parser) parseIdentifier() Identifier {
 	)
 
 	//nolint:gomnd
+	// TODO: error handling: case unexpected length
 	switch len(full) {
 	// no namespace
 	case 1:
