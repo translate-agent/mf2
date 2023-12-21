@@ -253,7 +253,7 @@ type PrivateUseAnnotation struct {
 	// TODO: Implementation
 }
 
-func (PrivateUseAnnotation) String() string { return "TODO" }
+func (PrivateUseAnnotation) String() string { return "^ PRIVATE USE ANNOTATION NOT IMPLEMENTED" } // TODO: Implement
 
 type ReservedAnnotation struct {
 	Annotation
@@ -261,7 +261,7 @@ type ReservedAnnotation struct {
 	// TODO: Implementation
 }
 
-func (ReservedAnnotation) String() string { return "TODO" }
+func (ReservedAnnotation) String() string { return "! RESERVED ANNOTATION NOT IMPLEMENTED" } // TODO: Implement
 
 // ---------------------------------Option-------------------------------------
 
