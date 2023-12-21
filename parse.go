@@ -14,9 +14,8 @@ type parser struct {
 }
 
 func (p *parser) next() item {
-	if p.pos >= len(p.items) {
-		// todo: error or check elsewhere
-		return item{}
+	if p.pos == len(p.items)-1 {
+		return mk(itemError, "no more tokens")
 	}
 
 	p.pos++
@@ -103,288 +102,610 @@ func Parse(input string) (AST, error) { //nolint:ireturn
 		return SimpleMessage{}, nil
 	}
 
-	return p.parseMessage(), nil
+	message, err := p.parseMessage()
+	if err != nil {
+		return nil, fmt.Errorf("parse message: %w", err)
+	}
+
+	return message, err
 }
 
 // ------------------------------Message------------------------------
 
 // parseMessage determines message type and then parses it accordingly.
-// TODO: parse error handling.
-func (p *parser) parseMessage() Message { //nolint:ireturn
+func (p *parser) parseMessage() (Message, error) { //nolint:ireturn
 	if typ := p.items[0].typ; typ == itemKeyword || typ == itemQuotedPatternOpen {
-		return p.parseComplexMessage()
+		message, err := p.parseComplexMessage()
+		if err != nil {
+			return nil, fmt.Errorf("parse complex message: %w", err)
+		}
+
+		return message, nil
 	}
 
-	return p.parseSimpleMessage()
+	message, err := p.parseSimpleMessage()
+	if err != nil {
+		return nil, fmt.Errorf("parse simple message: %w", err)
+	}
+
+	return message, nil
 }
 
-func (p *parser) parseSimpleMessage() SimpleMessage {
-	return SimpleMessage{Patterns: p.parsePatterns()}
+func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
+	patterns, err := p.parsePatterns()
+	if err != nil {
+		return SimpleMessage{}, fmt.Errorf("parse patterns: %w", err)
+	}
+
+	return SimpleMessage{Patterns: patterns}, nil
 }
 
-func (p *parser) parseComplexMessage() ComplexMessage {
+func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 	var declarations []Declaration
 
 	for itm := p.current(); p.current().typ != itemEOF; itm = p.next() {
-		// TODO: Error handling: case unexpected token
-		//nolint:exhaustive
 		switch itm.typ {
+		case itemError:
+			return ComplexMessage{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
 		case itemKeyword:
 			switch itm.val {
 			// TODO: case ReservedKeyword:
-			case "." + keywordInput:
-				// TODO: implementation
-			case "." + keywordLocal:
-				declarations = append(declarations, p.parseLocalDeclaration())
-			case "." + keywordMatch:
-				// Declarations + Matcher
-				return ComplexMessage{Declarations: declarations, ComplexBody: p.parseMatcher()}
+			case "." + keywordInput: // Input declaration
+				p.next() // skip keyword
+
+				declaration, err := p.parseInputDeclaration()
+				if err != nil {
+					return ComplexMessage{}, fmt.Errorf("parse input declaration: %w", err)
+				}
+
+				declarations = append(declarations, declaration)
+
+			case "." + keywordLocal: // Local declaration
+				p.next() // skip keyword
+
+				declaration, err := p.parseLocalDeclaration()
+				if err != nil {
+					return ComplexMessage{}, fmt.Errorf("parse local declaration: %w", err)
+				}
+
+				declarations = append(declarations, declaration)
+			case "." + keywordMatch: // Zero or more Declarations + Matcher
+				p.next() // skip keyword
+
+				matcher, err := p.parseMatcher()
+				if err != nil {
+					return ComplexMessage{}, fmt.Errorf("parse matcher: %w", err)
+				}
+
+				return ComplexMessage{Declarations: declarations, ComplexBody: matcher}, nil
 			}
 
-		case itemQuotedPatternOpen:
-			// Declarations + QuotedPattern
-			return ComplexMessage{Declarations: declarations, ComplexBody: QuotedPattern{Patterns: p.parsePatterns()}}
+		case itemQuotedPatternOpen: // Zero or more Declarations + QuotedPattern
+			p.next() // skip opening quote
+
+			patterns, err := p.parsePatterns()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse patterns: %w", err)
+			}
+
+			return ComplexMessage{Declarations: declarations, ComplexBody: QuotedPattern{Patterns: patterns}}, nil
+		// bad tokens
+		case itemEOF, itemVariable, itemFunction, itemExpressionOpen,
+			itemExpressionClose, itemQuotedPatternClose, itemText, itemCatchAllKey,
+			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
+			itemOption, itemReserved, itemOperator, itemPrivate:
+			err := UnexpectedTokenError{
+				Expected: []itemType{itemWhitespace, itemKeyword, itemQuotedPatternOpen},
+				Actual:   itm.typ,
+			}
+
+			return ComplexMessage{}, err
 		}
 	}
 
-	// TODO: error: No complex body found.
-	return ComplexMessage{}
+	return ComplexMessage{}, errors.New("no complex body found")
 }
 
 // ------------------------------Pattern------------------------------
 
 // parsePatterns parses a slice of patterns.
-func (p *parser) parsePatterns() []Pattern {
+func (p *parser) parsePatterns() ([]Pattern, error) {
 	var pattern []Pattern
 
 	// Loop until the end, or closing pattern quote, if parsing complex message.
 	for itm := p.current(); itm.typ != itemEOF && itm.typ != itemQuotedPatternClose; itm = p.next() {
-		// TODO: Error handling: case unexpected token
-		//nolint:exhaustive
 		switch itm.typ {
+		case itemError:
+			return nil, fmt.Errorf("got error token: '%s'", itm.val)
 		case itemText:
 			pattern = append(pattern, TextPattern(itm.val))
 		case itemExpressionOpen:
-			pattern = append(pattern, PlaceholderPattern{Expression: p.parseExpression()})
+			p.next() // skip opening brace
+
+			expression, err := p.parseExpression()
+			if err != nil {
+				return nil, fmt.Errorf("parse expression: %w", err)
+			}
+
+			pattern = append(pattern, PlaceholderPattern{Expression: expression})
+		// bad tokens
+		case itemEOF, itemVariable, itemFunction,
+			itemExpressionClose, itemQuotedPatternOpen, itemQuotedPatternClose,
+			itemKeyword, itemCatchAllKey,
+			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
+			itemOption, itemWhitespace, itemReserved,
+			itemOperator, itemPrivate:
+			return nil, UnexpectedTokenError{Expected: []itemType{itemText, itemExpressionOpen}, Actual: itm.typ}
 		}
 	}
 
-	return pattern
+	return pattern, nil
 }
 
 // ------------------------------Expression------------------------------
 
 // parseExpression determines expression type and then parses it accordingly.
-func (p *parser) parseExpression() Expression { //nolint:ireturn
-	// Move to the significant token. I.e, variable, literal or function.
+func (p *parser) parseExpression() (Expression, error) { //nolint:ireturn
 	for itm := p.current(); p.current().typ != itemExpressionClose; itm = p.next() {
-		// TODO: Error handling: case unexpected token
-		//nolint:exhaustive
 		switch itm.typ {
-		case itemVariable:
-			return p.parseVariableExpression()
-		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
-			return p.parseLiteralExpression()
-		case itemFunction:
-			return AnnotationExpression{Annotation: p.parseAnnotation()}
+		case itemError:
+			return nil, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
+		case itemVariable: // Variable expression
+			expression, err := p.parseVariableExpression()
+			if err != nil {
+				return nil, fmt.Errorf("parse variable expression: %w", err)
+			}
+
+			return expression, nil
+		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral: // Literal expression
+			expression, err := p.parseLiteralExpression()
+			if err != nil {
+				return nil, fmt.Errorf("parse literal expression: %w", err)
+			}
+
+			return expression, nil
+		case itemFunction: // Annotation expression
+			annotation, err := p.parseAnnotation()
+			if err != nil {
+				return nil, fmt.Errorf("parse annotation expression: %w", err)
+			}
+
+			return AnnotationExpression{Annotation: annotation}, nil
+		// bad tokens
+		case itemEOF, itemExpressionOpen, itemExpressionClose,
+			itemQuotedPatternOpen, itemQuotedPatternClose,
+			itemText, itemKeyword, itemCatchAllKey,
+			itemOption, itemReserved,
+			itemOperator, itemPrivate:
+			err := UnexpectedTokenError{
+				Expected: []itemType{
+					itemWhitespace, itemVariable, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral, itemFunction,
+				},
+				Actual: itm.typ,
+			}
+
+			return nil, err
 		}
 	}
 
-	// TODO: error. Reason: no expression start found.
-	return nil
+	return nil, errors.New("no expression start found")
 }
 
-func (p *parser) parseVariableExpression() VariableExpression {
-	var variable Variable
+func (p *parser) parseVariableExpression() (VariableExpression, error) {
+	var (
+		variable      Variable
+		foundVariable bool // flag to check if variable is already found
+	)
 
 	for itm := p.current(); p.current().typ != itemExpressionClose; itm = p.next() {
-		// TODO: Error handling: case unexpected token
-		//nolint:exhaustive
 		switch itm.typ {
+		case itemError:
+			return VariableExpression{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
 		case itemVariable:
+			if foundVariable {
+				return VariableExpression{}, errors.New("expression contains more than one variable")
+			}
+
+			foundVariable = true
 			variable = Variable(itm.val[1:]) // omit "$" prefix //TODO: Lexer should not capture variable prefix
-			// TODO: error handling: this case should happen exactly once
 		case itemFunction, itemPrivate, itemReserved:
 			// Variable expression with annotation.
-			return VariableExpression{Variable: variable, Annotation: p.parseAnnotation()}
+			annotation, err := p.parseAnnotation()
+			if err != nil {
+				return VariableExpression{}, fmt.Errorf("parse annotation: %w", err)
+			}
+
+			return VariableExpression{Variable: variable, Annotation: annotation}, nil
+		// bad tokens
+		case itemEOF, itemExpressionOpen, itemExpressionClose,
+			itemQuotedPatternOpen, itemQuotedPatternClose,
+			itemText, itemKeyword, itemCatchAllKey,
+			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
+			itemOption, itemOperator:
+			err := UnexpectedTokenError{
+				Expected: []itemType{itemWhitespace, itemVariable, itemFunction, itemPrivate, itemReserved},
+				Actual:   itm.typ,
+			}
+
+			return VariableExpression{}, err
 		}
 	}
 
 	// Variable expression without annotation.
-	return VariableExpression{Variable: variable}
+	return VariableExpression{Variable: variable}, nil
 }
 
-func (p *parser) parseLiteralExpression() LiteralExpression {
-	var literal Literal
+func (p *parser) parseLiteralExpression() (LiteralExpression, error) {
+	var (
+		literal      Literal
+		foundLiteral bool // flag to check if literal is already found
+	)
 
 	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
-		// TODO: Error handling: case unexpected token
-		//nolint:exhaustive
 		switch itm.typ {
+		case itemError:
+			return LiteralExpression{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
-			literal = p.parseLiteral()
-			// TODO: error handling: this case should happen exactly once
+			if foundLiteral {
+				return LiteralExpression{}, errors.New("expression contains more than one literal")
+			}
+
+			foundLiteral = true
+
+			var err error
+
+			literal, err = p.parseLiteral()
+			if err != nil {
+				return LiteralExpression{}, fmt.Errorf("parse literal: %w", err)
+			}
 		case itemFunction:
 			// Literal expression with annotation.
-			return LiteralExpression{Literal: literal, Annotation: p.parseAnnotation()}
+			annotation, err := p.parseAnnotation()
+			if err != nil {
+				return LiteralExpression{}, fmt.Errorf("parse annotation: %w", err)
+			}
+
+			return LiteralExpression{Literal: literal, Annotation: annotation}, nil
+		// bad tokens
+		case itemEOF, itemVariable,
+			itemExpressionOpen, itemExpressionClose,
+			itemQuotedPatternOpen, itemQuotedPatternClose,
+			itemText, itemKeyword, itemCatchAllKey,
+			itemOption, itemReserved,
+			itemOperator, itemPrivate:
+			err := UnexpectedTokenError{
+				Expected: []itemType{itemWhitespace, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral, itemFunction},
+				Actual:   itm.typ,
+			}
+
+			return LiteralExpression{}, err
 		}
 	}
 
 	// Literal expression without annotation.
-	return LiteralExpression{Literal: literal}
+	return LiteralExpression{Literal: literal}, nil
 }
 
 // ------------------------------Annotation------------------------------
 
 // parseAnnotation determines annotation type and then parses it accordingly.
-func (p *parser) parseAnnotation() Annotation { //nolint:ireturn
-	//nolint:exhaustive
+func (p *parser) parseAnnotation() (Annotation, error) { //nolint:ireturn
 	switch p.current().typ {
-	default:
-		// TODO: error. Reason: unexpected token
-		return nil
 	case itemFunction:
-		return p.parseFunctionAnnotation()
+		annotation, err := p.parseFunctionAnnotation()
+		if err != nil {
+			return nil, fmt.Errorf("parse function annotation: %w", err)
+		}
+
+		return annotation, nil
 	case itemPrivate:
-		return p.parsePrivateUseAnnotation()
+		annotation, err := p.parsePrivateUseAnnotation()
+		if err != nil {
+			return nil, fmt.Errorf("parse private use annotation: %w", err)
+		}
+
+		return annotation, nil
 	case itemReserved:
-		return p.parseReservedAnnotation()
+		annotation, err := p.parseReservedAnnotation()
+		if err != nil {
+			return nil, fmt.Errorf("parse reserved annotation: %w", err)
+		}
+
+		return annotation, nil
+		// bad tokens
+	case itemError, itemEOF, itemVariable,
+		itemExpressionOpen, itemExpressionClose,
+		itemQuotedPatternOpen, itemQuotedPatternClose,
+		itemText, itemKeyword, itemCatchAllKey,
+		itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
+		itemOption, itemWhitespace, itemOperator:
+		err := UnexpectedTokenError{
+			Expected: []itemType{itemFunction, itemPrivate, itemReserved},
+			Actual:   p.current().typ,
+		}
+
+		return nil, err
 	}
+
+	return nil, fmt.Errorf("unknown token: %s", p.current().typ)
 }
 
-func (p *parser) parseFunctionAnnotation() FunctionAnnotation {
+func (p *parser) parseFunctionAnnotation() (FunctionAnnotation, error) {
 	var annotation FunctionAnnotation
 
 	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
-		//nolint:exhaustive
 		switch itm.typ {
+		case itemError:
+			return FunctionAnnotation{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
 		case itemFunction:
 			annotation.Function = p.parseFunction()
 		case itemOption:
-			annotation.Options = append(annotation.Options, p.parseOption())
+			// Function with options
+			option, err := p.parseOption()
+			if err != nil {
+				return FunctionAnnotation{}, fmt.Errorf("parse option: %w", err)
+			}
+
+			annotation.Options = append(annotation.Options, option)
+		// bad tokens
+		case itemEOF, itemVariable,
+			itemExpressionOpen, itemExpressionClose,
+			itemQuotedPatternOpen, itemQuotedPatternClose,
+			itemText, itemKeyword, itemCatchAllKey,
+			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
+			itemReserved, itemOperator, itemPrivate:
+			err := UnexpectedTokenError{
+				Expected: []itemType{itemWhitespace, itemFunction, itemOption},
+				Actual:   itm.typ,
+			}
+
+			return FunctionAnnotation{}, err
 		}
 	}
 
-	return annotation
+	// Function without options
+	return annotation, nil
 }
 
-func (p *parser) parsePrivateUseAnnotation() PrivateUseAnnotation {
+func (p *parser) parsePrivateUseAnnotation() (PrivateUseAnnotation, error) {
 	// TODO: implement
-	return PrivateUseAnnotation{}
+	return PrivateUseAnnotation{}, errors.New("not implemented")
 }
 
-func (p *parser) parseReservedAnnotation() ReservedAnnotation {
+func (p *parser) parseReservedAnnotation() (ReservedAnnotation, error) {
 	// TODO: implement
-	return ReservedAnnotation{}
+	return ReservedAnnotation{}, errors.New("not implemented")
 }
 
 // ------------------------------Declaration------------------------------
 
-func (p *parser) parseLocalDeclaration() LocalDeclaration {
-	var variable Variable
+func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
+	var (
+		variable      Variable
+		foundVariable bool // flag to check if variable is already found
+	)
 
 	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
-		// TODO: Error handling: case unexpected token
-		//nolint:exhaustive
 		switch itm.typ {
+		case itemError:
+			return LocalDeclaration{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace, itemOperator:
+			continue
 		case itemVariable:
+			if foundVariable {
+				return LocalDeclaration{}, errors.New("local declaration contains more than one variable")
+			}
+
+			foundVariable = true
 			variable = Variable(itm.val[1:]) // omit "$" prefix //TODO: Lexer should not capture variable prefix
-			// TODO: error handling: this case should happen exactly once
 		case itemExpressionOpen:
-			return LocalDeclaration{Variable: variable, Expression: p.parseExpression()}
+			p.next() // skip opening brace
+
+			expression, err := p.parseExpression()
+			if err != nil {
+				return LocalDeclaration{}, fmt.Errorf("parse expression: %w", err)
+			}
+
+			return LocalDeclaration{Variable: variable, Expression: expression}, nil
+		// bad tokens
+		case itemEOF, itemFunction,
+			itemExpressionClose, itemQuotedPatternOpen, itemQuotedPatternClose,
+			itemText, itemKeyword, itemCatchAllKey,
+			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
+			itemOption, itemReserved, itemPrivate:
+			err := UnexpectedTokenError{
+				Expected: []itemType{itemWhitespace, itemOperator, itemVariable, itemExpressionOpen},
+				Actual:   itm.typ,
+			}
+
+			return LocalDeclaration{}, err
 		}
 	}
 
-	// TODO: error. Reason: no expression found.
-	return LocalDeclaration{}
+	return LocalDeclaration{}, errors.New("no expression found start")
+}
+
+func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
+	// TODO: implement
+	return InputDeclaration{}, errors.New("not implemented")
 }
 
 // ---------------------------------------------------------------------
 
-func (p *parser) parseMatcher() Matcher {
+func (p *parser) parseMatcher() (Matcher, error) {
 	var matcher Matcher
 
 	for itm := p.current(); itm.typ != itemEOF; itm = p.next() {
-		// TODO: Error handling: unexpected token
-		//nolint:exhaustive
 		switch itm.typ {
+		case itemError:
+			return Matcher{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
 		case itemExpressionOpen:
-			matcher.MatchStatements = append(matcher.MatchStatements, p.parseExpression())
+			p.next() // skip opening brace
+
+			expression, err := p.parseExpression()
+			if err != nil {
+				return Matcher{}, fmt.Errorf("parse expression: %w", err)
+			}
+
+			matcher.MatchStatements = append(matcher.MatchStatements, expression)
 		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
-			matcher.Variants = append(matcher.Variants, Variant{
-				Keys: p.parseVariantKeys(),
-				QuotedPattern: QuotedPattern{
-					Patterns: p.parsePatterns(),
+			keys, err := p.parseVariantKeys()
+			if err != nil {
+				return Matcher{}, fmt.Errorf("parse variant keys: %w", err)
+			}
+
+			p.next() // skip opening quoted pattern
+
+			patterns, err := p.parsePatterns()
+			if err != nil {
+				return Matcher{}, fmt.Errorf("parse patterns: %w", err)
+			}
+
+			matcher.Variants = append(matcher.Variants, Variant{Keys: keys, QuotedPattern: QuotedPattern{Patterns: patterns}})
+		// bad tokens
+		case itemEOF, itemVariable, itemFunction,
+			itemExpressionClose, itemQuotedPatternOpen, itemQuotedPatternClose,
+			itemText, itemKeyword,
+			itemOption, itemReserved,
+			itemOperator, itemPrivate:
+			err := UnexpectedTokenError{
+				Expected: []itemType{
+					itemWhitespace, itemExpressionOpen, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
 				},
-			})
+				Actual: itm.typ,
+			}
+
+			return Matcher{}, err
 		}
 	}
 
-	return matcher
+	return matcher, nil
 }
 
-func (p *parser) parseVariantKeys() []VariantKey {
+func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 	var keys []VariantKey
 
 	for itm := p.current(); itm.typ != itemQuotedPatternOpen; itm = p.next() {
-		// TODO: Error handling: unexpected token
-		//nolint:exhaustive
 		switch itm.typ {
+		case itemError:
+			return nil, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
 		case itemCatchAllKey:
 			keys = append(keys, CatchAllKey{})
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
-			keys = append(keys, LiteralKey{Literal: p.parseLiteral()})
+			literal, err := p.parseLiteral()
+			if err != nil {
+				return nil, fmt.Errorf("parse literal: %w", err)
+			}
+
+			keys = append(keys, LiteralKey{Literal: literal})
+		// bad tokens
+		case itemEOF, itemVariable, itemFunction,
+			itemExpressionOpen, itemExpressionClose,
+			itemQuotedPatternOpen, itemQuotedPatternClose,
+			itemText, itemKeyword,
+			itemOption, itemReserved,
+			itemOperator, itemPrivate:
+			err := UnexpectedTokenError{
+				Expected: []itemType{itemWhitespace, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral},
+				Actual:   itm.typ,
+			}
+
+			return nil, err
 		}
 	}
 
-	return keys
+	return keys, nil
 }
 
-func (p *parser) parseOption() Option { //nolint:ireturn
+func (p *parser) parseOption() (Option, error) { //nolint:ireturn
 	var identifier Identifier
 
 	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
-		// TODO: Error handling: unexpected token
-		//nolint:exhaustive
 		switch itm.typ {
+		case itemError:
+			return nil, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace, itemOperator:
+			continue
 		case itemOption:
 			identifier = p.parseIdentifier()
 
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
-			return LiteralOption{Literal: p.parseLiteral(), Identifier: identifier}
+			literal, err := p.parseLiteral()
+			if err != nil {
+				return nil, fmt.Errorf("parse literal: %w", err)
+			}
+
+			return LiteralOption{Literal: literal, Identifier: identifier}, nil
 
 		case itemVariable:
 			return VariableOption{
 				Variable:   Variable(p.current().val[1:]), // omit "$" prefix //TODO: Lexer should not capture variable prefix
 				Identifier: identifier,
+			}, nil
+		// bad tokens
+		case itemEOF, itemFunction,
+			itemExpressionOpen, itemExpressionClose,
+			itemQuotedPatternOpen, itemQuotedPatternClose,
+			itemText, itemKeyword, itemCatchAllKey,
+			itemReserved, itemPrivate:
+			err := UnexpectedTokenError{
+				Expected: []itemType{
+					itemWhitespace, itemOperator, itemOption, itemVariable,
+					itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral, itemVariable,
+				},
+				Actual: itm.typ,
 			}
+
+			return nil, err
 		}
 	}
 
-	// todo: error. Reason: value is missing for option
-	return nil
+	return nil, errors.New("no option value found")
 }
 
-func (p *parser) parseLiteral() Literal { //nolint:ireturn
-	// TODO: Error handling: unexpected token
-	//nolint:exhaustive
+func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
 	switch itm := p.current(); itm.typ {
 	case itemNumberLiteral:
 		var num float64
 		if err := json.Unmarshal([]byte(itm.val), &num); err != nil {
-			// TODO: Return error instead of panic
-			panic(err)
+			return nil, fmt.Errorf("parse number literal: %w", err)
 		}
 
-		return UnquotedLiteral{Value: NumberLiteral(num)}
+		return UnquotedLiteral{Value: NumberLiteral(num)}, nil
 	case itemQuotedLiteral:
-		return QuotedLiteral(p.current().val)
+		return QuotedLiteral(p.current().val), nil
 	case itemUnquotedLiteral:
-		return UnquotedLiteral{Value: NameLiteral(p.current().val)}
+		return UnquotedLiteral{Value: NameLiteral(p.current().val)}, nil
+	// bad tokens
+	case itemError, itemEOF, itemVariable, itemFunction,
+		itemExpressionOpen, itemExpressionClose,
+		itemQuotedPatternOpen, itemQuotedPatternClose,
+		itemText, itemKeyword, itemCatchAllKey,
+		itemOption, itemWhitespace, itemReserved,
+		itemOperator, itemPrivate:
+		err := UnexpectedTokenError{
+			Expected: []itemType{itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral},
+			Actual:   itm.typ,
+		}
+
+		return nil, err
 	}
 
-	// TODO: error. Reason: unexpected token
-	return nil
+	return nil, fmt.Errorf("unknown token: %s", p.current().typ)
 }
 
 func (p *parser) parseFunction() Function {
@@ -415,4 +736,22 @@ func (p *parser) parseIdentifier() Identifier {
 	}
 
 	return Identifier{Namespace: ns, Name: name}
+}
+
+type UnexpectedTokenError struct {
+	Expected []itemType
+	Actual   itemType
+}
+
+func (u UnexpectedTokenError) Error() string {
+	if len(u.Expected) == 0 {
+		return fmt.Sprintf("expected no tokens, got '%s'", u.Actual)
+	}
+
+	r := u.Expected[0].String()
+	for _, typ := range u.Expected[1:] {
+		r += ", " + typ.String()
+	}
+
+	return fmt.Sprintf("unexpected token: expected one of [%s], got '%s'", r, u.Actual)
 }
