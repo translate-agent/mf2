@@ -411,10 +411,14 @@ const (
 
 // sliceToString converts a slice of Nodes to a string, separated by sep.
 func sliceToString[T Node](s []T, sep string) string {
-	nodeStrings := make([]string, len(s))
-	for i, node := range s {
-		nodeStrings[i] = fmt.Sprint(node)
+	if len(s) == 0 {
+		return ""
 	}
 
-	return strings.Join(nodeStrings, sep)
+	r := s[0].String()
+	for _, v := range s[1:] {
+		r += sep + v.String()
+	}
+
+	return r
 }
