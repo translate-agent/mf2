@@ -740,6 +740,8 @@ func (p *parser) parseIdentifier() Identifier {
 	return Identifier{Namespace: ns, Name: name}
 }
 
+// UnexpectedTokenError is returned when parser encounters unexpected token.
+// It contains information about expected token types and actual token type.
 type UnexpectedTokenError struct {
 	Expected []itemType
 	Actual   itemType
