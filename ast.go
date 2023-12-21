@@ -672,6 +672,8 @@ func (f Function) Validate() error {
 		return fmt.Errorf("function: invalid prefix: %q", f.Prefix)
 	}
 
+	// TODO: If prefix is '+' (opening function), then there also must be a function with prefix '-' (closing function)
+
 	return nil
 }
 

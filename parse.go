@@ -407,7 +407,6 @@ func (p *parser) parseIdentifier() Identifier {
 	)
 
 	//nolint:gomnd
-	// TODO: error handling: case unexpected length
 	switch len(full) {
 	// no namespace
 	case 1:
