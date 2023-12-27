@@ -45,6 +45,17 @@ func (p *parser) collect() error {
 	return errors.New("too many tokens. infinite loop ?")
 }
 
+// isComplexMessage returns true if first token is one of the complex message tokens.
+func (p *parser) isComplexMessage() bool {
+	//nolint:exhaustive
+	switch p.items[0].typ {
+	case itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen:
+		return true
+	}
+
+	return false
+}
+
 /*
 Parse parses the input string and returns an AST tree of MessageFormat2.
 Empty input string returns a SimpleMessage with no patterns.
@@ -165,7 +176,7 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 
 			declarations = append(declarations, declaration)
 
-		case itemMatchKeyword: // Matcher
+		case itemMatchKeyword: // Zero or more Declarations + Matcher
 			p.next() // skip keyword
 
 			matcher, err := p.parseMatcher()
@@ -806,18 +817,7 @@ func (p *parser) parseIdentifier() Identifier {
 	return Identifier{Namespace: ns, Name: name}
 }
 
-// ------------------------------Helpers------------------------------
-
-// isComplexMessage returns true if first token is one of the complex message tokens.
-func (p *parser) isComplexMessage() bool {
-	//nolint:exhaustive
-	switch p.items[0].typ {
-	case itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen:
-		return true
-	}
-
-	return false
-}
+// ------------------------------------------------------------
 
 // UnexpectedTokenError is returned when parser encounters unexpected token.
 // It contains information about expected token types and actual token type.
