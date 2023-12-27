@@ -23,7 +23,10 @@ const (
 	itemQuotedPatternOpen
 	itemQuotedPatternClose
 	itemText
-	itemKeyword
+	itemInputKeyword
+	itemLocalKeyword
+	itemMatchKeyword
+	itemReservedKeyword
 	itemCatchAllKey
 	itemNumberLiteral
 	itemQuotedLiteral
@@ -54,8 +57,14 @@ func (t itemType) String() string {
 		return "function"
 	case itemText:
 		return "text"
-	case itemKeyword:
-		return "keyword"
+	case itemInputKeyword:
+		return "input keyword"
+	case itemLocalKeyword:
+		return "local keyword"
+	case itemMatchKeyword:
+		return "match keyword"
+	case itemReservedKeyword:
+		return "reserved keyword"
 	case itemNumberLiteral:
 		return "number literal"
 	case itemOperator:
@@ -273,13 +282,13 @@ func lexComplexMessage(l *lexer) stateFn {
 				return lexName(l)
 			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
-				return l.emitItem(mk(itemKeyword, "."+keywordLocal))
+				return l.emitItem(mk(itemLocalKeyword, "."+keywordLocal))
 			case strings.HasPrefix(l.input[l.pos:], keywordInput):
 				l.pos += len(keywordInput)
-				return l.emitItem(mk(itemKeyword, "."+keywordInput))
+				return l.emitItem(mk(itemInputKeyword, "."+keywordInput))
 			case strings.HasPrefix(l.input[l.pos:], keywordMatch):
 				l.pos += len(keywordMatch)
-				return l.emitItem(mk(itemKeyword, "."+keywordMatch))
+				return l.emitItem(mk(itemMatchKeyword, "."+keywordMatch))
 			}
 		case r == '$':
 			l.backup()
@@ -393,7 +402,7 @@ func lexName(l *lexer) stateFn {
 			typ = itemVariable
 		case len(s) == 0 && r == '.':
 			s = string(r)
-			typ = itemKeyword
+			typ = itemReservedKeyword
 		}
 	}
 }

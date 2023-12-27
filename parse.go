@@ -121,7 +121,7 @@ func Parse(input string) (AST, error) {
 
 // parseMessage parses message by its type.
 func (p *parser) parseMessage() (Message, error) { //nolint:ireturn
-	if typ := p.items[0].typ; typ == itemKeyword || typ == itemQuotedPatternOpen {
+	if p.isComplexMessage() {
 		message, err := p.parseComplexMessage()
 		if err != nil {
 			return nil, fmt.Errorf("parse complex message: %w", err)
@@ -156,38 +156,24 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 			return ComplexMessage{}, fmt.Errorf("got error token: '%s'", itm.val)
 		case itemWhitespace:
 			continue
-		case itemKeyword:
-			switch itm.val {
-			// TODO: case ReservedKeyword:
-			case "." + keywordInput: // Input declaration
-				p.next() // skip keyword
 
-				declaration, err := p.parseInputDeclaration()
-				if err != nil {
-					return ComplexMessage{}, fmt.Errorf("parse input declaration: %w", err)
-				}
-
-				declarations = append(declarations, declaration)
-
-			case "." + keywordLocal: // Local declaration
-				p.next() // skip keyword
-
-				declaration, err := p.parseLocalDeclaration()
-				if err != nil {
-					return ComplexMessage{}, fmt.Errorf("parse local declaration: %w", err)
-				}
-
-				declarations = append(declarations, declaration)
-			case "." + keywordMatch: // Zero or more Declarations + Matcher
-				p.next() // skip keyword
-
-				matcher, err := p.parseMatcher()
-				if err != nil {
-					return ComplexMessage{}, fmt.Errorf("parse matcher: %w", err)
-				}
-
-				return ComplexMessage{Declarations: declarations, ComplexBody: matcher}, nil
+		case itemInputKeyword, itemLocalKeyword, itemReservedKeyword: // Declarations
+			declaration, err := p.parseDeclaration()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse declaration: %w", err)
 			}
+
+			declarations = append(declarations, declaration)
+
+		case itemMatchKeyword: // Matcher
+			p.next() // skip keyword
+
+			matcher, err := p.parseMatcher()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse matcher: %w", err)
+			}
+
+			return ComplexMessage{Declarations: declarations, ComplexBody: matcher}, nil
 
 		case itemQuotedPatternOpen: // Zero or more Declarations + QuotedPattern
 			p.next() // skip opening quote
@@ -204,8 +190,11 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
 			itemOption, itemReserved, itemOperator, itemPrivate:
 			err := UnexpectedTokenError{
-				Expected: []itemType{itemWhitespace, itemKeyword, itemQuotedPatternOpen},
-				Actual:   itm.typ,
+				Expected: []itemType{
+					itemWhitespace, itemInputKeyword, itemLocalKeyword,
+					itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen,
+				},
+				Actual: itm.typ,
 			}
 
 			return ComplexMessage{}, err
@@ -239,8 +228,10 @@ func (p *parser) parsePatterns() ([]Pattern, error) {
 			pattern = append(pattern, PlaceholderPattern{Expression: expression})
 		// bad tokens
 		case itemEOF, itemVariable, itemFunction,
-			itemExpressionClose, itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemKeyword, itemCatchAllKey,
+			itemExpressionClose, itemQuotedPatternOpen,
+			itemQuotedPatternClose, itemCatchAllKey,
+			itemInputKeyword, itemLocalKeyword,
+			itemMatchKeyword, itemReservedKeyword,
 			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
 			itemOption, itemWhitespace, itemReserved,
 			itemOperator, itemPrivate:
@@ -285,7 +276,9 @@ func (p *parser) parseExpression() (Expression, error) { //nolint:ireturn
 		// bad tokens
 		case itemEOF, itemExpressionOpen, itemExpressionClose,
 			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
+			itemText, itemCatchAllKey,
+			itemInputKeyword, itemLocalKeyword,
+			itemMatchKeyword, itemReservedKeyword,
 			itemOption, itemReserved,
 			itemOperator, itemPrivate:
 			err := UnexpectedTokenError{
@@ -332,7 +325,9 @@ func (p *parser) parseVariableExpression() (VariableExpression, error) {
 		// bad tokens
 		case itemEOF, itemExpressionOpen, itemExpressionClose,
 			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
+			itemText, itemCatchAllKey,
+			itemInputKeyword, itemLocalKeyword,
+			itemMatchKeyword, itemReservedKeyword,
 			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
 			itemOption, itemOperator:
 			err := UnexpectedTokenError{
@@ -385,7 +380,9 @@ func (p *parser) parseLiteralExpression() (LiteralExpression, error) {
 		case itemEOF, itemVariable,
 			itemExpressionOpen, itemExpressionClose,
 			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
+			itemText, itemCatchAllKey,
+			itemInputKeyword, itemLocalKeyword,
+			itemMatchKeyword, itemReservedKeyword,
 			itemOption, itemReserved,
 			itemOperator, itemPrivate:
 			err := UnexpectedTokenError{
@@ -431,7 +428,9 @@ func (p *parser) parseAnnotation() (Annotation, error) { //nolint:ireturn
 	case itemError, itemEOF, itemVariable,
 		itemExpressionOpen, itemExpressionClose,
 		itemQuotedPatternOpen, itemQuotedPatternClose,
-		itemText, itemKeyword, itemCatchAllKey,
+		itemText, itemCatchAllKey,
+		itemInputKeyword, itemLocalKeyword,
+		itemMatchKeyword, itemReservedKeyword,
 		itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
 		itemOption, itemWhitespace, itemOperator:
 		err := UnexpectedTokenError{
@@ -468,7 +467,9 @@ func (p *parser) parseFunctionAnnotation() (FunctionAnnotation, error) {
 		case itemEOF, itemVariable,
 			itemExpressionOpen, itemExpressionClose,
 			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
+			itemText, itemCatchAllKey,
+			itemInputKeyword, itemLocalKeyword,
+			itemMatchKeyword, itemReservedKeyword,
 			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
 			itemReserved, itemOperator, itemPrivate:
 			err := UnexpectedTokenError{
@@ -495,6 +496,53 @@ func (p *parser) parseReservedAnnotation() (ReservedAnnotation, error) {
 }
 
 // ------------------------------Declaration------------------------------
+
+// parseDeclaration parses declaration by its type.
+func (p *parser) parseDeclaration() (Declaration, error) { //nolint:ireturn
+	switch p.current().typ {
+	case itemInputKeyword:
+		p.next() // skip keyword
+
+		declaration, err := p.parseInputDeclaration()
+		if err != nil {
+			return nil, fmt.Errorf("parse input declaration: %w", err)
+		}
+
+		return declaration, nil
+	case itemLocalKeyword:
+		p.next() // skip keyword
+
+		declaration, err := p.parseLocalDeclaration()
+		if err != nil {
+			return nil, fmt.Errorf("parse local declaration: %w", err)
+		}
+
+		return declaration, nil
+	case itemReservedKeyword:
+		p.next() // skip keyword
+
+		declaration, err := p.parseReservedStatement()
+		if err != nil {
+			return nil, fmt.Errorf("parse reserved statement: %w", err)
+		}
+
+		return declaration, nil
+	// bad tokens
+	case itemError, itemEOF, itemVariable, itemFunction,
+		itemExpressionOpen, itemExpressionClose,
+		itemQuotedPatternOpen, itemQuotedPatternClose,
+		itemText, itemMatchKeyword,
+		itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
+		itemOption, itemWhitespace, itemReserved,
+		itemOperator, itemPrivate:
+		return nil, UnexpectedTokenError{
+			Expected: []itemType{itemInputKeyword, itemLocalKeyword, itemReservedKeyword},
+			Actual:   p.current().typ,
+		}
+	}
+
+	return nil, fmt.Errorf("unknown token: %s", p.current().typ)
+}
 
 func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 	var (
@@ -527,7 +575,9 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 		// bad tokens
 		case itemEOF, itemFunction,
 			itemExpressionClose, itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
+			itemText, itemCatchAllKey,
+			itemInputKeyword, itemLocalKeyword,
+			itemMatchKeyword, itemReservedKeyword,
 			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
 			itemOption, itemReserved, itemPrivate:
 			err := UnexpectedTokenError{
@@ -545,6 +595,11 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
 	// TODO: implement
 	return InputDeclaration{}, errors.New("not implemented")
+}
+
+func (p *parser) parseReservedStatement() (ReservedStatement, error) {
+	// TODO: implement.
+	return ReservedStatement{}, errors.New("not implemented")
 }
 
 // ---------------------------------------------------------------------
@@ -584,7 +639,8 @@ func (p *parser) parseMatcher() (Matcher, error) {
 		// bad tokens
 		case itemEOF, itemVariable, itemFunction,
 			itemExpressionClose, itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword,
+			itemText, itemInputKeyword, itemLocalKeyword,
+			itemMatchKeyword, itemReservedKeyword,
 			itemOption, itemReserved,
 			itemOperator, itemPrivate:
 			err := UnexpectedTokenError{
@@ -623,7 +679,8 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 		case itemEOF, itemVariable, itemFunction,
 			itemExpressionOpen, itemExpressionClose,
 			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword,
+			itemText, itemInputKeyword, itemLocalKeyword,
+			itemMatchKeyword, itemReservedKeyword,
 			itemOption, itemReserved,
 			itemOperator, itemPrivate:
 			err := UnexpectedTokenError{
@@ -667,7 +724,9 @@ func (p *parser) parseOption() (Option, error) { //nolint:ireturn
 		case itemEOF, itemFunction,
 			itemExpressionOpen, itemExpressionClose,
 			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
+			itemText, itemCatchAllKey,
+			itemInputKeyword, itemLocalKeyword,
+			itemMatchKeyword, itemReservedKeyword,
 			itemReserved, itemPrivate:
 			err := UnexpectedTokenError{
 				Expected: []itemType{
@@ -701,7 +760,9 @@ func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
 	case itemError, itemEOF, itemVariable, itemFunction,
 		itemExpressionOpen, itemExpressionClose,
 		itemQuotedPatternOpen, itemQuotedPatternClose,
-		itemText, itemKeyword, itemCatchAllKey,
+		itemText, itemCatchAllKey,
+		itemInputKeyword, itemLocalKeyword,
+		itemMatchKeyword, itemReservedKeyword,
 		itemOption, itemWhitespace, itemReserved,
 		itemOperator, itemPrivate:
 		err := UnexpectedTokenError{
@@ -743,6 +804,19 @@ func (p *parser) parseIdentifier() Identifier {
 	}
 
 	return Identifier{Namespace: ns, Name: name}
+}
+
+// ------------------------------Helpers------------------------------
+
+// isComplexMessage returns true if first token is one of the complex message tokens.
+func (p *parser) isComplexMessage() bool {
+	//nolint:exhaustive
+	switch p.items[0].typ {
+	case itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen:
+		return true
+	}
+
+	return false
 }
 
 // UnexpectedTokenError is returned when parser encounters unexpected token.
