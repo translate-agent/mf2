@@ -114,7 +114,7 @@ func Parse(input string) (AST, error) {
 
 // ------------------------------Message------------------------------
 
-// parseMessage determines message type and then parses it accordingly.
+// parseMessage parses message by its type.
 func (p *parser) parseMessage() (Message, error) { //nolint:ireturn
 	if typ := p.items[0].typ; typ == itemKeyword || typ == itemQuotedPatternOpen {
 		message, err := p.parseComplexMessage()
@@ -248,7 +248,7 @@ func (p *parser) parsePatterns() ([]Pattern, error) {
 
 // ------------------------------Expression------------------------------
 
-// parseExpression determines expression type and then parses it accordingly.
+// parseExpression parses expression by its type.
 func (p *parser) parseExpression() (Expression, error) { //nolint:ireturn
 	for itm := p.current(); p.current().typ != itemExpressionClose; itm = p.next() {
 		switch itm.typ {
@@ -398,7 +398,7 @@ func (p *parser) parseLiteralExpression() (LiteralExpression, error) {
 
 // ------------------------------Annotation------------------------------
 
-// parseAnnotation determines annotation type and then parses it accordingly.
+// parseAnnotation parses annotation by its type.
 func (p *parser) parseAnnotation() (Annotation, error) { //nolint:ireturn
 	switch p.current().typ {
 	case itemFunction:
