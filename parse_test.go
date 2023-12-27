@@ -933,7 +933,7 @@ func TestValidate(t *testing.T) {
 				require.FailNow(t, "test.errorPath is not set")
 			}
 
-			require.ErrorContains(t, tt.ast.Validate(), tt.errorPath)
+			require.ErrorContains(t, tt.ast.validate(), tt.errorPath)
 		})
 	}
 }

@@ -31,7 +31,7 @@ Example:
 func (a AST) String() string { return fmt.Sprint(a.Message) }
 
 /*
-Validate returns an error if the AST is invalid according to the MessageFormat 2.0 specification.
+validate returns an error if the AST is invalid according to the MessageFormat 2.0 specification.
 For example, when matcher has no selectors or variants.
 Or variable is zero value, i.e $.
 
@@ -53,14 +53,14 @@ Example:
 		},
 	},
 
-	err := ast.Validate() // err: ast.message.patterns.placeholderPattern.expression.variable: name is empty '{ $ }'
+	err := ast.validate() // err: ast.message.patterns.placeholderPattern.expression.variable: name is empty '{ $ }'
 */
-func (a AST) Validate() error {
+func (a AST) validate() error {
 	if a.Message == nil {
 		return errors.New("ast: message is required")
 	}
 
-	if err := a.Message.Validate(); err != nil {
+	if err := a.Message.validate(); err != nil {
 		return fmt.Errorf("ast.%w", err)
 	}
 
@@ -77,7 +77,7 @@ func (a AST) Validate() error {
 // Node is the interface implemented by all AST nodes.
 type Node interface {
 	node()
-	Validate() error // Validate returns an error if the Node is invalid according to the MessageFormat 2.0 specification.
+	validate() error // validate returns an error if the Node is invalid according to the MessageFormat 2.0 specification.
 
 	fmt.Stringer
 }
@@ -151,7 +151,7 @@ type SimpleMessage struct {
 
 func (sm SimpleMessage) String() string { return sliceToString(sm.Patterns, "") }
 
-func (sm SimpleMessage) Validate() error {
+func (sm SimpleMessage) validate() error {
 	if err := validateSlice(sm.Patterns); err != nil {
 		return fmt.Errorf("simpleMessage.%w", err)
 	}
@@ -174,12 +174,12 @@ func (cm ComplexMessage) String() string {
 	return fmt.Sprintf("%s\n%s", sliceToString(cm.Declarations, "\n"), cm.ComplexBody)
 }
 
-func (cm ComplexMessage) Validate() error {
+func (cm ComplexMessage) validate() error {
 	if cm.ComplexBody == nil {
 		return errors.New("complexMessage: complexBody is required")
 	}
 
-	if err := cm.ComplexBody.Validate(); err != nil {
+	if err := cm.ComplexBody.validate(); err != nil {
 		return fmt.Errorf("complexMessage.%w", err)
 	}
 
@@ -206,7 +206,7 @@ func (tp TextPattern) String() string {
 
 	return r.Replace(string(tp))
 }
-func (tp TextPattern) Validate() error { return nil }
+func (tp TextPattern) validate() error { return nil }
 
 type PlaceholderPattern struct {
 	Pattern
@@ -216,12 +216,12 @@ type PlaceholderPattern struct {
 
 func (pp PlaceholderPattern) String() string { return fmt.Sprint(pp.Expression) }
 
-func (pp PlaceholderPattern) Validate() error {
+func (pp PlaceholderPattern) validate() error {
 	if pp.Expression == nil {
 		return errors.New("placeholderPattern: expression is required")
 	}
 
-	if err := pp.Expression.Validate(); err != nil {
+	if err := pp.Expression.validate(); err != nil {
 		return fmt.Errorf("placeholderPattern.%w", err)
 	}
 
@@ -245,12 +245,12 @@ func (le LiteralExpression) String() string {
 	return fmt.Sprintf("{ %s %s }", le.Literal, le.Annotation)
 }
 
-func (le LiteralExpression) Validate() error {
+func (le LiteralExpression) validate() error {
 	if le.Literal == nil {
 		return errors.New("literalExpression: literal is required")
 	}
 
-	if err := le.Literal.Validate(); err != nil {
+	if err := le.Literal.validate(); err != nil {
 		return fmt.Errorf("literalExpression:.%w", err)
 	}
 
@@ -258,7 +258,7 @@ func (le LiteralExpression) Validate() error {
 		return nil
 	}
 
-	if err := le.Annotation.Validate(); err != nil {
+	if err := le.Annotation.validate(); err != nil {
 		return fmt.Errorf("literalExpression.%w", err)
 	}
 
@@ -280,8 +280,8 @@ func (ve VariableExpression) String() string {
 	return fmt.Sprintf("{ %s %s }", ve.Variable, ve.Annotation)
 }
 
-func (ve VariableExpression) Validate() error {
-	if err := ve.Variable.Validate(); err != nil {
+func (ve VariableExpression) validate() error {
+	if err := ve.Variable.validate(); err != nil {
 		return fmt.Errorf("variableExpression.%w", err)
 	}
 
@@ -289,7 +289,7 @@ func (ve VariableExpression) Validate() error {
 		return nil
 	}
 
-	if err := ve.Annotation.Validate(); err != nil {
+	if err := ve.Annotation.validate(); err != nil {
 		return fmt.Errorf("variableExpression.%w", err)
 	}
 
@@ -304,12 +304,12 @@ type AnnotationExpression struct {
 
 func (ae AnnotationExpression) String() string { return fmt.Sprintf("{ %s }", ae.Annotation) }
 
-func (ae AnnotationExpression) Validate() error {
+func (ae AnnotationExpression) validate() error {
 	if ae.Annotation == nil {
 		return errors.New("annotationExpression: annotation is required")
 	}
 
-	if err := ae.Annotation.Validate(); err != nil {
+	if err := ae.Annotation.validate(); err != nil {
 		return fmt.Errorf("annotationExpression.%w", err)
 	}
 
@@ -332,7 +332,7 @@ func (ql QuotedLiteral) String() string {
 	return fmt.Sprintf("|%s|", r.Replace(string(ql)))
 }
 
-func (ql QuotedLiteral) Validate() error {
+func (ql QuotedLiteral) validate() error {
 	if isZeroValue(ql) {
 		return errors.New("quotedLiteral: literal is empty")
 	}
@@ -347,12 +347,12 @@ type UnquotedLiteral struct {
 }
 
 func (ul UnquotedLiteral) String() string { return fmt.Sprint(ul.Value) }
-func (ul UnquotedLiteral) Validate() error {
+func (ul UnquotedLiteral) validate() error {
 	if ul.Value == nil {
 		return errors.New("unquotedLiteral: literal is empty")
 	}
 
-	if err := ul.Value.Validate(); err != nil {
+	if err := ul.Value.validate(); err != nil {
 		return fmt.Errorf("unquotedLiteral.%w", err)
 	}
 
@@ -365,7 +365,7 @@ func (NameLiteral) node()             {}
 func (NameLiteral) literal()          {}
 func (NameLiteral) unquoted()         {}
 func (nl NameLiteral) String() string { return string(nl) }
-func (nl NameLiteral) Validate() error {
+func (nl NameLiteral) validate() error {
 	if isZeroValue(nl) {
 		return errors.New("nameLiteral: literal is empty")
 	}
@@ -379,7 +379,7 @@ func (NumberLiteral) node()              {}
 func (NumberLiteral) literal()           {}
 func (NumberLiteral) unquoted()          {}
 func (nl NumberLiteral) String() string  { return fmt.Sprint(float64(nl)) }
-func (nl NumberLiteral) Validate() error { return nil } // Zero value is valid
+func (nl NumberLiteral) validate() error { return nil } // Zero value is valid
 
 // --------------------------------Annotation----------------------------------
 
@@ -398,8 +398,8 @@ func (fa FunctionAnnotation) String() string {
 	return fmt.Sprintf("%s %s", fa.Function, sliceToString(fa.Options, " "))
 }
 
-func (fa FunctionAnnotation) Validate() error {
-	if err := fa.Function.Validate(); err != nil {
+func (fa FunctionAnnotation) validate() error {
+	if err := fa.Function.validate(); err != nil {
 		return fmt.Errorf("functionAnnotation.%w", err)
 	}
 
@@ -421,7 +421,7 @@ type PrivateUseAnnotation struct {
 }
 
 func (PrivateUseAnnotation) String() string  { return "^ PRIVATE_USE_ANNOTATION_NOT_IMPLEMENTED" } // TODO: Implement
-func (PrivateUseAnnotation) Validate() error { return nil }
+func (PrivateUseAnnotation) validate() error { return nil }
 
 type ReservedAnnotation struct {
 	Annotation
@@ -430,7 +430,7 @@ type ReservedAnnotation struct {
 }
 
 func (ReservedAnnotation) String() string  { return "! RESERVED_ANNOTATION_NOT_IMPLEMENTED" } // TODO: Implement
-func (ReservedAnnotation) Validate() error { return nil }
+func (ReservedAnnotation) validate() error { return nil }
 
 // ---------------------------------Option-------------------------------------
 
@@ -443,16 +443,16 @@ type LiteralOption struct {
 
 func (lo LiteralOption) String() string { return fmt.Sprintf("%s = %s", lo.Identifier, lo.Literal) }
 
-func (lo LiteralOption) Validate() error {
+func (lo LiteralOption) validate() error {
 	if lo.Literal == nil {
 		return errors.New("literalOption: literal is required")
 	}
 
-	if err := lo.Literal.Validate(); err != nil {
+	if err := lo.Literal.validate(); err != nil {
 		return fmt.Errorf("literalOption.%w", err)
 	}
 
-	if err := lo.Identifier.Validate(); err != nil {
+	if err := lo.Identifier.validate(); err != nil {
 		return fmt.Errorf("literalOption.%w", err)
 	}
 
@@ -468,12 +468,12 @@ type VariableOption struct {
 
 func (vo VariableOption) String() string { return fmt.Sprintf("%s = %s", vo.Identifier, vo.Variable) }
 
-func (vo VariableOption) Validate() error {
-	if err := vo.Variable.Validate(); err != nil {
+func (vo VariableOption) validate() error {
+	if err := vo.Variable.validate(); err != nil {
 		return fmt.Errorf("variableOption.%w", err)
 	}
 
-	if err := vo.Identifier.Validate(); err != nil {
+	if err := vo.Identifier.validate(); err != nil {
 		return fmt.Errorf("variableOption.%w", err)
 	}
 
@@ -489,8 +489,8 @@ type InputDeclaration struct {
 }
 
 func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, id.Expression) }
-func (id InputDeclaration) Validate() error {
-	if err := id.Expression.Validate(); err != nil {
+func (id InputDeclaration) validate() error {
+	if err := id.Expression.validate(); err != nil {
 		return fmt.Errorf("inputDeclaration.%w", err)
 	}
 
@@ -508,16 +508,16 @@ func (ld LocalDeclaration) String() string {
 	return fmt.Sprintf("%s %s = %s", local, ld.Variable, ld.Expression)
 }
 
-func (ld LocalDeclaration) Validate() error {
+func (ld LocalDeclaration) validate() error {
 	if ld.Expression == nil {
 		return errors.New("localDeclaration: expression is required")
 	}
 
-	if err := ld.Expression.Validate(); err != nil {
+	if err := ld.Expression.validate(); err != nil {
 		return fmt.Errorf("localDeclaration.%w", err)
 	}
 
-	if err := ld.Expression.Validate(); err != nil {
+	if err := ld.Expression.validate(); err != nil {
 		return fmt.Errorf("localDeclaration.%w", err)
 	}
 
@@ -531,7 +531,7 @@ type ReservedStatement struct {
 }
 
 func (ReservedStatement) String() string  { return ".RESERVED STATEMENT_NOT_IMPLEMENTED { TODO }" } // TODO: Implement
-func (ReservedStatement) Validate() error { return nil }
+func (ReservedStatement) validate() error { return nil }
 
 // --------------------------------VariantKey----------------------------------
 
@@ -542,12 +542,12 @@ type LiteralKey struct {
 }
 
 func (lk LiteralKey) String() string { return fmt.Sprint(lk.Literal) }
-func (lk LiteralKey) Validate() error {
+func (lk LiteralKey) validate() error {
 	if lk.Literal == nil {
 		return errors.New("literalKey: literal is required")
 	}
 
-	if err := lk.Literal.Validate(); err != nil {
+	if err := lk.Literal.validate(); err != nil {
 		return fmt.Errorf("literalKey.%w", err)
 	}
 
@@ -560,7 +560,7 @@ type CatchAllKey struct {
 }
 
 func (ck CatchAllKey) String() string  { return catchAllSymbol }
-func (ck CatchAllKey) Validate() error { return nil }
+func (ck CatchAllKey) validate() error { return nil }
 
 // ---------------------------------ComplexBody--------------------------------------
 
@@ -574,7 +574,7 @@ func (qp QuotedPattern) String() string {
 	return fmt.Sprintf("{{%s}}", sliceToString(qp.Patterns, ""))
 }
 
-func (qp QuotedPattern) Validate() error {
+func (qp QuotedPattern) validate() error {
 	if err := validateSlice(qp.Patterns); err != nil {
 		return fmt.Errorf("quotedPattern.%w", err)
 	}
@@ -596,7 +596,7 @@ func (m Matcher) String() string {
 	return fmt.Sprintf("%s %s\n%s", match, matchStr, variantsStr)
 }
 
-func (m Matcher) Validate() error {
+func (m Matcher) validate() error {
 	if len(m.MatchStatements) == 0 {
 		return errors.New("matcher: at least one match statement is required")
 	}
@@ -622,7 +622,7 @@ type Variable string
 
 func (Variable) node()            {}
 func (v Variable) String() string { return fmt.Sprintf("%c%s", variablePrefix, string(v)) }
-func (v Variable) Validate() error {
+func (v Variable) validate() error {
 	if isZeroValue(v) {
 		return errors.New("variable: name is empty")
 	}
@@ -645,7 +645,7 @@ func (i Identifier) String() string {
 	return fmt.Sprintf("%s:%s", i.Namespace, i.Name)
 }
 
-func (i Identifier) Validate() error {
+func (i Identifier) validate() error {
 	if isZeroValue(i.Name) {
 		return errors.New("identifier: name is empty")
 	}
@@ -661,8 +661,8 @@ type Function struct {
 }
 
 func (f Function) String() string { return fmt.Sprintf("%c%s", f.Prefix, f.Identifier) }
-func (f Function) Validate() error {
-	if err := f.Identifier.Validate(); err != nil {
+func (f Function) validate() error {
+	if err := f.Identifier.validate(); err != nil {
 		return fmt.Errorf("function.%w", err)
 	}
 
@@ -688,7 +688,7 @@ func (v Variant) String() string {
 	return fmt.Sprintf("%s %s", sliceToString(v.Keys, " "), v.QuotedPattern)
 }
 
-func (v Variant) Validate() error {
+func (v Variant) validate() error {
 	if len(v.Keys) == 0 {
 		return errors.New("variant: at least one key is required")
 	}
@@ -697,7 +697,7 @@ func (v Variant) Validate() error {
 		return fmt.Errorf("variant.%w", err)
 	}
 
-	if err := v.QuotedPattern.Validate(); err != nil {
+	if err := v.QuotedPattern.validate(); err != nil {
 		return fmt.Errorf("variant.%w", err)
 	}
 
@@ -740,7 +740,7 @@ func isZeroValue[T comparable](v T) bool {
 // validateSlice validates a slice of Nodes.
 func validateSlice[T Node](s []T) error {
 	for _, v := range s {
-		if err := v.Validate(); err != nil {
+		if err := v.validate(); err != nil {
 			return fmt.Errorf("%w '%s'", err, fmt.Sprint(v))
 		}
 	}

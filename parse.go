@@ -110,7 +110,7 @@ func Parse(input string) (AST, error) {
 	}
 
 	ast := AST{Message: message}
-	if err := ast.Validate(); err != nil {
+	if err := ast.validate(); err != nil {
 		return AST{}, fmt.Errorf("validate AST: %w", err)
 	}
 
