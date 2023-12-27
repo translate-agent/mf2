@@ -9,7 +9,7 @@ import (
 func Test_Builder(t *testing.T) {
 	t.Parallel()
 
-	for _, test := range []struct {
+	for _, test := range []struct { //nolint:govet
 		name, expected string
 		b              *Builder
 	}{
@@ -53,15 +53,15 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"match",
-			".match $i $j\n1 2 {{first}}\n2 0 {{{$i}}}\n* * {{|default|}}\n",
+			".match {$i} {$j}\n1 2 {{first}}\n2 0 {{second { $i }}}\n* * {{{ |default| }}}\n",
 			New().
 				Match(
 					Expr().Var("$i"),
 					Expr().Var("$j"),
 				).
-				Key("1", "2").Pattern(Expr().Text("first")).
-				Key("2", "0").Pattern(Expr().Var("$i")).
-				Key("*", "*").Pattern(Expr().Literal("default")),
+				Key(1, 2).Text("first").
+				Key(2, 0).Text("second").Expr(Expr().Var("$i")).
+				Key("*", "*").Expr(Expr().Literal("default")),
 		},
 	} {
 		test := test

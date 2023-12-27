@@ -2,13 +2,17 @@ package builder
 
 import (
 	"fmt"
+	"strconv"
 )
 
 type Builder struct {
 	newline, spacing string
-	locals           []local
-	inputs           []Expression
-	patterns         []any
+	err              error
+
+	locals            []local
+	inputs, selectors []Expression
+	variants          []variant
+	patterns          []any
 }
 
 func New() *Builder {
@@ -19,6 +23,10 @@ func New() *Builder {
 }
 
 func (b *Builder) Build() (string, error) {
+	if b.err != nil {
+		return "", b.err
+	}
+
 	var s string
 
 	for _, v := range b.inputs {
@@ -31,6 +39,27 @@ func (b *Builder) Build() (string, error) {
 
 	for _, pattern := range b.patterns {
 		s += fmt.Sprint(pattern)
+	}
+
+	if len(b.selectors) > 0 {
+		s += ".match" + b.spacing
+	}
+
+	for i, selector := range b.selectors {
+		switch i {
+		case len(b.selectors) - 1:
+			s += selector.String()
+		default:
+			s += selector.String() + b.spacing
+		}
+	}
+
+	if len(b.selectors) > 0 {
+		s += b.newline
+	}
+
+	for _, variant := range b.variants {
+		s += variant.String() + b.newline
 	}
 
 	return s, nil
@@ -46,22 +75,44 @@ func (b *Builder) String() string {
 }
 
 func (b *Builder) Newline(s string) *Builder {
+	if b.err != nil {
+		return b
+	}
+
 	b.newline = s
+
 	return b
 }
 
 func (b *Builder) Spacing(s string) *Builder {
+	if b.err != nil {
+		return b
+	}
+
 	b.spacing = s
+
 	return b
 }
 
 func (b *Builder) Text(s string) *Builder {
-	b.patterns = append(b.patterns, s)
+	if b.err != nil {
+		return b
+	}
+
+	if len(b.variants) > 0 {
+		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, s)
+	} else {
+		b.patterns = append(b.patterns, s)
+	}
 
 	return b
 }
 
 func (b *Builder) Local(v string, expr *Expression) *Builder {
+	if b.err != nil {
+		return b
+	}
+
 	expr.spacing = b.spacing
 
 	b.locals = append(b.locals, local{variable: variable(v), expr: expr})
@@ -70,6 +121,10 @@ func (b *Builder) Local(v string, expr *Expression) *Builder {
 }
 
 func (b *Builder) Input(expr *Expression) *Builder {
+	if b.err != nil {
+		return b
+	}
+
 	expr.spacing = b.spacing
 
 	b.inputs = append(b.inputs, *expr)
@@ -78,24 +133,92 @@ func (b *Builder) Input(expr *Expression) *Builder {
 }
 
 func (b *Builder) Expr(e *Expression) *Builder {
+	if b.err != nil {
+		return b
+	}
+
 	e.spacing = b.spacing
-	b.patterns = append(b.patterns, e)
+
+	if len(b.variants) > 0 {
+		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, e)
+	} else {
+		b.patterns = append(b.patterns, e)
+	}
 
 	return b
 }
 
-func (b *Builder) Match(selectors ...Expression) *Builder {
+func (b *Builder) Match(selectors ...*Expression) *Builder {
+	if b.err != nil {
+		return b
+	}
+
+	if len(selectors) == 0 {
+		b.err = fmt.Errorf("match MUST have at least one selector")
+		return b
+	}
+
+	for i := range selectors {
+		b.selectors = append(b.selectors, *selectors[i])
+	}
+
 	return b
+}
+
+func (b *Builder) Key(keys ...any) *Builder {
+	if b.err != nil {
+		return b
+	}
+
+	if len(keys) != len(b.selectors) {
+		b.err = fmt.Errorf("number of keys in each variant MUST match the number of selectors in the matcher")
+		return b
+	}
+
+	b.variants = append(b.variants, variant{keys: keys})
+
+	return b
+}
+
+type variant struct {
+	keys, pattern []any
+}
+
+func (v *variant) String() string {
+	var s string
+
+	for i := range v.keys {
+		switch k := v.keys[i].(type) {
+		case int:
+			s += strconv.Itoa(k)
+		case string:
+			s += k
+		}
+
+		s += " "
+	}
+
+	s += "{{"
+
+	for i := range v.pattern {
+		if i != 0 {
+			s += " "
+		}
+
+		switch p := v.pattern[i].(type) {
+		case string:
+			s += p
+		case *Expression:
+			s += p.String()
+		}
+	}
+
+	return s + "}}"
 }
 
 type local struct {
-	variable variable
 	expr     *Expression
-}
-
-type input struct {
 	variable variable
-	expr     Expression
 }
 
 type literal string
@@ -151,7 +274,7 @@ func (e *Expression) Var(v string) *Expression {
 	return e
 }
 
-type option struct {
+type option struct { //nolint:govet
 	key     string
 	operand any // literal or variable
 }
