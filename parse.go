@@ -167,15 +167,35 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 			return ComplexMessage{}, fmt.Errorf("got error token: '%s'", itm.val)
 		case itemWhitespace:
 			continue
+		// Declarations
+		case itemInputKeyword:
+			p.next() // skip keyword
 
-		case itemInputKeyword, itemLocalKeyword, itemReservedKeyword: // Declarations
-			declaration, err := p.parseDeclaration()
+			declaration, err := p.parseInputDeclaration()
 			if err != nil {
-				return ComplexMessage{}, fmt.Errorf("parse declaration: %w", err)
+				return ComplexMessage{}, fmt.Errorf("parse input declaration: %w", err)
 			}
 
 			declarations = append(declarations, declaration)
+		case itemLocalKeyword:
+			p.next() // skip keyword
 
+			declaration, err := p.parseLocalDeclaration()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse local declaration: %w", err)
+			}
+
+			declarations = append(declarations, declaration)
+		case itemReservedKeyword:
+			p.next() // skip keyword
+
+			declaration, err := p.parseReservedStatement()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse reserved statement: %w", err)
+			}
+
+			declarations = append(declarations, declaration)
+		// Complex body
 		case itemMatchKeyword: // Zero or more Declarations + Matcher
 			p.next() // skip keyword
 
@@ -507,53 +527,6 @@ func (p *parser) parseReservedAnnotation() (ReservedAnnotation, error) {
 }
 
 // ------------------------------Declaration------------------------------
-
-// parseDeclaration parses declaration by its type.
-func (p *parser) parseDeclaration() (Declaration, error) { //nolint:ireturn
-	switch p.current().typ {
-	case itemInputKeyword:
-		p.next() // skip keyword
-
-		declaration, err := p.parseInputDeclaration()
-		if err != nil {
-			return nil, fmt.Errorf("parse input declaration: %w", err)
-		}
-
-		return declaration, nil
-	case itemLocalKeyword:
-		p.next() // skip keyword
-
-		declaration, err := p.parseLocalDeclaration()
-		if err != nil {
-			return nil, fmt.Errorf("parse local declaration: %w", err)
-		}
-
-		return declaration, nil
-	case itemReservedKeyword:
-		p.next() // skip keyword
-
-		declaration, err := p.parseReservedStatement()
-		if err != nil {
-			return nil, fmt.Errorf("parse reserved statement: %w", err)
-		}
-
-		return declaration, nil
-	// bad tokens
-	case itemError, itemEOF, itemVariable, itemFunction,
-		itemExpressionOpen, itemExpressionClose,
-		itemQuotedPatternOpen, itemQuotedPatternClose,
-		itemText, itemMatchKeyword,
-		itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-		itemOption, itemWhitespace, itemReserved,
-		itemOperator, itemPrivate:
-		return nil, UnexpectedTokenError{
-			Expected: []itemType{itemInputKeyword, itemLocalKeyword, itemReservedKeyword},
-			Actual:   p.current().typ,
-		}
-	}
-
-	return nil, fmt.Errorf("unknown token: %s", p.current().typ)
-}
 
 func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 	var (
