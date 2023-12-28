@@ -49,11 +49,11 @@ func (p *parser) collect() error {
 func (p *parser) isComplexMessage() bool {
 	//nolint:exhaustive
 	switch p.items[0].typ {
+	default:
+		return false
 	case itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen:
 		return true
 	}
-
-	return false
 }
 
 /*
