@@ -264,6 +264,8 @@ func (e *Expression) String() string {
 	switch v := e.operand.(type) {
 	case variable:
 		s += string(v)
+	case nil:
+		// noop
 	case literal:
 		s += printLiteral(v)
 	default:
@@ -271,7 +273,11 @@ func (e *Expression) String() string {
 	}
 
 	if e.function.name != "" {
-		s += " " + e.function.name
+		if e.operand != nil { // literal or variable
+			s += " "
+		}
+
+		s += e.function.name
 
 		for _, o := range e.function.options {
 			s += " " + o.key + e.spacing + "=" + e.spacing + fmt.Sprint(o.operand)

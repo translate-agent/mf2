@@ -19,7 +19,7 @@ func Test_Builder(t *testing.T) {
 			New().Text("Hello, World!"),
 		},
 		{
-			"text, first character is dot",
+			"simple message, first character is dot",
 			"\\.text",
 			New().Text(".text"),
 		},
@@ -43,6 +43,15 @@ func Test_Builder(t *testing.T) {
 				Text("Hello, ").
 				Expr(Expr().Var("$world").Func(":upper", Option("limit", "2"))).
 				Text("!"),
+		},
+		{
+			"text with markup-like function",
+			"Hello { +link } World { -link }",
+			New().
+				Text("Hello ").
+				Expr(Expr().Func("+link")).
+				Text(" World ").
+				Expr(Expr().Func("-link")),
 		},
 		{
 			"local",
