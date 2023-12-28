@@ -2,12 +2,13 @@ package builder
 
 import (
 	"fmt"
-	"strconv"
+	"strings"
 )
 
 type Builder struct {
-	newline, spacing string
-	err              error
+	spacing string // optional spacing [s]
+	newline string
+	err     error
 
 	locals            []local
 	inputs, selectors []Expression
@@ -46,16 +47,11 @@ func (b *Builder) Build() (string, error) {
 	}
 
 	for i, selector := range b.selectors {
-		switch i {
-		case len(b.selectors) - 1:
-			s += selector.String()
-		default:
-			s += selector.String() + b.spacing
+		if i == len(b.selectors)-1 { // newline after the last selector
+			s += selector.String() + b.newline
+		} else {
+			s += selector.String() + " "
 		}
-	}
-
-	if len(b.selectors) > 0 {
-		s += b.newline
 	}
 
 	for _, variant := range b.variants {
@@ -99,10 +95,12 @@ func (b *Builder) Text(s string) *Builder {
 		return b
 	}
 
-	if len(b.variants) > 0 {
-		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, s)
-	} else {
+	s = escapeSpecialChars(s)
+
+	if len(b.variants) == 0 {
 		b.patterns = append(b.patterns, s)
+	} else {
+		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, s)
 	}
 
 	return b
@@ -110,6 +108,11 @@ func (b *Builder) Text(s string) *Builder {
 
 func (b *Builder) Local(v string, expr *Expression) *Builder {
 	if b.err != nil {
+		return b
+	}
+
+	if len(b.patterns) > 0 {
+		b.err = fmt.Errorf("complex message cannot be added after simple message")
 		return b
 	}
 
@@ -122,6 +125,11 @@ func (b *Builder) Local(v string, expr *Expression) *Builder {
 
 func (b *Builder) Input(expr *Expression) *Builder {
 	if b.err != nil {
+		return b
+	}
+
+	if len(b.patterns) > 0 {
+		b.err = fmt.Errorf("complex message cannot be added after simple message")
 		return b
 	}
 
@@ -139,10 +147,10 @@ func (b *Builder) Expr(e *Expression) *Builder {
 
 	e.spacing = b.spacing
 
-	if len(b.variants) > 0 {
-		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, e)
-	} else {
+	if len(b.variants) == 0 {
 		b.patterns = append(b.patterns, e)
+	} else {
+		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, e)
 	}
 
 	return b
@@ -150,6 +158,11 @@ func (b *Builder) Expr(e *Expression) *Builder {
 
 func (b *Builder) Match(selectors ...*Expression) *Builder {
 	if b.err != nil {
+		return b
+	}
+
+	if len(b.patterns) > 0 {
+		b.err = fmt.Errorf("complex message cannot be added after simple message")
 		return b
 	}
 
@@ -188,14 +201,16 @@ func (v *variant) String() string {
 	var s string
 
 	for i := range v.keys {
-		switch k := v.keys[i].(type) {
-		case int:
-			s += strconv.Itoa(k)
+		switch v := v.keys[i].(type) {
 		case string:
-			s += k
+			s += v + " "
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+			s += fmt.Sprintf("%d ", v)
+		case float32, float64:
+			s += fmt.Sprintf("%f ", v)
+		default:
+			panic(fmt.Sprintf("unsupported key type: %T", v))
 		}
-
-		s += " "
 	}
 
 	s += "{{"
@@ -205,11 +220,13 @@ func (v *variant) String() string {
 			s += " "
 		}
 
-		switch p := v.pattern[i].(type) {
+		switch v := v.pattern[i].(type) {
 		case string:
-			s += p
+			s += v
 		case *Expression:
-			s += p.String()
+			s += v.String()
+		default:
+			panic(fmt.Sprintf("unsupported pattern type: %T", v))
 		}
 	}
 
@@ -221,7 +238,7 @@ type local struct {
 	variable variable
 }
 
-type literal string
+type literal any
 
 type variable string
 
@@ -244,6 +261,8 @@ func (e *Expression) String() string {
 		s += string(v)
 	case literal:
 		s += printLiteral(v)
+	default:
+		panic(fmt.Sprintf("unsupported operand type: %T", v))
 	}
 
 	for _, f := range e.functions {
@@ -259,12 +278,16 @@ func (e *Expression) String() string {
 
 func Expr() *Expression { return new(Expression) }
 
-func (e *Expression) Literal(v string) *Expression {
-	e.operand = literal(v)
+func (e *Expression) Literal(v any) *Expression {
+	e.operand = v
 	return e
 }
 
 func (e *Expression) Var(v string) *Expression {
+	if len(v) == 0 {
+		panic("variable name cannot be empty")
+	}
+
 	if v[0] != '$' {
 		panic(fmt.Sprintf("variable must start with $: %s", v))
 	}
@@ -282,6 +305,10 @@ type option struct { //nolint:govet
 func Option(key string, operand any) option { return option{key, operand} }
 
 func (e *Expression) Func(name string, option ...option) *Expression {
+	if len(name) == 0 {
+		panic("function name cannot be empty")
+	}
+
 	switch name[0] {
 	default:
 		panic(fmt.Sprintf("function MUST start with :, + or -: %s", name))
@@ -291,7 +318,73 @@ func (e *Expression) Func(name string, option ...option) *Expression {
 	}
 }
 
-// TODO: escape characters according to MF2.
-func printLiteral(s literal) string {
-	return "|" + string(s) + "|"
+func printLiteral(l any) string {
+	switch v := l.(type) {
+	case string:
+		v = escapeChars(v, map[rune]struct{}{
+			'\\': {},
+			'|':  {},
+		})
+
+		return "|" + v + "|"
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return fmt.Sprintf("|%d|", v)
+	case float32, float64:
+		return fmt.Sprintf("|%f|", v)
+	default:
+		panic(fmt.Sprintf("unsupported literal type: %T", v))
+	}
+}
+
+// helpers
+
+// specialChars is a list of characters that need to be escaped in the node.Text,
+// because they are either syntax characters or reserved keywords.
+var specialChars = map[rune]struct{}{
+	// Syntax characters
+	'{':  {},
+	'}':  {},
+	'\\': {},
+	'|':  {},
+	// Reserved keywords (Future syntax characters)
+	'!': {},
+	'@': {},
+	'#': {},
+	'%': {},
+	'*': {},
+	'<': {},
+	'>': {},
+	'/': {},
+	'?': {},
+	'~': {},
+}
+
+// escapeSpecialChars escapes special characters in the given text.
+func escapeSpecialChars(text string) string {
+	var sb strings.Builder
+
+	for _, c := range text {
+		if _, ok := specialChars[c]; ok {
+			sb.WriteRune('\\')
+		}
+
+		sb.WriteRune(c)
+	}
+
+	return sb.String()
+}
+
+// escapeChars escapes provided characters in text.
+func escapeChars(text string, chars map[rune]struct{}) string {
+	var sb strings.Builder
+
+	for _, c := range text {
+		if _, ok := chars[c]; ok {
+			sb.WriteRune('\\')
+		}
+
+		sb.WriteRune(c)
+	}
+
+	return sb.String()
 }
