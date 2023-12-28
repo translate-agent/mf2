@@ -109,7 +109,12 @@ func Parse(input string) (AST, error) {
 		return AST{}, fmt.Errorf("parse message: %w", err)
 	}
 
-	return AST{Message: message}, nil
+	ast := AST{Message: message}
+	if err := ast.validate(); err != nil {
+		return AST{}, fmt.Errorf("validate AST: %w", err)
+	}
+
+	return ast, nil
 }
 
 // ------------------------------Message------------------------------
