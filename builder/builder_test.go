@@ -15,12 +15,22 @@ func Test_Builder(t *testing.T) {
 	}{
 		{
 			"text",
-			"Hello, World\\!",
+			"Hello, World!",
 			New().Text("Hello, World!"),
 		},
 		{
+			"text, first character is dot",
+			"\\.text",
+			New().Text(".text"),
+		},
+		{
+			"text, with special chars",
+			"Hello\\\\, \\{World\\}!",
+			New().Text("Hello\\, {World}!"),
+		},
+		{
 			"text with literal",
-			"Hello, { |World| }\\!",
+			"Hello, { |World| }!",
 			New().
 				Text("Hello, ").
 				Expr(Expr().Literal("World")).
@@ -28,7 +38,7 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"text with expr",
-			"Hello, { $world :upper limit = 2 }\\!",
+			"Hello, { $world :upper limit = 2 }!",
 			New().
 				Text("Hello, ").
 				Expr(Expr().Var("$world").Func(":upper", Option("limit", "2"))).
@@ -53,15 +63,15 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"match",
-			".match {$i} {$j}\n1 2 {{first}}\n2 0 {{second { $i }}}\n3 0 {{{ |a\\|| }}}\n* * {{{ |1| }}}\n",
+			".match {$i} {$j}\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ |1| }}}\n",
 			New().
 				Match(
 					Expr().Var("$i"),
 					Expr().Var("$j"),
 				).
-				Key(1, 2).Text("first").
+				Key(1, 2).Text("{first}").
 				Key(2, 0).Text("second").Expr(Expr().Var("$i")).
-				Key(3, 0).Expr(Expr().Literal("a|")).
+				Key(3, 0).Expr(Expr().Literal("\\a|")).
 				Key("*", "*").Expr(Expr().Literal(1)),
 		},
 	} {

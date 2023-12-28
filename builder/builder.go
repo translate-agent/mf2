@@ -95,7 +95,12 @@ func (b *Builder) Text(s string) *Builder {
 		return b
 	}
 
-	s = escapeSpecialChars(s)
+	if b.locals == nil && b.inputs == nil && b.selectors == nil &&
+		b.variants == nil && b.patterns == nil { // simple start text
+		s = textEscape(s, true)
+	} else {
+		s = textEscape(s, false)
+	}
 
 	if len(b.variants) == 0 {
 		b.patterns = append(b.patterns, s)
@@ -248,9 +253,9 @@ type function struct {
 }
 
 type Expression struct {
-	spacing   string
-	operand   any // literal or variable
-	functions []function
+	spacing  string
+	operand  any // literal or variable
+	function function
 }
 
 func (e *Expression) String() string {
@@ -265,10 +270,10 @@ func (e *Expression) String() string {
 		panic(fmt.Sprintf("unsupported operand type: %T", v))
 	}
 
-	for _, f := range e.functions {
-		s += " " + f.name
+	if e.function.name != "" {
+		s += " " + e.function.name
 
-		for _, o := range f.options {
+		for _, o := range e.function.options {
 			s += " " + o.key + e.spacing + "=" + e.spacing + fmt.Sprint(o.operand)
 		}
 	}
@@ -309,11 +314,15 @@ func (e *Expression) Func(name string, option ...option) *Expression {
 		panic("function name cannot be empty")
 	}
 
+	if e.function.name != "" {
+		panic("expression already has a function")
+	}
+
 	switch name[0] {
 	default:
 		panic(fmt.Sprintf("function MUST start with :, + or -: %s", name))
 	case ':', '+', '-':
-		e.functions = append(e.functions, function{name: name, options: option})
+		e.function = function{name: name, options: option}
 		return e
 	}
 }
@@ -321,11 +330,7 @@ func (e *Expression) Func(name string, option ...option) *Expression {
 func printLiteral(l any) string {
 	switch v := l.(type) {
 	case string:
-		v = escapeChars(v, map[rune]struct{}{
-			'\\': {},
-			'|':  {},
-		})
-
+		v = quotedEscape(v)
 		return "|" + v + "|"
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return fmt.Sprintf("|%d|", v)
@@ -338,33 +343,13 @@ func printLiteral(l any) string {
 
 // helpers
 
-// specialChars is a list of characters that need to be escaped in the node.Text,
-// because they are either syntax characters or reserved keywords.
-var specialChars = map[rune]struct{}{
-	// Syntax characters
-	'{':  {},
-	'}':  {},
-	'\\': {},
-	'|':  {},
-	// Reserved keywords (Future syntax characters)
-	'!': {},
-	'@': {},
-	'#': {},
-	'%': {},
-	'*': {},
-	'<': {},
-	'>': {},
-	'/': {},
-	'?': {},
-	'~': {},
-}
-
-// escapeSpecialChars escapes special characters in the given text.
-func escapeSpecialChars(text string) string {
+// quotedEscape escapes special characters in quoted name literal.
+func quotedEscape(s string) string {
 	var sb strings.Builder
 
-	for _, c := range text {
-		if _, ok := specialChars[c]; ok {
+	for _, c := range s {
+		switch c {
+		case '\\', '|':
 			sb.WriteRune('\\')
 		}
 
@@ -374,13 +359,18 @@ func escapeSpecialChars(text string) string {
 	return sb.String()
 }
 
-// escapeChars escapes provided characters in text.
-func escapeChars(text string, chars map[rune]struct{}) string {
+// textEscape escapes special characters in text.
+func textEscape(s string, simpleStart bool) string {
 	var sb strings.Builder
 
-	for _, c := range text {
-		if _, ok := chars[c]; ok {
+	for i, c := range s {
+		switch c {
+		case '\\', '{', '}':
 			sb.WriteRune('\\')
+		case '.':
+			if i == 0 && simpleStart {
+				sb.WriteRune('\\')
+			}
 		}
 
 		sb.WriteRune(c)
