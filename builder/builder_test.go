@@ -72,7 +72,7 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"match",
-			".match {$i} {$j}\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ |1| }}}\n",
+			".match {$i} {$j}\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}\n",
 			New().
 				Match(
 					Expr().Var("$i"),

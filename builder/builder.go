@@ -339,9 +339,9 @@ func printLiteral(l any) string {
 		v = quotedEscape(v)
 		return "|" + v + "|"
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		return fmt.Sprintf("|%d|", v)
+		return fmt.Sprintf("%d", v)
 	case float32, float64:
-		return fmt.Sprintf("|%f|", v)
+		return fmt.Sprintf("%f", v)
 	default:
 		panic(fmt.Sprintf("unsupported literal type: %T", v))
 	}
