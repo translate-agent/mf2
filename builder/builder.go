@@ -10,8 +10,9 @@ type Builder struct {
 	newline string
 	err     error
 
+	quoted            *pattern
 	locals            []local
-	inputs, selectors []Expression
+	inputs, selectors []expression
 	variants          []variant
 	patterns          []any
 }
@@ -28,6 +29,10 @@ func (b *Builder) Build() (string, error) {
 		return "", b.err
 	}
 
+	if err := b.validate(); err != nil {
+		return "", err
+	}
+
 	var s string
 
 	for _, v := range b.inputs {
@@ -42,14 +47,13 @@ func (b *Builder) Build() (string, error) {
 		s += fmt.Sprint(pattern)
 	}
 
-	if len(b.selectors) > 0 {
-		s += ".match" + b.spacing
-	}
-
 	for i, selector := range b.selectors {
-		if i == len(b.selectors)-1 { // newline after the last selector
+		switch i {
+		case 0:
+			s += ".match" + b.spacing + selector.String() + " "
+		case len(b.selectors) - 1: // newline after the last selector
 			s += selector.String() + b.newline
-		} else {
+		default:
 			s += selector.String() + " "
 		}
 	}
@@ -58,16 +62,41 @@ func (b *Builder) Build() (string, error) {
 		s += variant.String() + b.newline
 	}
 
+	if b.quoted != nil {
+		s += b.quoted.String()
+	}
+
 	return s, nil
 }
 
-func (b *Builder) String() string {
+func (b *Builder) MustBuild() string {
 	s, err := b.Build()
 	if err != nil {
 		panic(err)
 	}
 
 	return s
+}
+
+func (b *Builder) validate() error {
+	if len(b.variants) == 0 && b.quoted == nil &&
+		(len(b.inputs) > 0 || len(b.locals) > 0 || len(b.selectors) > 0) {
+		return fmt.Errorf("complex message MUST include complex body")
+	}
+
+	if len(b.variants) > 0 && b.quoted != nil {
+		return fmt.Errorf("complex message MUST have single complex body")
+	}
+
+	if len(b.selectors) > 0 && len(b.variants) == 0 {
+		return fmt.Errorf("matcher MUST have at least one variant")
+	}
+
+	if len(b.variants) > 0 && len(b.selectors) == 0 {
+		return fmt.Errorf("matcher MUST have at least one selector")
+	}
+
+	return nil
 }
 
 func (b *Builder) Newline(s string) *Builder {
@@ -95,23 +124,77 @@ func (b *Builder) Text(s string) *Builder {
 		return b
 	}
 
-	if b.locals == nil && b.inputs == nil && b.selectors == nil &&
-		b.variants == nil && b.patterns == nil { // simple start text
-		s = textEscape(s, true)
-	} else {
-		s = textEscape(s, false)
-	}
+	s = textEscape(s)
 
-	if len(b.variants) == 0 {
-		b.patterns = append(b.patterns, s)
-	} else {
-		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, s)
+	switch b.IsEmpty() {
+	case true:
+		if simpleStart(s) || s == "" {
+			b.patterns = append(b.patterns, s)
+		} else {
+			b.quoted = &pattern{elements: []any{s}}
+		}
+	case false:
+		if len(b.variants) != 0 {
+			b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, s)
+		} else {
+			b.patterns = append(b.patterns, s)
+		}
 	}
 
 	return b
 }
 
-func (b *Builder) Local(v string, expr *Expression) *Builder {
+type pattern struct {
+	elements []any
+}
+
+func Pattern() *pattern { return new(pattern) }
+
+func (p *pattern) String() string {
+	s := "{{"
+
+	if p != nil {
+		for i := range p.elements {
+			switch v := p.elements[i].(type) {
+			case string:
+				s += v
+			case *expression:
+				s += v.String()
+			default:
+				panic(fmt.Sprintf("unsupported pattern type: %T", v))
+			}
+		}
+	}
+
+	return s + "}}"
+}
+
+func (p *pattern) Text(s string) *pattern {
+	p.elements = append(p.elements, textEscape(s))
+	return p
+}
+
+func (p *pattern) Expr(e *expression) *pattern {
+	p.elements = append(p.elements, e)
+	return p
+}
+
+func (b *Builder) Quoted(pattern *pattern) *Builder {
+	if b.err != nil {
+		return b
+	}
+
+	if len(b.patterns) > 0 {
+		b.err = fmt.Errorf("complex message cannot be added after simple message")
+		return b
+	}
+
+	b.quoted = pattern
+
+	return b
+}
+
+func (b *Builder) Local(v string, expr *expression) *Builder {
 	if b.err != nil {
 		return b
 	}
@@ -128,7 +211,7 @@ func (b *Builder) Local(v string, expr *Expression) *Builder {
 	return b
 }
 
-func (b *Builder) Input(expr *Expression) *Builder {
+func (b *Builder) Input(expr *expression) *Builder {
 	if b.err != nil {
 		return b
 	}
@@ -145,7 +228,7 @@ func (b *Builder) Input(expr *Expression) *Builder {
 	return b
 }
 
-func (b *Builder) Expr(e *Expression) *Builder {
+func (b *Builder) Expr(e *expression) *Builder {
 	if b.err != nil {
 		return b
 	}
@@ -161,7 +244,7 @@ func (b *Builder) Expr(e *Expression) *Builder {
 	return b
 }
 
-func (b *Builder) Match(selectors ...*Expression) *Builder {
+func (b *Builder) Match(selectors ...*expression) *Builder {
 	if b.err != nil {
 		return b
 	}
@@ -228,7 +311,7 @@ func (v *variant) String() string {
 		switch v := v.pattern[i].(type) {
 		case string:
 			s += v
-		case *Expression:
+		case *expression:
 			s += v.String()
 		default:
 			panic(fmt.Sprintf("unsupported pattern type: %T", v))
@@ -239,7 +322,7 @@ func (v *variant) String() string {
 }
 
 type local struct {
-	expr     *Expression
+	expr     *expression
 	variable variable
 }
 
@@ -252,13 +335,13 @@ type function struct {
 	options []option
 }
 
-type Expression struct {
+type expression struct {
 	spacing  string
 	operand  any // literal or variable
 	function function
 }
 
-func (e *Expression) String() string {
+func (e *expression) String() string {
 	s := "{" + e.spacing
 
 	switch v := e.operand.(type) {
@@ -287,14 +370,14 @@ func (e *Expression) String() string {
 	return s + e.spacing + "}"
 }
 
-func Expr() *Expression { return new(Expression) }
+func Expr() *expression { return new(expression) }
 
-func (e *Expression) Literal(v any) *Expression {
+func (e *expression) Literal(v any) *expression {
 	e.operand = v
 	return e
 }
 
-func (e *Expression) Var(v string) *Expression {
+func (e *expression) Var(v string) *expression {
 	if len(v) == 0 {
 		panic("variable name cannot be empty")
 	}
@@ -315,7 +398,7 @@ type option struct { //nolint:govet
 
 func Option(key string, operand any) option { return option{key, operand} }
 
-func (e *Expression) Func(name string, option ...option) *Expression {
+func (e *expression) Func(name string, option ...option) *expression {
 	if len(name) == 0 {
 		panic("function name cannot be empty")
 	}
@@ -349,7 +432,13 @@ func printLiteral(l any) string {
 
 // helpers
 
-// quotedEscape escapes special characters in quoted name literal.
+/*
+	quotedEscape escapes special characters in quoted name literal.
+
+ABNF:
+quoted-escape   = backslash ( backslash / "|" )
+.
+*/
 func quotedEscape(s string) string {
 	var sb strings.Builder
 
@@ -365,22 +454,68 @@ func quotedEscape(s string) string {
 	return sb.String()
 }
 
-// textEscape escapes special characters in text.
-func textEscape(s string, simpleStart bool) string {
+/*
+	textEscape escapes special characters in text.
+
+ABNF:
+text-escape     = backslash ( backslash / "{" / "}" )
+.
+*/
+func textEscape(s string) string {
 	var sb strings.Builder
 
-	for i, c := range s {
+	for _, c := range s {
 		switch c {
 		case '\\', '{', '}':
 			sb.WriteRune('\\')
-		case '.':
-			if i == 0 && simpleStart {
-				sb.WriteRune('\\')
-			}
 		}
 
 		sb.WriteRune(c)
 	}
 
 	return sb.String()
+}
+
+// simpleStart returns true if the string has a simple start.
+// simple-start = simple-start-char / text-escape / placeholder.
+func simpleStart(s string) bool {
+	for i, c := range s {
+		if i > 0 {
+			break
+		}
+
+		if isSimpleStart(c) || c == '\\' {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isSimpleStart returns true if r is simple start character.
+//
+// ABNF:
+//
+//	simple-start-char = %x0-2D         ; omit .
+//	                  / %x2F-5B        ; omit \
+//	                  / %x5D-7A        ; omit {
+//	                  / %x7C           ; omit }
+//	                  / %x7E-D7FF      ; omit surrogates
+//	                  / %xE000-10FFFF
+func isSimpleStart(r rune) bool {
+	return 0x0 <= r && r <= 0x2D || // omit .
+		0x2F <= r && r <= 0x5B || // omit \
+		0x5D <= r && r <= 0x7A || // omit {}
+		r == 0x7C || // omit }
+		0x7E <= r && r <= 0xD7FF || // omit surrogates
+		0xE000 <= r && r <= 0x10FFFF
+}
+
+func (b Builder) IsEmpty() bool {
+	if b.locals == nil && b.inputs == nil && b.selectors == nil &&
+		b.variants == nil && b.patterns == nil && b.quoted == nil {
+		return true
+	}
+
+	return false
 }

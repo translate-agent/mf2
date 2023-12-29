@@ -3,7 +3,7 @@ package builder
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_Builder(t *testing.T) {
@@ -14,22 +14,22 @@ func Test_Builder(t *testing.T) {
 		b              *Builder
 	}{
 		{
-			"text",
+			"empty simple message",
+			"",
+			New().Text(""),
+		},
+		{
+			"simple message, text only",
 			"Hello, World!",
 			New().Text("Hello, World!"),
 		},
 		{
-			"simple message, first character is dot",
-			"\\.text",
-			New().Text(".text"),
+			"simple message, text with special chars",
+			"\\{Hello\\}\\\\, \\{World\\}!",
+			New().Text("{Hello}\\, {World}!"),
 		},
 		{
-			"text, with special chars",
-			"Hello\\\\, \\{World\\}!",
-			New().Text("Hello\\, {World}!"),
-		},
-		{
-			"text with literal",
+			"simple message, text with literal",
 			"Hello, { |World| }!",
 			New().
 				Text("Hello, ").
@@ -37,7 +37,7 @@ func Test_Builder(t *testing.T) {
 				Text("!"),
 		},
 		{
-			"text with expr",
+			"simple message, text with expr",
 			"Hello, { $world :upper limit = 2 }!",
 			New().
 				Text("Hello, ").
@@ -45,7 +45,7 @@ func Test_Builder(t *testing.T) {
 				Text("!"),
 		},
 		{
-			"text with markup-like function",
+			"simple message, text with markup-like function",
 			"Hello { +link } World { -link }",
 			New().
 				Text("Hello ").
@@ -54,24 +54,35 @@ func Test_Builder(t *testing.T) {
 				Expr(Expr().Func("-link")),
 		},
 		{
-			"local",
-			".local $hostName = { $host }\n",
-			New().Local("$hostName", Expr().Var("$host")),
+			"complex message, empty quoted pattern",
+			"{{}}",
+			New().Quoted(Pattern()),
 		},
 		{
-			"input",
-			".input { $host }\n",
-			New().Input(Expr().Var("$host")),
+			"complex message, text starts with period",
+			"{{.ok}}",
+			New().Text(".ok"),
 		},
 		{
-			"input and local",
-			".input { $host }\n.local $hostName = { $host }\n",
+			"complex message, local declaration",
+			".local $hostName = { $host }\n{{{$hostName}}}",
+			New().Local("$hostName", Expr().Var("$host")).Quoted(Pattern().Expr(Expr().Var("$hostName"))),
+		},
+		{
+			"complex message, input declaration",
+			".input { $host }\n{{{$host}}}",
+			New().Input(Expr().Var("$host")).Quoted(Pattern().Expr(Expr().Var("$host"))),
+		},
+		{
+			"complex message, input and local declaration",
+			".input { $host }\n.local $hostName = { $host }\n{{{$host}}}",
 			New().
 				Local("$hostName", Expr().Var("$host")).
-				Input(Expr().Var("$host")),
+				Input(Expr().Var("$host")).
+				Quoted(Pattern().Expr(Expr().Var("$host"))),
 		},
 		{
-			"match",
+			"complex message, matcher with multiple keys",
 			".match {$i} {$j}\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}\n",
 			New().
 				Match(
@@ -89,7 +100,7 @@ func Test_Builder(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(t, test.expected, test.b.String())
+			require.Equal(t, test.expected, test.b.MustBuild())
 		})
 	}
 }
