@@ -379,28 +379,33 @@ func lexExpr(l *lexer) stateFn {
 
 // lexName is the state function for lexing names.
 func lexName(l *lexer) stateFn {
-	var s string
+	var typ itemType
 
-	typ := itemUnquotedLiteral
+	switch l.next() {
+	case '$':
+		typ = itemVariable
+	case '.':
+		typ = itemKeyword
+	default:
+		typ = itemUnquotedLiteral
 
-	for i, r := 0, l.next(); ; i, r = i+1, l.next() {
-		switch {
-		default:
-			l.backup()
-
-			return l.emitItem(mk(typ, s))
-		case len(s) > 0 && isName(r):
-			s += string(r)
-		case r == eof:
-			return l.emitItem(mk(typ, s))
-		case i == 0 && isNameStart(r):
-			s = string(r)
-		case i == 0 && r == '$':
-			typ = itemVariable
-		case i == 0 && r == '.':
-			typ = itemReservedKeyword
-		}
+		l.backup() // backup to the first rune
 	}
+
+	var (
+		s string // item value
+		r rune   // current rune
+	)
+
+	for r = l.next(); isName(r); r = l.next() {
+		s += string(r)
+	}
+
+	if r != eof { // backup is not necessary if we reached eof
+		l.backup()
+	}
+
+	return l.emitItem(mk(typ, s))
 }
 
 // lexLiteral is the state function for lexing literals.
