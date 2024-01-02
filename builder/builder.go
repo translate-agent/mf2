@@ -90,7 +90,7 @@ func (b *Builder) MustBuild() string {
 }
 
 func (b *Builder) validate() error {
-	if len(b.variants) == 0 && b.quoted == nil &&
+	if len(b.variants) == 0 && len(b.quoted) == 0 &&
 		(len(b.inputs) > 0 || len(b.locals) > 0 || len(b.selectors) > 0) {
 		return fmt.Errorf("complex message MUST include complex body")
 	}
@@ -541,8 +541,8 @@ func isSimpleStart(r rune) bool {
 
 // IsEmpty returns true if the builder is empty.
 func (b Builder) IsEmpty() bool {
-	if b.locals == nil && b.inputs == nil && b.selectors == nil &&
-		b.variants == nil && b.patterns == nil && b.quoted == nil {
+	if len(b.locals) == 0 && len(b.inputs) == 0 && len(b.selectors) == 0 &&
+		len(b.variants) == 0 && len(b.patterns) == 0 && len(b.quoted) == 0 {
 		return true
 	}
 
