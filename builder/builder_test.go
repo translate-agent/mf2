@@ -14,12 +14,12 @@ func Test_Builder(t *testing.T) {
 		b              *Builder
 	}{
 		{
-			"empty simple message",
+			"simple message, empty text",
 			"",
 			New().Text(""),
 		},
 		{
-			"simple message, text only",
+			"simple message, text",
 			"Hello, World!",
 			New().Text("Hello, World!"),
 		},
@@ -37,11 +37,11 @@ func Test_Builder(t *testing.T) {
 				Text("!"),
 		},
 		{
-			"simple message, text with expr",
-			"Hello, { $world :upper limit = 2 }!",
+			"simple message, text and expr with options",
+			"Hello, { $world :upper limit = 2 min = $min type = |integer| }!",
 			New().
 				Text("Hello, ").
-				Expr(Expr().Var("$world").Func(":upper", Option("limit", "2"))).
+				Expr(Expr().Var("$world").Func(":upper", Option("limit", 2), Option("min", "$min"), Option("type", "integer"))).
 				Text("!"),
 		},
 		{
@@ -59,7 +59,7 @@ func Test_Builder(t *testing.T) {
 			New().Quoted(Pattern()),
 		},
 		{
-			"complex message, text starts with period",
+			"complex message, text starts with a period",
 			"{{.ok}}",
 			New().Text(".ok"),
 		},
@@ -83,7 +83,7 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"complex message, matcher with multiple keys",
-			".match {$i} {$j}\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}\n",
+			".match {$i} {$j}\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
 			New().
 				Match(
 					Expr().Var("$i"),

@@ -10,7 +10,7 @@ type Builder struct {
 	newline string
 	err     error
 
-	quoted            *pattern
+	quoted            pattern
 	locals            []local
 	inputs, selectors []expression
 	variants          []variant
@@ -24,7 +24,7 @@ func New() *Builder {
 	}
 }
 
-func (b *Builder) Build() (string, error) {
+func (b *Builder) build() (string, error) {
 	if b.err != nil {
 		return "", b.err
 	}
@@ -43,26 +43,37 @@ func (b *Builder) Build() (string, error) {
 		s += ".local" + b.spacing + string(v.variable) + b.spacing + "=" + b.spacing + v.expr.String() + b.newline
 	}
 
-	for _, pattern := range b.patterns {
-		s += fmt.Sprint(pattern)
-	}
-
-	for i, selector := range b.selectors {
-		switch i {
-		case 0:
-			s += ".match" + b.spacing + selector.String() + " "
-		case len(b.selectors) - 1: // newline after the last selector
-			s += selector.String() + b.newline
+	for _, v := range b.patterns {
+		switch v := v.(type) {
+		case string:
+			s += v
+		case *expression:
+			s += v.String()
 		default:
-			s += selector.String() + " "
+			return "", fmt.Errorf("unsupported pattern type: %T", v)
 		}
 	}
 
-	for _, variant := range b.variants {
-		s += variant.String() + b.newline
+	for i, v := range b.selectors {
+		switch i {
+		case 0:
+			s += ".match" + b.spacing + v.String() + " "
+		case len(b.selectors) - 1: // newline after the last selector
+			s += v.String() + b.newline
+		default:
+			s += v.String() + " "
+		}
 	}
 
-	if b.quoted != nil {
+	for i, v := range b.variants {
+		s += v.String()
+
+		if i != len(b.variants)-1 {
+			s += b.newline
+		}
+	}
+
+	if len(b.quoted) > 0 {
 		s += b.quoted.String()
 	}
 
@@ -70,7 +81,7 @@ func (b *Builder) Build() (string, error) {
 }
 
 func (b *Builder) MustBuild() string {
-	s, err := b.Build()
+	s, err := b.build()
 	if err != nil {
 		panic(err)
 	}
@@ -84,16 +95,22 @@ func (b *Builder) validate() error {
 		return fmt.Errorf("complex message MUST include complex body")
 	}
 
-	if len(b.variants) > 0 && b.quoted != nil {
-		return fmt.Errorf("complex message MUST have single complex body")
+	if len(b.variants) > 0 {
+		if b.quoted != nil {
+			return fmt.Errorf("complex message MUST have single complex body")
+		}
+
+		if len(b.selectors) == 0 {
+			return fmt.Errorf("matcher MUST have at least one selector")
+		}
+
+		if !hasCatchAllVariant(b.variants) {
+			return fmt.Errorf("matcher MUST have at least one variant with all catch-all keys")
+		}
 	}
 
 	if len(b.selectors) > 0 && len(b.variants) == 0 {
 		return fmt.Errorf("matcher MUST have at least one variant")
-	}
-
-	if len(b.variants) > 0 && len(b.selectors) == 0 {
-		return fmt.Errorf("matcher MUST have at least one selector")
 	}
 
 	return nil
@@ -124,45 +141,40 @@ func (b *Builder) Text(s string) *Builder {
 		return b
 	}
 
-	s = textEscape(s)
+	if b.IsEmpty() {
+		if hasSimpleStart(s) || s == "" {
+			b.patterns = append(b.patterns, textEscape(s))
+		} else {
+			b.quoted = []any{textEscape(s)} // create quoted pattern if the first character doesn't have simple start.
+		}
 
-	switch b.IsEmpty() {
-	case true:
-		if simpleStart(s) || s == "" {
-			b.patterns = append(b.patterns, s)
-		} else {
-			b.quoted = &pattern{elements: []any{s}}
-		}
-	case false:
-		if len(b.variants) != 0 {
-			b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, s)
-		} else {
-			b.patterns = append(b.patterns, s)
-		}
+		return b
+	}
+
+	if len(b.variants) > 0 {
+		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, textEscape(s))
+	} else {
+		b.patterns = append(b.patterns, textEscape(s))
 	}
 
 	return b
 }
 
-type pattern struct {
-	elements []any
-}
+type pattern []any
 
 func Pattern() *pattern { return new(pattern) }
 
-func (p *pattern) String() string {
+func (p pattern) String() string {
 	s := "{{"
 
-	if p != nil {
-		for i := range p.elements {
-			switch v := p.elements[i].(type) {
-			case string:
-				s += v
-			case *expression:
-				s += v.String()
-			default:
-				panic(fmt.Sprintf("unsupported pattern type: %T", v))
-			}
+	for _, v := range p {
+		switch v := v.(type) {
+		case string:
+			s += v
+		case *expression:
+			s += v.String()
+		default:
+			panic(fmt.Sprintf("unsupported pattern type: %T", v))
 		}
 	}
 
@@ -170,18 +182,27 @@ func (p *pattern) String() string {
 }
 
 func (p *pattern) Text(s string) *pattern {
-	p.elements = append(p.elements, textEscape(s))
+	*p = append(*p, textEscape(s))
 	return p
 }
 
 func (p *pattern) Expr(e *expression) *pattern {
-	p.elements = append(p.elements, e)
+	*p = append(*p, e)
 	return p
 }
 
-func (b *Builder) Quoted(pattern *pattern) *Builder {
+func (b *Builder) Quoted(p *pattern) *Builder {
 	if b.err != nil {
 		return b
+	}
+
+	if p == nil {
+		b.err = fmt.Errorf("complex message quoted pattern cannot be nil")
+		return b
+	}
+
+	if len(*p) == 0 {
+		*p = append(*p, "")
 	}
 
 	if len(b.patterns) > 0 {
@@ -189,7 +210,7 @@ func (b *Builder) Quoted(pattern *pattern) *Builder {
 		return b
 	}
 
-	b.quoted = pattern
+	b.quoted = *p
 
 	return b
 }
@@ -235,11 +256,12 @@ func (b *Builder) Expr(e *expression) *Builder {
 
 	e.spacing = b.spacing
 
-	if len(b.variants) == 0 {
-		b.patterns = append(b.patterns, e)
-	} else {
+	if len(b.variants) > 0 {
 		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, e)
+		return b
 	}
+
+	b.patterns = append(b.patterns, e)
 
 	return b
 }
@@ -304,7 +326,7 @@ func (v *variant) String() string {
 	s += "{{"
 
 	for i := range v.pattern {
-		if i != 0 {
+		if i > 0 {
 			s += " "
 		}
 
@@ -363,7 +385,14 @@ func (e *expression) String() string {
 		s += e.function.name
 
 		for _, o := range e.function.options {
-			s += " " + o.key + e.spacing + "=" + e.spacing + fmt.Sprint(o.operand)
+			s += " " + o.key + e.spacing + "=" + e.spacing
+
+			if v, ok := o.operand.(string); ok && len(v) > 0 && v[0] == '$' { // recognized as variable if string starts with $
+				s += v
+				continue
+			}
+
+			s += printLiteral(o.operand)
 		}
 	}
 
@@ -419,8 +448,7 @@ func (e *expression) Func(name string, option ...option) *expression {
 func printLiteral(l any) string {
 	switch v := l.(type) {
 	case string:
-		v = quotedEscape(v)
-		return "|" + v + "|"
+		return "|" + quotedEscape(v) + "|"
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		return fmt.Sprintf("%d", v)
 	case float32, float64:
@@ -476,15 +504,15 @@ func textEscape(s string) string {
 	return sb.String()
 }
 
-// simpleStart returns true if the string has a simple start.
-// simple-start = simple-start-char / text-escape / placeholder.
-func simpleStart(s string) bool {
-	for i, c := range s {
-		if i > 0 {
-			break
-		}
+// hasSimpleStart returns true if the string has a simple start.
+// ABNF:
+// simple-start = simple-start-char / text-escape / placeholder
+// .
+func hasSimpleStart(s string) bool {
+	if len(s) > 0 {
+		c := []rune(s)[0]
 
-		if isSimpleStart(c) || c == '\\' {
+		if isSimpleStart(c) || c == '{' || c == '}' || c == '\\' {
 			return true
 		}
 	}
@@ -511,10 +539,30 @@ func isSimpleStart(r rune) bool {
 		0xE000 <= r && r <= 0x10FFFF
 }
 
+// IsEmpty returns true if the builder is empty.
 func (b Builder) IsEmpty() bool {
 	if b.locals == nil && b.inputs == nil && b.selectors == nil &&
 		b.variants == nil && b.patterns == nil && b.quoted == nil {
 		return true
+	}
+
+	return false
+}
+
+// hasCatchAllVariant() checks if at least variant has catch-all keys.
+func hasCatchAllVariant(variants []variant) bool {
+	for _, v := range variants {
+		var catchAllCount int
+
+		for _, key := range v.keys {
+			if key == "*" {
+				catchAllCount++
+			}
+
+			if catchAllCount == len(v.keys) {
+				return true
+			}
+		}
 	}
 
 	return false
