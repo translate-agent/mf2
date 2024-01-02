@@ -24,7 +24,7 @@ func New() *Builder {
 	}
 }
 
-func (b *Builder) build() (string, error) {
+func (b *Builder) Build() (string, error) {
 	if b.err != nil {
 		return "", b.err
 	}
@@ -81,7 +81,7 @@ func (b *Builder) build() (string, error) {
 }
 
 func (b *Builder) MustBuild() string {
-	s, err := b.build()
+	s, err := b.Build()
 	if err != nil {
 		panic(err)
 	}
