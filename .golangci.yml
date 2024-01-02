@@ -1,52 +1,52 @@
 linters:
   enable-all: true
   disable:
-   - asasalint
-   - deadcode
-   - depguard
-   - dupl
-   - exhaustivestruct
-   - exhaustruct
-   - forbidigo
-   - funlen
-   - gci
-   - ginkgolinter
-   - goconst
-   - gochecknoglobals
-   - gochecknoinits
-   - gocyclo
-   - godox
-   - goerr113
-   - gofmt
-   - goheader
-   - goimports
-   - golint
-   - gomodguard
-   - gosmopolitan
-   - grouper
-   - ifshort
-   - inamedparam
-   - interfacer
-   - loggercheck
-   - maintidx
-   - maligned
-   - nlreturn
-   - nonamedreturns
-   - nosnakecase
-   - promlinter
-   - revive
-   - scopelint
-   - structcheck
-   - tagliatelle
-   - testableexamples
-   - testpackage
-   - thelper
-   - tparallel
-   - varcheck
-   - varnamelen
-   - wastedassign
-   - whitespace
-   - zerologlint
+    - asasalint
+    - deadcode
+    - depguard
+    - dupl
+    - exhaustivestruct
+    - exhaustruct
+    - forbidigo
+    - funlen
+    - gci
+    - ginkgolinter
+    - goconst
+    - gochecknoglobals
+    - gochecknoinits
+    - gocyclo
+    - godox
+    - goerr113
+    - gofmt
+    - goheader
+    - goimports
+    - golint
+    - gomodguard
+    - gosmopolitan
+    - grouper
+    - ifshort
+    - inamedparam
+    - interfacer
+    - loggercheck
+    - maintidx
+    - maligned
+    - nlreturn
+    - nonamedreturns
+    - nosnakecase
+    - promlinter
+    - revive
+    - scopelint
+    - structcheck
+    - tagliatelle
+    - testableexamples
+    - testpackage
+    - thelper
+    - tparallel
+    - varcheck
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - zerologlint
 linters-settings:
   cyclop:
     max-complexity: 30
@@ -58,3 +58,5 @@ linters-settings:
         alias: translatev1
   predeclared:
     ignore: ""
+  exhaustive:
+    default-signifies-exhaustive: true
