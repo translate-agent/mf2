@@ -196,7 +196,7 @@ func Test_lex(t *testing.T) {
 			input: ".local $hostName = {$host} .local $h = {$host}",
 			expected: []item{
 				// .local $hostName = {$host}
-				mk(itemKeyword, ".local"),
+				mk(itemLocalKeyword, ".local"),
 				mk(itemWhitespace, " "),
 				mk(itemVariable, "$hostName"),
 				mk(itemWhitespace, " "),
@@ -207,7 +207,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionClose, "}"),
 				mk(itemWhitespace, " "),
 				// .local $h = {$host}
-				mk(itemKeyword, ".local"),
+				mk(itemLocalKeyword, ".local"),
 				mk(itemWhitespace, " "),
 				mk(itemVariable, "$h"),
 				mk(itemWhitespace, " "),
@@ -224,14 +224,14 @@ func Test_lex(t *testing.T) {
 			input: ".input {$host} .input {$user}",
 			expected: []item{
 				// .input {$host}
-				mk(itemKeyword, ".input"),
+				mk(itemInputKeyword, ".input"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "$host"),
 				mk(itemExpressionClose, "}"),
 				mk(itemWhitespace, " "),
 				// .input ${user}
-				mk(itemKeyword, ".input"),
+				mk(itemInputKeyword, ".input"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "$user"),
@@ -243,7 +243,7 @@ func Test_lex(t *testing.T) {
 			name:  "reserved declaration",
 			input: ".output",
 			expected: []item{
-				mk(itemKeyword, ".output"),
+				mk(itemReservedKeyword, ".output"),
 				mk(itemEOF, ""),
 			},
 		},
@@ -251,7 +251,7 @@ func Test_lex(t *testing.T) {
 			name:  "matcher",
 			input: ".match {$n} 0 {{no apples}} 1 {{{$n} apple}} * {{{$n} apples}}",
 			expected: []item{
-				mk(itemKeyword, ".match"),
+				mk(itemMatchKeyword, ".match"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "$n"),
