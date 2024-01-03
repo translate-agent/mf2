@@ -9,7 +9,8 @@ import (
 func Test_Builder(t *testing.T) {
 	t.Parallel()
 
-	for _, test := range []struct { //nolint:govet
+	//nolint:govet, lll
+	for _, test := range []struct {
 		name, expected string
 		b              *Builder
 	}{
@@ -19,9 +20,14 @@ func Test_Builder(t *testing.T) {
 			New().Text(""),
 		},
 		{
-			"simple message, text",
+			"simple message, simple text",
 			"Hello, World!",
 			New().Text("Hello, World!"),
+		},
+		{
+			"simple message, text starts with whitespace char",
+			" hello",
+			New().Text(" hello"),
 		},
 		{
 			"simple message, text with special chars",
@@ -33,7 +39,7 @@ func Test_Builder(t *testing.T) {
 			"Hello, { |World| }!",
 			New().
 				Text("Hello, ").
-				Expr(Expr().Literal("World")).
+				Expr(Literal("World")).
 				Text("!"),
 		},
 		{
@@ -41,7 +47,7 @@ func Test_Builder(t *testing.T) {
 			"Hello, { $world :upper limit = 2 min = $min type = |integer| }!",
 			New().
 				Text("Hello, ").
-				Expr(Expr().Var("$world").Func(":upper", Option("limit", 2), Option("min", "$min"), Option("type", "integer"))).
+				Expr(Var("$world").Func(":upper", Option("limit", 2), Option("min", "$min"), Option("type", "integer"))).
 				Text("!"),
 		},
 		{
@@ -49,50 +55,74 @@ func Test_Builder(t *testing.T) {
 			"Hello { +link } World { -link }",
 			New().
 				Text("Hello ").
-				Expr(Expr().Func("+link")).
+				Expr(Func("+link")).
 				Text(" World ").
-				Expr(Expr().Func("-link")),
+				Expr(Func("-link")),
 		},
 		{
-			"complex message, empty quoted pattern",
-			"{{}}",
-			New().Quoted(Pattern()),
+			"complex message, period char",
+			"{{.}}",
+			New().Text("."),
 		},
 		{
-			"complex message, text starts with a period",
+			"complex message, text starts with a period char",
 			"{{.ok}}",
 			New().Text(".ok"),
 		},
 		{
+			"complex message, text with special chars",
+			".local $var = { |greeting| }\n{{}}",
+			New().Local("$var", Literal("greeting")),
+		},
+		{
 			"complex message, local declaration",
-			".local $hostName = { $host }\n{{{$hostName}}}",
-			New().Local("$hostName", Expr().Var("$host")).Quoted(Pattern().Expr(Expr().Var("$hostName"))),
+			".local $hostName = { $host }\n{{{ $hostName }}}",
+			New().
+				Local("$hostName", Var("$host")).
+				Expr(Var("$hostName")),
 		},
 		{
 			"complex message, input declaration",
-			".input { $host }\n{{{$host}}}",
-			New().Input(Expr().Var("$host")).Quoted(Pattern().Expr(Expr().Var("$host"))),
+			".input { $host }\n{{{ $host }}}",
+			New().
+				Input(Var("$host")).
+				Expr(Var("$host")),
 		},
 		{
 			"complex message, input and local declaration",
-			".input { $host }\n.local $hostName = { $host }\n{{{$host}}}",
+			".input { $host }\n.local $hostName = { $host }\n{{{ $host }}}",
 			New().
-				Local("$hostName", Expr().Var("$host")).
-				Input(Expr().Var("$host")).
-				Quoted(Pattern().Expr(Expr().Var("$host"))),
+				Local("$hostName", Var("$host")).
+				Input(Var("$host")).
+				Expr(Var("$host")),
 		},
 		{
 			"complex message, matcher with multiple keys",
 			".match {$i} {$j}\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
 			New().
 				Match(
-					Expr().Var("$i"),
-					Expr().Var("$j"),
+					Var("$i"),
+					Var("$j"),
 				).
 				Key(1, 2).Text("{first}").
-				Key(2, 0).Text("second").Expr(Expr().Var("$i")).
-				Key(3, 0).Expr(Expr().Literal("\\a|")).
-				Key("*", "*").Expr(Expr().Literal(1)),
+				Key(2, 0).Text("second").Expr(Var("$i")).
+				Key(3, 0).Expr(Literal("\\a|")).
+				Key("*", "*").Expr(Literal(1)),
+		},
+		{
+			"complex message, matcher with multiple keys and local declarations",
+			".input { $i }\n.local $hostName = { $i }\n.match {$i} {$j}\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
+			New().
+				Input(Var("$i")).
+				Local("$hostName", Var("$i")).
+				Match(
+					Var("$i"),
+					Var("$j"),
+				).
+				Key(1, 2).Text("{first}").
+				Key(2, 0).Text("second").Expr(Var("$i")).
+				Key(3, 0).Expr(Literal("\\a|")).
+				Key("*", "*").Expr(Literal(1)),
 		},
 	} {
 		test := test
