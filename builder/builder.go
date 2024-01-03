@@ -538,15 +538,13 @@ func isAlpha(r rune) bool {
 }
 
 func coalesce[T comparable](l ...T) T {
-	for _, v := range l {
-		var c T
+	var c T
 
+	for _, v := range l {
 		if v != c {
 			return v
 		}
 	}
-
-	var c T
 
 	return c
 }
