@@ -755,6 +755,189 @@ no no {{Hello!}}`,
 	}
 }
 
+// TestValidate tests negative cases for AST validation. Positive cases are covered by TestParse* tests.
+func TestValidate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		ast       AST
+		name      string
+		errorPath string // path to the failing field (simplified to last n fields)
+	}{
+		{
+			name:      "No message",
+			ast:       AST{Message: nil},
+			errorPath: "ast",
+		},
+		{
+			// Hello, { $ } World!
+			name: "Variable expression empty variable name",
+			ast: AST{
+				Message: SimpleMessage{
+					Patterns: []Pattern{
+						TextPattern("Hello, "),
+						PlaceholderPattern{
+							Expression: VariableExpression{Variable: Variable("")},
+						},
+					},
+				},
+			},
+			errorPath: "variableExpression.variable",
+		},
+		{
+			// Hello, { $variable : } World!
+			name: "Variable expression with annotation empty function name",
+			ast: AST{
+				Message: SimpleMessage{
+					Patterns: []Pattern{
+						TextPattern("Hello, "),
+						PlaceholderPattern{
+							Expression: VariableExpression{
+								Variable: Variable("variable"),
+								Annotation: FunctionAnnotation{Function: Function{
+									Prefix: ':',
+									Identifier: Identifier{
+										Namespace: "",
+										Name:      "",
+									},
+								}},
+							},
+						},
+					},
+				},
+			},
+			errorPath: "functionAnnotation.function.identifier",
+		},
+		{
+			// Hello, { } World!
+			name: "Empty annotation expression",
+			ast: AST{
+				Message: SimpleMessage{
+					Patterns: []Pattern{
+						TextPattern("Hello, "),
+						PlaceholderPattern{
+							Expression: AnnotationExpression{},
+						},
+						TextPattern(" World!"),
+					},
+				},
+			},
+			errorPath: "placeholderPattern.annotationExpression",
+		},
+		{
+			// .input { $ } {{Hello, World!}}
+			name: "Empty variable in input declaration",
+			ast: AST{
+				Message: ComplexMessage{
+					Declarations: []Declaration{
+						InputDeclaration{
+							Expression: VariableExpression{Variable: Variable("")},
+						},
+					},
+					ComplexBody: QuotedPattern{
+						Patterns: []Pattern{
+							TextPattern("Hello, World!"),
+						},
+					},
+				},
+			},
+			errorPath: "inputDeclaration.variableExpression.variable",
+		},
+		{
+			// .local $var = {  } {{Hello, World!}}
+			name: "Empty expression in local declaration",
+			ast: AST{
+				Message: ComplexMessage{
+					Declarations: []Declaration{
+						LocalDeclaration{
+							Variable:   Variable("var"),
+							Expression: nil,
+						},
+					},
+					ComplexBody: QuotedPattern{
+						Patterns: []Pattern{
+							TextPattern("Hello, World!"),
+						},
+					},
+				},
+			},
+			errorPath: "complexMessage.localDeclaration",
+		},
+		{
+			// .match { } 1 {{Hello, World!}}
+			name: "Empty expression in matcher",
+			ast: AST{
+				Message: ComplexMessage{
+					Declarations: nil,
+					ComplexBody: Matcher{
+						MatchStatements: nil,
+						Variants: []Variant{
+							{
+								Keys: []VariantKey{LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}}},
+								QuotedPattern: QuotedPattern{
+									Patterns: []Pattern{
+										TextPattern("Hello, World!"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			errorPath: "complexMessage.matcher",
+		},
+		{
+			// .match { $variable }
+			name: "Matcher without variants",
+			ast: AST{
+				Message: ComplexMessage{
+					Declarations: nil,
+					ComplexBody: Matcher{
+						MatchStatements: []Expression{
+							VariableExpression{Variable: Variable("variable")},
+						},
+						Variants: nil,
+					},
+				},
+			},
+			errorPath: "complexMessage.matcher",
+		},
+		{
+			// .match { $variable } {{Hello world}}
+			name: "Matcher without variant key",
+			ast: AST{
+				Message: ComplexMessage{
+					ComplexBody: Matcher{
+						MatchStatements: []Expression{
+							VariableExpression{Variable: Variable("variable")},
+						},
+						Variants: []Variant{
+							{
+								Keys:          []VariantKey{},
+								QuotedPattern: QuotedPattern{Patterns: []Pattern{TextPattern("Hello world")}},
+							},
+						},
+					},
+				},
+			},
+			errorPath: "matcher.variant",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if tt.errorPath == "" {
+				require.FailNow(t, "test.errorPath is not set")
+			}
+
+			require.ErrorContains(t, tt.ast.validate(), tt.errorPath)
+		})
+	}
+}
+
 // helpers
 
 // requireEqualMF2String compares two strings, but ignores whitespace, tabs, and newlines.
