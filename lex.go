@@ -385,7 +385,7 @@ func lexName(l *lexer) stateFn {
 	case '$':
 		typ = itemVariable
 	case '.':
-		typ = itemKeyword
+		typ = itemReservedKeyword
 	default:
 		typ = itemUnquotedLiteral
 
