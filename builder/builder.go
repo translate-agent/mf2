@@ -1,9 +1,12 @@
 package builder
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
+
+const defaultSpacing = " "
 
 type Builder struct {
 	spacing string // optional spacing [s]
@@ -20,7 +23,7 @@ type Builder struct {
 func New() *Builder {
 	return &Builder{
 		newline: "\n",
-		spacing: " ",
+		spacing: defaultSpacing,
 	}
 }
 
@@ -36,11 +39,11 @@ func (b *Builder) Build() (string, error) {
 	var s string
 
 	for _, v := range b.inputs {
-		s += ".input" + b.spacing + v.String() + b.newline
+		s += ".input" + b.spacing + v.build(b.spacing) + b.newline
 	}
 
 	for _, v := range b.locals {
-		s += ".local" + b.spacing + string(v.variable) + b.spacing + "=" + b.spacing + v.expr.String() + b.newline
+		s += ".local" + b.spacing + string(v.variable) + b.spacing + "=" + b.spacing + v.expr.build(b.spacing) + b.newline
 	}
 
 	quotedPattern := (len(b.inputs) > 0 || len(b.locals) > 0) && (len(b.variants) == 0 && len(b.selectors) == 0)
@@ -67,7 +70,7 @@ func (b *Builder) Build() (string, error) {
 		case string:
 			s += textEscape(v)
 		case *Expression:
-			s += v.String()
+			s += v.build(b.spacing)
 		default:
 			return "", fmt.Errorf("unsupported pattern type: %T", v)
 		}
@@ -77,19 +80,18 @@ func (b *Builder) Build() (string, error) {
 		s += "}}"
 	}
 
-	for i, v := range b.selectors {
-		switch i {
-		case 0:
-			s += ".match" + b.spacing + v.String() + " "
-		case len(b.selectors) - 1: // newline after the last selector
-			s += v.String() + b.newline
-		default:
-			s += v.String() + " "
+	if len(b.selectors) > 0 {
+		s += ".match"
+
+		for _, v := range b.selectors {
+			s += b.spacing + v.build(b.spacing)
 		}
+
+		s += b.newline
 	}
 
 	for i, v := range b.variants {
-		s += v.String()
+		s += v.build(b.spacing)
 
 		if i != len(b.variants)-1 {
 			s += b.newline
@@ -140,6 +142,7 @@ func (b *Builder) Newline(s string) *Builder {
 	return b
 }
 
+// TODO: add to all expressions.
 func (b *Builder) Spacing(s string) *Builder {
 	if b.err != nil {
 		return b
@@ -169,13 +172,6 @@ func (b *Builder) Local(v string, expr *Expression) *Builder {
 		return b
 	}
 
-	if len(b.patterns) > 0 {
-		b.err = fmt.Errorf("complex message cannot be added after simple message")
-		return b
-	}
-
-	expr.spacing = b.spacing
-
 	b.locals = append(b.locals, local{variable: variable(v), expr: expr})
 
 	return b
@@ -185,13 +181,6 @@ func (b *Builder) Input(expr *Expression) *Builder {
 	if b.err != nil {
 		return b
 	}
-
-	if len(b.patterns) > 0 {
-		b.err = fmt.Errorf("complex message cannot be added after simple message")
-		return b
-	}
-
-	expr.spacing = b.spacing
 
 	b.inputs = append(b.inputs, *expr)
 
@@ -205,8 +194,6 @@ func (b *Builder) Expr(e *Expression) *Builder {
 		return b
 	}
 
-	e.spacing = b.spacing
-
 	if len(b.variants) > 0 {
 		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, e)
 		return b
@@ -217,7 +204,7 @@ func (b *Builder) Expr(e *Expression) *Builder {
 	return b
 }
 
-func (b *Builder) Match(selectors ...*Expression) *Builder {
+func (b *Builder) Match(selector *Expression, selectors ...*Expression) *Builder {
 	if b.err != nil {
 		return b
 	}
@@ -227,10 +214,7 @@ func (b *Builder) Match(selectors ...*Expression) *Builder {
 		return b
 	}
 
-	if len(selectors) == 0 {
-		b.err = fmt.Errorf("match MUST have at least one selector")
-		return b
-	}
+	b.selectors = append(b.selectors, *selector)
 
 	for i := range selectors {
 		b.selectors = append(b.selectors, *selectors[i])
@@ -239,17 +223,17 @@ func (b *Builder) Match(selectors ...*Expression) *Builder {
 	return b
 }
 
-func (b *Builder) Key(keys ...any) *Builder {
+func (b *Builder) Keys(key any, keys ...any) *Builder {
 	if b.err != nil {
 		return b
 	}
 
-	if len(keys) != len(b.selectors) {
+	if len(keys)+1 != len(b.selectors) {
 		b.err = fmt.Errorf("number of keys in each variant MUST match the number of selectors in the matcher")
 		return b
 	}
 
-	b.variants = append(b.variants, variant{keys: keys})
+	b.variants = append(b.variants, variant{keys: append([]any{key}, keys...)})
 
 	return b
 }
@@ -259,27 +243,35 @@ type variant struct {
 	pattern []any
 }
 
-func (v *variant) String() string {
+func (v *variant) build(spacing string) string {
 	var s string
 
-	for i := range v.keys {
-		s += printLiteral(v.keys[i], false) + " "
+	for i, k := range v.keys {
+		if i > 0 {
+			s += coalesce(spacing, defaultSpacing)
+		}
+
+		if k == "*" {
+			s += "*"
+		} else {
+			s += printLiteral(k)
+		}
 	}
 
-	s += "{{"
+	s += spacing + "{{"
 
 	for i := range v.pattern {
 		if i > 0 {
 			s += " "
 		}
 
-		switch v := v.pattern[i].(type) {
+		switch p := v.pattern[i].(type) {
 		case string:
-			s += textEscape(v)
+			s += textEscape(p)
 		case *Expression:
-			s += v.String()
+			s += p.build(spacing)
 		default:
-			panic(fmt.Sprintf("unsupported pattern type: %T", v))
+			panic(fmt.Sprintf("unsupported pattern type: %T", p))
 		}
 	}
 
@@ -301,13 +293,12 @@ type function struct {
 }
 
 type Expression struct {
-	spacing  string
 	operand  any // literal or variable
 	function function
 }
 
-func (e *Expression) String() string {
-	s := "{" + e.spacing
+func (e *Expression) build(spacing string) string {
+	s := "{" + spacing
 
 	switch v := e.operand.(type) {
 	case variable:
@@ -315,7 +306,7 @@ func (e *Expression) String() string {
 	case nil:
 		// noop
 	case literal:
-		s += printLiteral(v, true)
+		s += printLiteral(v)
 	default:
 		panic(fmt.Sprintf("unsupported operand type: %T", v))
 	}
@@ -328,18 +319,18 @@ func (e *Expression) String() string {
 		s += e.function.name
 
 		for _, o := range e.function.options {
-			s += " " + o.key + e.spacing + "=" + e.spacing
+			s += " " + o.key + spacing + "=" + spacing
 
 			if v, ok := o.operand.(string); ok && len(v) > 0 && v[0] == '$' { // recognized as variable if string starts with $
 				s += v
 				continue
 			}
 
-			s += printLiteral(o.operand, true)
+			s += printLiteral(o.operand)
 		}
 	}
 
-	return s + e.spacing + "}"
+	return s + spacing + "}"
 }
 
 func Literal(v any) *Expression {
@@ -369,12 +360,12 @@ func (e *Expression) Var(v string) *Expression {
 	return e
 }
 
-type FuncOption struct { //nolint:govet
-	key     string
+type FuncOption struct {
 	operand any // literal or variable
+	key     string
 }
 
-func Option(key string, operand any) FuncOption { return FuncOption{key, operand} }
+func Option(key string, operand any) FuncOption { return FuncOption{key: key, operand: operand} }
 
 func Func(name string, option ...FuncOption) *Expression {
 	return Expr().Func(name, option...)
@@ -398,18 +389,24 @@ func (e *Expression) Func(name string, option ...FuncOption) *Expression {
 	}
 }
 
-func printLiteral(l any, quoted bool) string {
-	switch v := l.(type) {
+func printLiteral(l any) string {
+	switch v := l.(type) { // TODO: more liberal
 	case string:
-		if quoted {
-			return "|" + quotedEscape(v) + "|"
+		for i, r := range v {
+			if i == 0 && !isNameStart(r) || i > 0 && !isName(r) {
+				return printQuoted(v)
+			}
 		}
 
-		return quotedEscape(v)
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		return fmt.Sprintf("%d", v)
-	case float32, float64:
-		return fmt.Sprintf("%f", v)
+		return v
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64,
+		float32, float64:
+		b, err := json.Marshal(v)
+		if err != nil {
+			panic(err)
+		}
+
+		return string(b)
 	default:
 		panic(fmt.Sprintf("unsupported literal type: %T", v))
 	}
@@ -418,31 +415,14 @@ func printLiteral(l any, quoted bool) string {
 // helpers
 
 /*
-	quotedEscape escapes special characters in quoted name literal.
+	printQuoted escapes special characters in quoted name literal.
 
 ABNF:
 quoted-escape   = backslash ( backslash / "|" )
 .
 */
-func quotedEscape(s string) string {
-	if s == "" {
-		return s
-	}
-
-	var sb strings.Builder
-
-	sb.Grow(len(s))
-
-	for _, c := range s {
-		switch c {
-		case '\\', '|':
-			sb.WriteRune('\\')
-		}
-
-		sb.WriteRune(c)
-	}
-
-	return sb.String()
+func printQuoted(s string) string {
+	return "|" + strings.NewReplacer("\\", "\\\\", "|", "\\|").Replace(s) + "|"
 }
 
 /*
@@ -453,24 +433,7 @@ text-escape     = backslash ( backslash / "{" / "}" )
 .
 */
 func textEscape(s string) string {
-	if s == "" {
-		return s
-	}
-
-	var sb strings.Builder
-
-	sb.Grow(len(s))
-
-	for _, c := range s {
-		switch c {
-		case '\\', '{', '}':
-			sb.WriteRune('\\')
-		}
-
-		sb.WriteRune(c)
-	}
-
-	return sb.String()
+	return strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}").Replace(s)
 }
 
 // hasSimpleStart returns true if the string has a simple start.
@@ -526,4 +489,64 @@ func hasCatchAllVariant(variants []variant) bool {
 	}
 
 	return false
+}
+
+// isName returns true if r is name character.
+//
+// ABNF:
+//
+//	name-char = name-start / DIGIT / "-" / "." / %xB7 / %x0300-036F / %x203F-2040.
+func isName(v rune) bool {
+	return isAlpha(v) ||
+		'0' <= v && v <= '9' ||
+		v == '-' ||
+		v == '.' ||
+		v == 0xB7 ||
+		0x0300 <= v && v <= 0x036F ||
+		0x203F <= v && v <= 2040
+}
+
+// isNameStart returns true if r is name start character.
+//
+// ABNF:
+//
+//	name-start = ALPHA / "_"
+//	           / %xC0-D6 / %xD8-F6 / %xF8-2FF
+//	           / %x370-37D / %x37F-1FFF / %x200C-200D
+//	           / %x2070-218F / %x2C00-2FEF / %x3001-D7FF
+//	           / %xF900-FDCF / %xFDF0-FFFD / %x10000-EFFFF
+func isNameStart(r rune) bool {
+	return isAlpha(r) ||
+		r == '_' ||
+		0xC0 <= r && r <= 0xD6 ||
+		0xD8 <= r && r <= 0xF6 ||
+		0xF8 <= r && r <= 0x2FF ||
+		0x370 <= r && r <= 0x37D ||
+		0x37F <= r && r <= 0x1FFF ||
+		0x200C <= r && r <= 0x200D ||
+		0x2070 <= r && r <= 0x218F ||
+		0x2C00 <= r && r <= 0x2FEF ||
+		0x3001 <= r && r <= 0xD7FF ||
+		0xF900 <= r && r <= 0xFDCF ||
+		0xFDF0 <= r && r <= 0xFFFD ||
+		0x10000 <= r && r <= 0xEFFFF
+}
+
+// isAlpha returns true if r is alphabetic character.
+func isAlpha(r rune) bool {
+	return ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z')
+}
+
+func coalesce[T comparable](l ...T) T {
+	for _, v := range l {
+		var c T
+
+		if v != c {
+			return v
+		}
+	}
+
+	var c T
+
+	return c
 }
