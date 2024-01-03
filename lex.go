@@ -401,9 +401,11 @@ func lexName(l *lexer) stateFn {
 		s += string(r)
 	}
 
-	if r != eof { // backup is not necessary if we reached eof
-		l.backup()
+	if r == eof {
+		return l.emitErrorf("unexpected eof in name")
 	}
+
+	l.backup()
 
 	return l.emitItem(mk(typ, s))
 }

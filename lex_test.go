@@ -45,7 +45,6 @@ func Test_lex(t *testing.T) {
 				mk(itemEOF, ""),
 			},
 		},
-
 		{
 			name:  "opening function",
 			input: "{+button}",
@@ -241,9 +240,10 @@ func Test_lex(t *testing.T) {
 		},
 		{
 			name:  "reserved declaration",
-			input: ".output",
+			input: ".output ",
 			expected: []item{
 				mk(itemReservedKeyword, "output"),
+				mk(itemWhitespace, " "),
 				mk(itemEOF, ""),
 			},
 		},
