@@ -1,4 +1,4 @@
-package builder
+package mf2
 
 import (
 	"encoding/json"
@@ -23,7 +23,7 @@ type Builder struct {
 	pattern   []any
 }
 
-func New() *Builder {
+func NewBuilder() *Builder {
 	return &Builder{
 		newline: defaultNewline,
 		spacing: defaultSpacing,
@@ -537,7 +537,7 @@ func isAlpha(r rune) bool {
 	return ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z')
 }
 
-func coalesce[T comparable](l ...T) T { //nolint:ireturn
+func coalesce[T comparable](l ...T) T {
 	var c T
 
 	for _, v := range l {

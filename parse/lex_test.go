@@ -1,4 +1,4 @@
-package mf2
+package parse
 
 import (
 	"testing"

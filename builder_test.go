@@ -1,4 +1,4 @@
-package builder
+package mf2
 
 import (
 	"testing"
@@ -17,27 +17,27 @@ func Test_Builder(t *testing.T) {
 	}{
 		{
 			"simple message, empty text",
-			New().Text(""),
+			NewBuilder().Text(""),
 			"",
 		},
 		{
 			"simple message, simple text",
-			New().Text("Hello, World!"),
+			NewBuilder().Text("Hello, World!"),
 			"Hello, World!",
 		},
 		{
 			"simple message, text starts with whitespace char",
-			New().Text(" hello"),
+			NewBuilder().Text(" hello"),
 			" hello",
 		},
 		{
 			"simple message, text with special chars",
-			New().Text("{Hello}\\, {World}!"),
+			NewBuilder().Text("{Hello}\\, {World}!"),
 			"\\{Hello\\}\\\\, \\{World\\}!",
 		},
 		{
 			"simple message, text with literal",
-			New().
+			NewBuilder().
 				Text("Hello, ").
 				Expr(Literal("World")).
 				Text("!"),
@@ -45,7 +45,7 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"simple message, text and expr with options",
-			New().
+			NewBuilder().
 				Text("Hello, ").
 				Expr(Var("$world").Func(":upper", Option("limit", 2), Option("min", "$min"), Option("type", "integer"))).
 				Text("!"),
@@ -53,7 +53,7 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"simple message, text with markup-like function",
-			New().
+			NewBuilder().
 				Text("Hello ").
 				Expr(Func("+link")).
 				Text(" World ").
@@ -62,36 +62,36 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"complex message, period char",
-			New().Text("."),
+			NewBuilder().Text("."),
 			"{{.}}",
 		},
 		{
 			"complex message, text starts with a period char",
-			New().Text(".ok"),
+			NewBuilder().Text(".ok"),
 			"{{.ok}}",
 		},
 		{
 			"complex message, text with special chars",
-			New().Local("$var", Literal("greeting")),
+			NewBuilder().Local("$var", Literal("greeting")),
 			".local $var = { greeting }\n{{}}",
 		},
 		{
 			"complex message, local declaration",
-			New().
+			NewBuilder().
 				Local("$hostName", Var("$host")).
 				Expr(Var("$hostName")),
 			".local $hostName = { $host }\n{{{ $hostName }}}",
 		},
 		{
 			"complex message, input declaration",
-			New().
+			NewBuilder().
 				Input(Var("$host")).
 				Expr(Var("$host")),
 			".input { $host }\n{{{ $host }}}",
 		},
 		{
 			"complex message, input and local declaration",
-			New().
+			NewBuilder().
 				Local("$hostName", Var("$host")).
 				Input(Var("$host")).
 				Expr(Var("$host")),
@@ -99,7 +99,7 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"complex message, matcher with multiple keys",
-			New().
+			NewBuilder().
 				Match(
 					Var("$i"),
 					Var("$j"),
@@ -112,7 +112,7 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"complex message, matcher with multiple keys and local declarations",
-			New().
+			NewBuilder().
 				Input(Var("$i")).
 				Local("$hostName", Var("$i")).
 				Match(
@@ -127,7 +127,7 @@ func Test_Builder(t *testing.T) {
 		},
 		{
 			"spacing",
-			New().
+			NewBuilder().
 				Match(
 					Var("$i"),
 					Var("$j"),
