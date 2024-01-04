@@ -56,6 +56,14 @@ linters-settings:
     alias:
       - pkg: go.expect.digital/translate/pkg/pb/translate/v1
         alias: translatev1
+  ireturn:
+    allow:
+      - anon
+      - error
+      - empty
+      - generic
+      - stdlib
+      - (or|er)$
   predeclared:
     ignore: ""
   exhaustive:
