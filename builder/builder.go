@@ -537,7 +537,7 @@ func isAlpha(r rune) bool {
 	return ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z')
 }
 
-func coalesce[T comparable](l ...T) T {
+func coalesce[T comparable](l ...T) T { //nolint:ireturn
 	var c T
 
 	for _, v := range l {
