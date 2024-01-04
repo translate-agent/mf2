@@ -45,6 +45,16 @@ func (p *parser) collect() error {
 	return errors.New("too many tokens. infinite loop ?")
 }
 
+// isComplexMessage returns true if first token is one of the complex message tokens.
+func (p *parser) isComplexMessage() bool {
+	switch p.items[0].typ {
+	default:
+		return false
+	case itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen:
+		return true
+	}
+}
+
 /*
 Parse parses the input string and returns an AST tree of MessageFormat2.
 Empty input string returns a SimpleMessage with no patterns.
@@ -121,7 +131,7 @@ func Parse(input string) (AST, error) {
 
 // parseMessage parses message by its type.
 func (p *parser) parseMessage() (Message, error) { //nolint:ireturn
-	if typ := p.items[0].typ; typ == itemKeyword || typ == itemQuotedPatternOpen {
+	if p.isComplexMessage() {
 		message, err := p.parseComplexMessage()
 		if err != nil {
 			return nil, fmt.Errorf("parse complex message: %w", err)
@@ -156,38 +166,44 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 			return ComplexMessage{}, fmt.Errorf("got error token: '%s'", itm.val)
 		case itemWhitespace:
 			continue
-		case itemKeyword:
-			switch itm.val {
-			// TODO: case ReservedKeyword:
-			case "." + keywordInput: // Input declaration
-				p.next() // skip keyword
+		// Declarations
+		case itemInputKeyword:
+			p.next() // skip keyword
 
-				declaration, err := p.parseInputDeclaration()
-				if err != nil {
-					return ComplexMessage{}, fmt.Errorf("parse input declaration: %w", err)
-				}
-
-				declarations = append(declarations, declaration)
-
-			case "." + keywordLocal: // Local declaration
-				p.next() // skip keyword
-
-				declaration, err := p.parseLocalDeclaration()
-				if err != nil {
-					return ComplexMessage{}, fmt.Errorf("parse local declaration: %w", err)
-				}
-
-				declarations = append(declarations, declaration)
-			case "." + keywordMatch: // Zero or more Declarations + Matcher
-				p.next() // skip keyword
-
-				matcher, err := p.parseMatcher()
-				if err != nil {
-					return ComplexMessage{}, fmt.Errorf("parse matcher: %w", err)
-				}
-
-				return ComplexMessage{Declarations: declarations, ComplexBody: matcher}, nil
+			declaration, err := p.parseInputDeclaration()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse input declaration: %w", err)
 			}
+
+			declarations = append(declarations, declaration)
+		case itemLocalKeyword:
+			p.next() // skip keyword
+
+			declaration, err := p.parseLocalDeclaration()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse local declaration: %w", err)
+			}
+
+			declarations = append(declarations, declaration)
+		case itemReservedKeyword:
+			p.next() // skip keyword
+
+			declaration, err := p.parseReservedStatement()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse reserved statement: %w", err)
+			}
+
+			declarations = append(declarations, declaration)
+		// Complex body
+		case itemMatchKeyword: // Zero or more Declarations + Matcher
+			p.next() // skip keyword
+
+			matcher, err := p.parseMatcher()
+			if err != nil {
+				return ComplexMessage{}, fmt.Errorf("parse matcher: %w", err)
+			}
+
+			return ComplexMessage{Declarations: declarations, ComplexBody: matcher}, nil
 
 		case itemQuotedPatternOpen: // Zero or more Declarations + QuotedPattern
 			p.next() // skip opening quote
@@ -199,13 +215,13 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 
 			return ComplexMessage{Declarations: declarations, ComplexBody: QuotedPattern{Patterns: patterns}}, nil
 		// bad tokens
-		case itemEOF, itemVariable, itemFunction, itemExpressionOpen,
-			itemExpressionClose, itemQuotedPatternClose, itemText, itemCatchAllKey,
-			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-			itemOption, itemReserved, itemOperator, itemPrivate:
+		default:
 			err := UnexpectedTokenError{
-				Expected: []itemType{itemWhitespace, itemKeyword, itemQuotedPatternOpen},
-				Actual:   itm.typ,
+				Expected: []itemType{
+					itemWhitespace, itemInputKeyword, itemLocalKeyword,
+					itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen,
+				},
+				Actual: itm.typ,
 			}
 
 			return ComplexMessage{}, err
@@ -238,12 +254,7 @@ func (p *parser) parsePatterns() ([]Pattern, error) {
 
 			pattern = append(pattern, PlaceholderPattern{Expression: expression})
 		// bad tokens
-		case itemEOF, itemVariable, itemFunction,
-			itemExpressionClose, itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemKeyword, itemCatchAllKey,
-			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-			itemOption, itemWhitespace, itemReserved,
-			itemOperator, itemPrivate:
+		default:
 			return nil, UnexpectedTokenError{Expected: []itemType{itemText, itemExpressionOpen}, Actual: itm.typ}
 		}
 	}
@@ -283,11 +294,7 @@ func (p *parser) parseExpression() (Expression, error) { //nolint:ireturn
 
 			return AnnotationExpression{Annotation: annotation}, nil
 		// bad tokens
-		case itemEOF, itemExpressionOpen, itemExpressionClose,
-			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
-			itemOption, itemReserved,
-			itemOperator, itemPrivate:
+		default:
 			err := UnexpectedTokenError{
 				Expected: []itemType{
 					itemWhitespace, itemVariable, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral, itemFunction,
@@ -320,7 +327,7 @@ func (p *parser) parseVariableExpression() (VariableExpression, error) {
 			}
 
 			foundVariable = true
-			variable = Variable(itm.val[1:]) // omit "$" prefix //TODO: Lexer should not capture variable prefix
+			variable = Variable(itm.val)
 		case itemFunction, itemPrivate, itemReserved:
 			// Variable expression with annotation.
 			annotation, err := p.parseAnnotation()
@@ -330,11 +337,7 @@ func (p *parser) parseVariableExpression() (VariableExpression, error) {
 
 			return VariableExpression{Variable: variable, Annotation: annotation}, nil
 		// bad tokens
-		case itemEOF, itemExpressionOpen, itemExpressionClose,
-			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
-			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-			itemOption, itemOperator:
+		default:
 			err := UnexpectedTokenError{
 				Expected: []itemType{itemWhitespace, itemVariable, itemFunction, itemPrivate, itemReserved},
 				Actual:   itm.typ,
@@ -382,12 +385,7 @@ func (p *parser) parseLiteralExpression() (LiteralExpression, error) {
 
 			return LiteralExpression{Literal: literal, Annotation: annotation}, nil
 		// bad tokens
-		case itemEOF, itemVariable,
-			itemExpressionOpen, itemExpressionClose,
-			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
-			itemOption, itemReserved,
-			itemOperator, itemPrivate:
+		default:
 			err := UnexpectedTokenError{
 				Expected: []itemType{itemWhitespace, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral, itemFunction},
 				Actual:   itm.typ,
@@ -428,12 +426,7 @@ func (p *parser) parseAnnotation() (Annotation, error) { //nolint:ireturn
 
 		return annotation, nil
 		// bad tokens
-	case itemError, itemEOF, itemVariable,
-		itemExpressionOpen, itemExpressionClose,
-		itemQuotedPatternOpen, itemQuotedPatternClose,
-		itemText, itemKeyword, itemCatchAllKey,
-		itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-		itemOption, itemWhitespace, itemOperator:
+	default:
 		err := UnexpectedTokenError{
 			Expected: []itemType{itemFunction, itemPrivate, itemReserved},
 			Actual:   p.current().typ,
@@ -441,8 +434,6 @@ func (p *parser) parseAnnotation() (Annotation, error) { //nolint:ireturn
 
 		return nil, err
 	}
-
-	return nil, fmt.Errorf("unknown token: %s", p.current().typ)
 }
 
 func (p *parser) parseFunctionAnnotation() (FunctionAnnotation, error) {
@@ -465,12 +456,7 @@ func (p *parser) parseFunctionAnnotation() (FunctionAnnotation, error) {
 
 			annotation.Options = append(annotation.Options, option)
 		// bad tokens
-		case itemEOF, itemVariable,
-			itemExpressionOpen, itemExpressionClose,
-			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
-			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-			itemReserved, itemOperator, itemPrivate:
+		default:
 			err := UnexpectedTokenError{
 				Expected: []itemType{itemWhitespace, itemFunction, itemOption},
 				Actual:   itm.typ,
@@ -514,7 +500,7 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 			}
 
 			foundVariable = true
-			variable = Variable(itm.val[1:]) // omit "$" prefix //TODO: Lexer should not capture variable prefix
+			variable = Variable(itm.val)
 		case itemExpressionOpen:
 			p.next() // skip opening brace
 
@@ -525,11 +511,7 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 
 			return LocalDeclaration{Variable: variable, Expression: expression}, nil
 		// bad tokens
-		case itemEOF, itemFunction,
-			itemExpressionClose, itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
-			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-			itemOption, itemReserved, itemPrivate:
+		default:
 			err := UnexpectedTokenError{
 				Expected: []itemType{itemWhitespace, itemOperator, itemVariable, itemExpressionOpen},
 				Actual:   itm.typ,
@@ -545,6 +527,11 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
 	// TODO: implement
 	return InputDeclaration{}, errors.New("not implemented")
+}
+
+func (p *parser) parseReservedStatement() (ReservedStatement, error) {
+	// TODO: implement.
+	return ReservedStatement{}, errors.New("not implemented")
 }
 
 // ---------------------------------------------------------------------
@@ -582,11 +569,7 @@ func (p *parser) parseMatcher() (Matcher, error) {
 
 			matcher.Variants = append(matcher.Variants, Variant{Keys: keys, QuotedPattern: QuotedPattern{Patterns: patterns}})
 		// bad tokens
-		case itemEOF, itemVariable, itemFunction,
-			itemExpressionClose, itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword,
-			itemOption, itemReserved,
-			itemOperator, itemPrivate:
+		default:
 			err := UnexpectedTokenError{
 				Expected: []itemType{
 					itemWhitespace, itemExpressionOpen, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
@@ -620,12 +603,7 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 
 			keys = append(keys, LiteralKey{Literal: literal})
 		// bad tokens
-		case itemEOF, itemVariable, itemFunction,
-			itemExpressionOpen, itemExpressionClose,
-			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword,
-			itemOption, itemReserved,
-			itemOperator, itemPrivate:
+		default:
 			err := UnexpectedTokenError{
 				Expected: []itemType{itemWhitespace, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral},
 				Actual:   itm.typ,
@@ -660,15 +638,11 @@ func (p *parser) parseOption() (Option, error) { //nolint:ireturn
 
 		case itemVariable:
 			return VariableOption{
-				Variable:   Variable(p.current().val[1:]), // omit "$" prefix //TODO: Lexer should not capture variable prefix
+				Variable:   Variable(itm.val),
 				Identifier: identifier,
 			}, nil
-		// bad tokens
-		case itemEOF, itemFunction,
-			itemExpressionOpen, itemExpressionClose,
-			itemQuotedPatternOpen, itemQuotedPatternClose,
-			itemText, itemKeyword, itemCatchAllKey,
-			itemReserved, itemPrivate:
+			// bad tokens
+		default:
 			err := UnexpectedTokenError{
 				Expected: []itemType{
 					itemWhitespace, itemOperator, itemOption, itemVariable,
@@ -698,12 +672,7 @@ func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
 	case itemUnquotedLiteral:
 		return UnquotedLiteral{Value: NameLiteral(p.current().val)}, nil
 	// bad tokens
-	case itemError, itemEOF, itemVariable, itemFunction,
-		itemExpressionOpen, itemExpressionClose,
-		itemQuotedPatternOpen, itemQuotedPatternClose,
-		itemText, itemKeyword, itemCatchAllKey,
-		itemOption, itemWhitespace, itemReserved,
-		itemOperator, itemPrivate:
+	default:
 		err := UnexpectedTokenError{
 			Expected: []itemType{itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral},
 			Actual:   itm.typ,
@@ -711,8 +680,6 @@ func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
 
 		return nil, err
 	}
-
-	return nil, fmt.Errorf("unknown token: %s", p.current().typ)
 }
 
 func (p *parser) parseFunction() Function {

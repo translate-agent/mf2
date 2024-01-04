@@ -23,7 +23,10 @@ const (
 	itemQuotedPatternOpen
 	itemQuotedPatternClose
 	itemText
-	itemKeyword
+	itemInputKeyword
+	itemLocalKeyword
+	itemMatchKeyword
+	itemReservedKeyword
 	itemCatchAllKey
 	itemNumberLiteral
 	itemQuotedLiteral
@@ -54,8 +57,14 @@ func (t itemType) String() string {
 		return "function"
 	case itemText:
 		return "text"
-	case itemKeyword:
-		return "keyword"
+	case itemInputKeyword:
+		return "input keyword"
+	case itemLocalKeyword:
+		return "local keyword"
+	case itemMatchKeyword:
+		return "match keyword"
+	case itemReservedKeyword:
+		return "reserved keyword"
 	case itemNumberLiteral:
 		return "number literal"
 	case itemOperator:
@@ -273,13 +282,13 @@ func lexComplexMessage(l *lexer) stateFn {
 				return lexName(l)
 			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
-				return l.emitItem(mk(itemKeyword, "."+keywordLocal))
+				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
 			case strings.HasPrefix(l.input[l.pos:], keywordInput):
 				l.pos += len(keywordInput)
-				return l.emitItem(mk(itemKeyword, "."+keywordInput))
+				return l.emitItem(mk(itemInputKeyword, keywordInput))
 			case strings.HasPrefix(l.input[l.pos:], keywordMatch):
 				l.pos += len(keywordMatch)
-				return l.emitItem(mk(itemKeyword, "."+keywordMatch))
+				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
 			}
 		case r == '$':
 			l.backup()
@@ -370,32 +379,35 @@ func lexExpr(l *lexer) stateFn {
 
 // lexName is the state function for lexing names.
 func lexName(l *lexer) stateFn {
-	var s string
+	var typ itemType
 
-	typ := itemUnquotedLiteral
+	switch l.next() {
+	case '$':
+		typ = itemVariable
+	case '.':
+		typ = itemReservedKeyword
+	default:
+		typ = itemUnquotedLiteral
 
-	for {
-		r := l.next()
-
-		switch {
-		default:
-			l.backup()
-
-			return l.emitItem(mk(typ, s))
-		case len(s) > 0 && isName(r):
-			s += string(r)
-		case r == eof:
-			return l.emitItem(mk(typ, s))
-		case len(s) == 0 && isNameStart(r):
-			s = string(r)
-		case len(s) == 0 && r == '$':
-			s = string(r)
-			typ = itemVariable
-		case len(s) == 0 && r == '.':
-			s = string(r)
-			typ = itemKeyword
-		}
+		l.backup() // backup to the first rune
 	}
+
+	var (
+		s string // item value
+		r rune   // current rune
+	)
+
+	for r = l.next(); isName(r); r = l.next() {
+		s += string(r)
+	}
+
+	if r == eof {
+		return l.emitErrorf("unexpected eof in name")
+	}
+
+	l.backup()
+
+	return l.emitItem(mk(typ, s))
 }
 
 // lexLiteral is the state function for lexing literals.
