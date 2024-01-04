@@ -6,23 +6,26 @@ import (
 	"strings"
 )
 
-const defaultSpacing = " "
+const (
+	defaultSpacing = " "
+	defaultNewline = "\n"
+)
 
 type Builder struct {
 	spacing string // optional spacing [s]
 	newline string
 	err     error
 
-	locals    []local      // local declarations
-	inputs    []Expression // input declarations
-	selectors []Expression // matcher selectors
-	variants  []variant    // matcher variants
-	patterns  []any        // string or expression
+	locals    []local
+	inputs    []*Expression
+	selectors []*Expression // matcher selectors
+	variants  []variant     // matcher variants
+	pattern   []any
 }
 
 func New() *Builder {
 	return &Builder{
-		newline: "\n",
+		newline: defaultNewline,
 		spacing: defaultSpacing,
 	}
 }
@@ -48,10 +51,10 @@ func (b *Builder) Build() (string, error) {
 
 	quotedPattern := (len(b.inputs) > 0 || len(b.locals) > 0) && (len(b.variants) == 0 && len(b.selectors) == 0)
 
-	if len(b.patterns) > 0 {
-		if v, ok := b.patterns[0].(string); ok && !hasSimpleStart(v) {
+	if len(b.pattern) > 0 {
+		if v, ok := b.pattern[0].(string); ok && !hasSimpleStart(v) {
 			switch {
-			case len(b.patterns) == 1 && v == "": // simple message with empty text
+			case len(b.pattern) == 1 && v == "": // simple message with empty text
 				// noop
 			case len(v) > 0 && []rune(v)[0] == '.': // complex message
 				quotedPattern = true
@@ -65,7 +68,7 @@ func (b *Builder) Build() (string, error) {
 		s += "{{"
 	}
 
-	for _, v := range b.patterns {
+	for _, v := range b.pattern {
 		switch v := v.(type) {
 		case string:
 			s += textEscape(v)
@@ -112,7 +115,7 @@ func (b *Builder) MustBuild() string {
 
 func (b *Builder) validate() error {
 	if len(b.variants) > 0 {
-		if len(b.patterns) > 0 {
+		if len(b.pattern) > 0 {
 			return fmt.Errorf("complex message MUST have single complex body")
 		}
 
@@ -161,7 +164,7 @@ func (b *Builder) Text(s string) *Builder {
 	if len(b.variants) > 0 {
 		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, s)
 	} else {
-		b.patterns = append(b.patterns, s)
+		b.pattern = append(b.pattern, s)
 	}
 
 	return b
@@ -182,24 +185,24 @@ func (b *Builder) Input(expr *Expression) *Builder {
 		return b
 	}
 
-	b.inputs = append(b.inputs, *expr)
+	b.inputs = append(b.inputs, expr)
 
 	return b
 }
 
 func Expr() *Expression { return new(Expression) }
 
-func (b *Builder) Expr(e *Expression) *Builder {
+func (b *Builder) Expr(expr *Expression) *Builder {
 	if b.err != nil {
 		return b
 	}
 
 	if len(b.variants) > 0 {
-		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, e)
+		b.variants[len(b.variants)-1].pattern = append(b.variants[len(b.variants)-1].pattern, expr)
 		return b
 	}
 
-	b.patterns = append(b.patterns, e)
+	b.pattern = append(b.pattern, expr)
 
 	return b
 }
@@ -209,16 +212,13 @@ func (b *Builder) Match(selector *Expression, selectors ...*Expression) *Builder
 		return b
 	}
 
-	if len(b.patterns) > 0 {
+	if len(b.pattern) > 0 {
 		b.err = fmt.Errorf("complex message cannot be added after simple message")
 		return b
 	}
 
-	b.selectors = append(b.selectors, *selector)
-
-	for i := range selectors {
-		b.selectors = append(b.selectors, *selectors[i])
-	}
+	b.selectors = append(b.selectors, selector)
+	b.selectors = append(b.selectors, selectors...)
 
 	return b
 }
