@@ -105,7 +105,7 @@ func Test_Builder(t *testing.T) {
 					Var("$j"),
 				).
 				Keys(1, 2).Text("{first}").
-				Keys(2, 0).Text("second").Expr(Var("$i")).
+				Keys(2, 0).Text("second ").Expr(Var("$i")).
 				Keys(3, 0).Expr(Literal("\\a|")).
 				Keys("*", "*").Expr(Literal(1)),
 			".match { $i } { $j }\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
@@ -120,7 +120,7 @@ func Test_Builder(t *testing.T) {
 					Var("$j"),
 				).
 				Keys(1, 2).Text("{first}").
-				Keys(2, 0).Text("second").Expr(Var("$i")).
+				Keys(2, 0).Text("second ").Expr(Var("$i")).
 				Keys(3, 0).Expr(Literal("\\a|")).
 				Keys("*", "*").Expr(Literal(1)),
 			".input { $i }\n.local $hostName = { $i }\n.match { $i } { $j }\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
@@ -133,11 +133,21 @@ func Test_Builder(t *testing.T) {
 					Var("$j"),
 				).
 				Keys(1, 2).Text("{first}").
-				Keys(2, 0).Text("second").Expr(Var("$i")).
+				Keys(2, 0).Text("second ").Expr(Var("$i")).
 				Keys(3, 0).Expr(Literal("\\a|")).
 				Keys("*", "*").Expr(Literal(1)).
 				Spacing(""),
 			".match{$i}{$j}\n1 2{{\\{first\\}}}\n2 0{{second {$i}}}\n3 0{{{|\\\\a\\||}}}\n* *{{{1}}}",
+		},
+		{
+			"spaces in text",
+			NewBuilder().
+				Match(
+					Var("$count"),
+				).
+				Keys(1).Expr(Var("$ph1")).Text(" hello ").Expr(Var("$ph2")).
+				Keys("*").Expr(Var("$ph2")).Text(" hello ").Expr(Var("$ph1")),
+			".match { $count }\n1 {{{ $ph1 } hello { $ph2 }}}\n* {{{ $ph2 } hello { $ph1 }}}",
 		},
 	} {
 		test := test

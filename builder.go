@@ -261,10 +261,6 @@ func (v *variant) build(spacing string) string {
 	s += spacing + "{{"
 
 	for i := range v.pattern {
-		if i > 0 {
-			s += " "
-		}
-
 		switch p := v.pattern[i].(type) {
 		case string:
 			s += textEscape(p)
