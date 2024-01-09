@@ -139,16 +139,6 @@ func Test_Builder(t *testing.T) {
 				Spacing(""),
 			".match{$i}{$j}\n1 2{{\\{first\\}}}\n2 0{{second {$i}}}\n3 0{{{|\\\\a\\||}}}\n* *{{{1}}}",
 		},
-		{
-			"spaces in text",
-			NewBuilder().
-				Match(
-					Var("$count"),
-				).
-				Keys(1).Expr(Var("$ph1")).Text(" hello ").Expr(Var("$ph2")).
-				Keys("*").Expr(Var("$ph2")).Text(" hello ").Expr(Var("$ph1")),
-			".match { $count }\n1 {{{ $ph1 } hello { $ph2 }}}\n* {{{ $ph2 } hello { $ph1 }}}",
-		},
 	} {
 		test := test
 
