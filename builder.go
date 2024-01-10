@@ -9,6 +9,7 @@ import (
 const (
 	defaultSpacing = " "
 	defaultNewline = "\n"
+	varSymbol      = "$"
 )
 
 type Builder struct {
@@ -175,7 +176,7 @@ func (b *Builder) Local(v string, expr *Expression) *Builder {
 		return b
 	}
 
-	b.locals = append(b.locals, local{variable: variable(v), expr: expr})
+	b.locals = append(b.locals, local{variable: variable(varSymbol + v), expr: expr})
 
 	return b
 }
@@ -317,7 +318,7 @@ func (e *Expression) build(spacing string) string {
 		for _, o := range e.function.options {
 			s += " " + o.key + spacing + "=" + spacing
 
-			if v, ok := o.operand.(string); ok && len(v) > 0 && v[0] == '$' { // recognized as variable if string starts with $
+			if v, ok := o.operand.(string); ok && len(v) > 0 {
 				s += v
 				continue
 			}
@@ -338,20 +339,16 @@ func (e *Expression) Literal(v any) *Expression {
 	return e
 }
 
-func Var(s string) *Expression {
-	return Expr().Var(s)
+func Var(name string) *Expression {
+	return Expr().Var(name)
 }
 
-func (e *Expression) Var(v string) *Expression {
-	if len(v) == 0 {
+func (e *Expression) Var(name string) *Expression {
+	if len(name) == 0 {
 		panic("variable name cannot be empty")
 	}
 
-	if v[0] != '$' {
-		panic(fmt.Sprintf("variable must start with $: %s", v))
-	}
-
-	e.operand = variable(v)
+	e.operand = variable(varSymbol + name)
 
 	return e
 }
@@ -361,10 +358,16 @@ type FuncOption struct {
 	key     string
 }
 
-func Option(key string, operand any) FuncOption { return FuncOption{key: key, operand: operand} }
-
 func Func(name string, option ...FuncOption) *Expression {
 	return Expr().Func(name, option...)
+}
+
+func VarOption(name, varName string) FuncOption {
+	return FuncOption{key: name, operand: varSymbol + varName}
+}
+
+func LiteralOption(name string, value any) FuncOption {
+	return FuncOption{key: name, operand: value}
 }
 
 func (e *Expression) Func(name string, option ...FuncOption) *Expression {
@@ -372,16 +375,28 @@ func (e *Expression) Func(name string, option ...FuncOption) *Expression {
 		panic("function name cannot be empty")
 	}
 
-	if e.function.name != "" {
-		panic("expression already has a function")
+	e.function = function{name: ":" + name, options: option}
+
+	return e
+}
+
+func OpenFunc(name string, option ...FuncOption) *Expression {
+	if len(name) == 0 {
+		panic("function name cannot be empty")
 	}
 
-	switch name[0] {
-	default:
-		panic(fmt.Sprintf("function MUST start with :, + or -: %s", name))
-	case ':', '+', '-':
-		e.function = function{name: name, options: option}
-		return e
+	return &Expression{
+		function: function{name: "+" + name, options: option},
+	}
+}
+
+func CloseFunc(name string, option ...FuncOption) *Expression {
+	if len(name) == 0 {
+		panic("function name cannot be empty")
+	}
+
+	return &Expression{
+		function: function{name: "-" + name, options: option},
 	}
 }
 
