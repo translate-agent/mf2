@@ -399,6 +399,10 @@ func CloseFunc(name string, option ...FuncOption) *Expression {
 func printLiteral(l any) string {
 	switch v := l.(type) { // TODO: more liberal
 	case string:
+		if len(v) == 0 {
+			return printQuoted(v)
+		}
+
 		for i, r := range v {
 			if i == 0 && !isNameStart(r) || i > 0 && !isName(r) {
 				return printQuoted(v)

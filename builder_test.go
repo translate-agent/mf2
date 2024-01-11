@@ -47,9 +47,15 @@ func Test_Builder(t *testing.T) {
 			"simple message, text and expr with options",
 			NewBuilder().
 				Text("Hello, ").
-				Expr(Var("world").Func("upper", LiteralOption("limit", 2), VarOption("min", "min"), LiteralOption("type", "integer"))).
+				Expr(Var("world").
+					Func("upper",
+						LiteralOption("limit", 2),
+						VarOption("min", "min"),
+						LiteralOption("type", "integer"),
+						LiteralOption("x", "y z"),
+						LiteralOption("host", ""))).
 				Text("!"),
-			"Hello, { $world :upper limit = 2 min = $min type = integer }!",
+			"Hello, { $world :upper limit = 2 min = $min type = integer x = |y z| host = || }!",
 		},
 		{
 			"simple message, text with markup-like function",
