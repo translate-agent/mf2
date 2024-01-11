@@ -48,7 +48,7 @@ func (b *Builder) Build() (string, error) {
 	}
 
 	for _, v := range b.locals {
-		s += ".local" + b.spacing + varSymbol + string(v.variable) + b.spacing + "=" + b.spacing + v.expr.build(b.spacing) + b.newline
+		s += ".local" + b.spacing + varSymbol + string(v.variable) + b.spacing + "=" + b.spacing + v.expr.build(b.spacing) + b.newline //nolint:lll
 	}
 
 	quotedPattern := (len(b.inputs) > 0 || len(b.locals) > 0) && (len(b.variants) == 0 && len(b.selectors) == 0)
