@@ -299,7 +299,7 @@ func (e *Expression) build(spacing string) string {
 
 	switch v := e.operand.(type) {
 	case variable:
-		s += string(v)
+		s += varSymbol + string(v)
 	case nil:
 		// noop
 	case literal:
@@ -318,8 +318,8 @@ func (e *Expression) build(spacing string) string {
 		for _, o := range e.function.options {
 			s += " " + o.key + spacing + "=" + spacing
 
-			if v, ok := o.operand.(string); ok && len(v) > 0 {
-				s += v
+			if v, ok := o.operand.(variable); ok {
+				s += varSymbol + string(v)
 				continue
 			}
 
@@ -348,7 +348,7 @@ func (e *Expression) Var(name string) *Expression {
 		panic("variable name cannot be empty")
 	}
 
-	e.operand = variable(varSymbol + name)
+	e.operand = variable(name)
 
 	return e
 }
@@ -358,12 +358,8 @@ type FuncOption struct {
 	key     string
 }
 
-func Func(name string, option ...FuncOption) *Expression {
-	return Expr().Func(name, option...)
-}
-
 func VarOption(name, varName string) FuncOption {
-	return FuncOption{key: name, operand: varSymbol + varName}
+	return FuncOption{key: name, operand: variable(varName)}
 }
 
 func LiteralOption(name string, value any) FuncOption {
