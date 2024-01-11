@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -47,7 +48,7 @@ func (b *Builder) Build() (string, error) {
 	}
 
 	for _, v := range b.locals {
-		s += ".local" + b.spacing + string(v.variable) + b.spacing + "=" + b.spacing + v.expr.build(b.spacing) + b.newline
+		s += ".local" + b.spacing + varSymbol + string(v.variable) + b.spacing + "=" + b.spacing + v.expr.build(b.spacing) + b.newline
 	}
 
 	quotedPattern := (len(b.inputs) > 0 || len(b.locals) > 0) && (len(b.variants) == 0 && len(b.selectors) == 0)
@@ -176,7 +177,7 @@ func (b *Builder) Local(v string, expr *Expression) *Builder {
 		return b
 	}
 
-	b.locals = append(b.locals, local{variable: variable(varSymbol + v), expr: expr})
+	b.locals = append(b.locals, local{variable: variable(v), expr: expr})
 
 	return b
 }
@@ -344,6 +345,8 @@ func Var(name string) *Expression {
 }
 
 func (e *Expression) Var(name string) *Expression {
+	validateVarName(name)
+
 	if len(name) == 0 {
 		panic("variable name cannot be empty")
 	}
@@ -359,6 +362,8 @@ type FuncOption struct {
 }
 
 func VarOption(name, varName string) FuncOption {
+	validateVarName(varName)
+
 	return FuncOption{key: name, operand: variable(varName)}
 }
 
@@ -558,4 +563,14 @@ func coalesce[T comparable](l ...T) T {
 	}
 
 	return c
+}
+
+// validateVarName checks whether the first rune is a valid starting character
+// for a variable name according to the specified criteria.
+func validateVarName(varName string) {
+	firstRune, _ := utf8.DecodeRuneInString(varName)
+
+	if !isNameStart(firstRune) && !isName(firstRune) {
+		panic("invalid first rune for a variable name")
+	}
 }
