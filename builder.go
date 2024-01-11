@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"unicode/utf8"
 )
 
 const (
@@ -346,8 +345,6 @@ func Var(name string) *Expression {
 }
 
 func (e *Expression) Var(name string) *Expression {
-	validateVarName(name)
-
 	if len(name) == 0 {
 		panic("variable name cannot be empty")
 	}
@@ -363,8 +360,6 @@ type FuncOption struct {
 }
 
 func VarOption(name, varName string) FuncOption {
-	validateVarName(varName)
-
 	return FuncOption{key: name, operand: variable(varName)}
 }
 
@@ -564,14 +559,4 @@ func coalesce[T comparable](l ...T) T {
 	}
 
 	return c
-}
-
-// validateVarName checks whether the first rune is a valid starting character
-// for a variable name according to the specified criteria.
-func validateVarName(varName string) {
-	firstRune, _ := utf8.DecodeRuneInString(varName)
-
-	if !isNameStart(firstRune) && !isName(firstRune) {
-		panic("invalid first rune for a variable name")
-	}
 }
