@@ -397,7 +397,7 @@ func lexName(l *lexer) stateFn {
 		r rune   // current rune
 	)
 
-	for r = l.next(); isNameStart(r) || isName(r); r = l.next() {
+	for r = l.next(); isName(r); r = l.next() {
 		s += string(r)
 	}
 
@@ -601,7 +601,7 @@ func isNameStart(r rune) bool {
 //
 //	name-char = name-start / DIGIT / "-" / "." / %xB7 / %x0300-036F / %x203F-2040.
 func isName(v rune) bool {
-	return isAlpha(v) ||
+	return isNameStart(v) ||
 		'0' <= v && v <= '9' ||
 		v == '-' ||
 		v == '.' ||
