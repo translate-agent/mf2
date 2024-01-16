@@ -300,6 +300,26 @@ func Test_lex(t *testing.T) {
 				mk(itemQuotedPatternClose, "}}"),
 			},
 		},
+		{
+			name:  "variable with _",
+			input: "{$csv_filename}",
+			expected: []item{
+				mk(itemExpressionOpen, "{"),
+				mk(itemVariable, "csv_filename"),
+				mk(itemExpressionClose, "}"),
+			},
+		},
+		{
+			name:  "variable with whitespace",
+			input: "{ $csv_filename }",
+			expected: []item{
+				mk(itemExpressionOpen, "{"),
+				mk(itemWhitespace, " "),
+				mk(itemVariable, "csv_filename"),
+				mk(itemWhitespace, " "),
+				mk(itemExpressionClose, "}"),
+			},
+		},
 	} {
 		test := test
 

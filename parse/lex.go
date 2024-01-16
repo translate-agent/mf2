@@ -397,7 +397,7 @@ func lexName(l *lexer) stateFn {
 		r rune   // current rune
 	)
 
-	for r = l.next(); isName(r); r = l.next() {
+	for r = l.next(); isNameStart(r) || isName(r); r = l.next() {
 		s += string(r)
 	}
 
