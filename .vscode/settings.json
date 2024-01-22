@@ -2,5 +2,11 @@
   "go.lintOnSave": "workspace",
   "go.coverOnSave": true,
   "go.testOnSave": true,
-  "go.lintTool": "golangci-lint"
+  "go.lintTool": "golangci-lint",
+  // When running with latest dlv
+  "go.delveConfig": {
+    "dlvFlags": [
+      "--check-go-version=false"
+    ]
+  },
 }
