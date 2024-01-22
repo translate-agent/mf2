@@ -115,10 +115,10 @@ func Test_lex(t *testing.T) {
 		},
 		{
 			name:  "quoted literal",
-			input: "{|Hello, world!| :uppercase}",
+			input: "{|\\| is escaped| :uppercase}",
 			expected: []item{
 				mk(itemExpressionOpen, "{"),
-				mk(itemQuotedLiteral, "Hello, world!"),
+				mk(itemQuotedLiteral, "| is escaped"),
 				mk(itemWhitespace, " "),
 				mk(itemFunction, ":uppercase"),
 				mk(itemExpressionClose, "}"),
