@@ -320,6 +320,15 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionClose, "}"),
 			},
 		},
+		{
+			name:  "quoted literal with escapes",
+			input: "{|Here this is escaped \\| it is part of literal|}", // Here is escaped | it is part of literal
+			expected: []item{
+				mk(itemExpressionOpen, "{"),
+				mk(itemQuotedLiteral, "Here this is escaped | it is part of literal"),
+				mk(itemExpressionClose, "}"),
+			},
+		},
 	} {
 		test := test
 

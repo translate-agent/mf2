@@ -440,9 +440,7 @@ func lexLiteral(l *lexer) stateFn {
 				default:
 					return l.emitErrorf("unexpected escaped character in quoted literal: %s", string(r))
 				case '\\', '|':
-					s += string(r) + string(next)
-
-					return l.emitItem(mk(itemQuotedLiteral, s))
+					s += string(next)
 				case eof:
 					return l.emitErrorf("unexpected eof in quoted literal")
 				}
