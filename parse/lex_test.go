@@ -115,10 +115,10 @@ func Test_lex(t *testing.T) {
 		},
 		{
 			name:  "quoted literal",
-			input: "{|Hello, world!| :uppercase}",
+			input: "{|\\| is escaped| :uppercase}",
 			expected: []item{
 				mk(itemExpressionOpen, "{"),
-				mk(itemQuotedLiteral, "Hello, world!"),
+				mk(itemQuotedLiteral, "| is escaped"),
 				mk(itemWhitespace, " "),
 				mk(itemFunction, ":uppercase"),
 				mk(itemExpressionClose, "}"),
@@ -317,15 +317,6 @@ func Test_lex(t *testing.T) {
 				mk(itemWhitespace, " "),
 				mk(itemVariable, "csv_filename"),
 				mk(itemWhitespace, " "),
-				mk(itemExpressionClose, "}"),
-			},
-		},
-		{
-			name:  "quoted literal with escapes",
-			input: "{|Here this is escaped \\| it is part of literal|}", // Here is escaped | it is part of literal
-			expected: []item{
-				mk(itemExpressionOpen, "{"),
-				mk(itemQuotedLiteral, "Here this is escaped | it is part of literal"),
 				mk(itemExpressionClose, "}"),
 			},
 		},
