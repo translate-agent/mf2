@@ -279,7 +279,7 @@ func lexComplexMessage(l *lexer) stateFn {
 			switch {
 			default: // reserved keyword
 				l.backup()
-				return lexName(l)
+				return lexName(l) // TODO: return lexReservedKeyword
 			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
 				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
@@ -290,6 +290,7 @@ func lexComplexMessage(l *lexer) stateFn {
 				l.pos += len(keywordMatch)
 				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
 			}
+		// TODO: parse reserved-statement
 		case r == '$':
 			l.backup()
 			return lexName(l)
@@ -368,10 +369,14 @@ func lexExpr(l *lexer) stateFn {
 		return lexIdentifier(l)
 	case isReservedStart(v):
 		l.backup()
-		return lexReserved(l)
-	case v == '^', v == '&':
-		// TODO(jhorsts): incomplete implementation
-		return l.emitItem(mk(itemPrivate, string(v)))
+
+		return lexReserved(l, itemReserved)
+
+	case isPrivateStart(v):
+		l.backup()
+
+		return lexReserved(l, itemPrivate)
+
 	case v == '=':
 		return l.emitItem(mk(itemOperator, "="))
 	}
@@ -530,7 +535,7 @@ func lexIdentifier(l *lexer) stateFn {
 	}
 }
 
-func lexReserved(l *lexer) stateFn {
+func lexReserved(l *lexer, typ itemType) stateFn {
 	var s string
 
 	for {
@@ -544,18 +549,35 @@ func lexReserved(l *lexer) stateFn {
 		case v == '\\':
 			v = l.next()
 
-			switch v {
-			default:
+			if !isReservedEscape(v) {
 				return l.emitErrorf("unexpected escaped character in reserved: %s", string(v))
-			case '\\', '{', '|', '}':
-				s += string(v)
 			}
-		case v == '|', isWhitespace(v), v == '}':
+
+			s += string(v)
+
+		case isReserved(v):
+			s += string(v)
+		case v == '|':
+			l.backup()
+			lexLiteral(l)
+
+			if l.item.typ == itemError {
+				return l.emitItem(l.item)
+			}
+
+			s += fmt.Sprintf("|%s|", l.item.val)
+		case isWhitespace(v):
+			if l.peek() == '}' {
+				l.backup()
+
+				return l.emitItem(mk(typ, s))
+			}
+
+			s += string(v)
+		case v == '}':
 			l.backup()
 
-			return l.emitItem(mk(itemReserved, s))
-		case len(s) == 0 && isReservedStart(v), isReserved(v):
-			s += string(v)
+			return l.emitItem(mk(typ, s))
 		}
 	}
 }
@@ -661,6 +683,15 @@ func isReserved(r rune) bool {
 		0xE000 <= r && r <= 0x10FFFF
 }
 
+// isReservedEscape returns true if r is reserved escape character.
+//
+// ABNF:
+//
+//	reserved-escape = backslash ( backslash / "{" / "|" / "}" ).
+func isReservedEscape(r rune) bool {
+	return r == '\\' || r == '{' || r == '|' || r == '}'
+}
+
 // isSimpleStart returns true if r is simple start character.
 //
 // ABNF:
@@ -691,4 +722,13 @@ func isText(r rune) bool {
 // isDigit returns true if r is digit character.
 func isDigit(r rune) bool {
 	return '0' <= r && r <= '9'
+}
+
+// isPrivateStart returns true if r is private start character.
+//
+// ABNF:
+//
+//	private-start = "^" / "&".
+func isPrivateStart(r rune) bool {
+	return r == '^' || r == '&'
 }

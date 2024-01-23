@@ -150,42 +150,73 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
-			name:  "reserved",
-			input: `{!a @b #c %d *e <|hello| > /\{ ?\| ~\}}`,
+			name:  "reserved annotations",
+			input: `{!a}{@b c}{# \{}{%|quoted|}{ *r }{<}{>a b c}{ / a b c }{?}{~}`,
 			expected: []item{
+				// 1
 				mk(itemExpressionOpen, "{"),
 				mk(itemReserved, "!a"),
+				mk(itemExpressionClose, "}"),
+				// 2
+				mk(itemExpressionOpen, "{"),
+				mk(itemReserved, "@b c"),
+				mk(itemExpressionClose, "}"),
+				// 3
+				mk(itemExpressionOpen, "{"),
+				mk(itemReserved, "# {"),
+				mk(itemExpressionClose, "}"),
+				// 4
+				mk(itemExpressionOpen, "{"),
+				mk(itemReserved, "%|quoted|"),
+				mk(itemExpressionClose, "}"),
+				// 5
+				mk(itemExpressionOpen, "{"),
 				mk(itemWhitespace, " "),
-				mk(itemReserved, "@b"),
+				mk(itemReserved, "*r"),
 				mk(itemWhitespace, " "),
-				mk(itemReserved, "#c"),
-				mk(itemWhitespace, " "),
-				mk(itemReserved, "%d"),
-				mk(itemWhitespace, " "),
-				mk(itemReserved, "*e"),
-				mk(itemWhitespace, " "),
+				mk(itemExpressionClose, "}"),
+				// 6
+				mk(itemExpressionOpen, "{"),
 				mk(itemReserved, "<"),
-				mk(itemQuotedLiteral, "hello"),
+				mk(itemExpressionClose, "}"),
+				// 7
+				mk(itemExpressionOpen, "{"),
+				mk(itemReserved, ">a b c"),
+				mk(itemExpressionClose, "}"),
+				// 8
+				mk(itemExpressionOpen, "{"),
 				mk(itemWhitespace, " "),
-				mk(itemReserved, ">"),
+				mk(itemReserved, "/ a b c"),
 				mk(itemWhitespace, " "),
-				mk(itemReserved, `/{`),
-				mk(itemWhitespace, " "),
-				mk(itemReserved, "?|"),
-				mk(itemWhitespace, " "),
-				mk(itemReserved, "~}"),
+				mk(itemExpressionClose, "}"),
+				// 9
+				mk(itemExpressionOpen, "{"),
+				mk(itemReserved, "?"),
+				mk(itemExpressionClose, "}"),
+				// 10
+				mk(itemExpressionOpen, "{"),
+				mk(itemReserved, "~"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
 			},
 		},
 		{
-			name:  "private use", // TODO: incomplete
-			input: "{^ &}",
+			name:  "private use annotations",
+			input: "{ ^ body }{&|body| a}{^ \\|body \\}}",
 			expected: []item{
+				// 1
 				mk(itemExpressionOpen, "{"),
-				mk(itemPrivate, "^"),
 				mk(itemWhitespace, " "),
-				mk(itemPrivate, "&"),
+				mk(itemPrivate, "^ body"),
+				mk(itemWhitespace, " "),
+				mk(itemExpressionClose, "}"),
+				// 2
+				mk(itemExpressionOpen, "{"),
+				mk(itemPrivate, "&|body| a"),
+				mk(itemExpressionClose, "}"),
+				// 3
+				mk(itemExpressionOpen, "{"),
+				mk(itemPrivate, "^ |body }"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
 			},
