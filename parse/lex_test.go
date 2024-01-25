@@ -29,7 +29,7 @@ func Test_lex(t *testing.T) {
 		},
 		{
 			name:  "function",
-			input: "{:rand seed=1 log:level=$log}",
+			input: "{:rand seed=1 log:level=$log @attr1=val1 @attr2}",
 			expected: []item{
 				mk(itemExpressionOpen, "{"),
 				mk(itemFunction, "rand"),
@@ -41,6 +41,12 @@ func Test_lex(t *testing.T) {
 				mk(itemOption, "log:level"),
 				mk(itemOperator, "="),
 				mk(itemVariable, "log"),
+				mk(itemWhitespace, " "),
+				mk(itemAttribute, "attr1"),
+				mk(itemOperator, "="),
+				mk(itemUnquotedLiteral, "val1"),
+				mk(itemWhitespace, " "),
+				mk(itemAttribute, "attr2"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
 			},
