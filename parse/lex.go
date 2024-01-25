@@ -20,6 +20,8 @@ const (
 	itemFunction
 	itemExpressionOpen
 	itemExpressionClose
+	itemMarkupOpen
+	itemMarkupClose
 	itemQuotedPatternOpen
 	itemQuotedPatternClose
 	itemText
@@ -32,6 +34,7 @@ const (
 	itemQuotedLiteral
 	itemUnquotedLiteral
 	itemOption
+	itemAttribute
 	itemWhitespace
 	itemReserved
 	itemOperator
@@ -41,8 +44,6 @@ const (
 // String returns a string representation of the item type.
 func (t itemType) String() string {
 	switch t {
-	default:
-		return "unknown"
 	case itemCatchAllKey:
 		return "catch all key"
 	case itemEOF:
@@ -53,6 +54,10 @@ func (t itemType) String() string {
 		return "expression close"
 	case itemExpressionOpen:
 		return "expression open"
+	case itemMarkupOpen:
+		return "markup open"
+	case itemMarkupClose:
+		return "markup close"
 	case itemFunction:
 		return "function"
 	case itemText:
@@ -71,6 +76,8 @@ func (t itemType) String() string {
 		return "operator"
 	case itemOption:
 		return "option"
+	case itemAttribute:
+		return "attribute"
 	case itemPrivate:
 		return "private"
 	case itemQuotedLiteral:
@@ -88,6 +95,8 @@ func (t itemType) String() string {
 	case itemWhitespace:
 		return "whitespace"
 	}
+
+	return "unknown"
 }
 
 // Keywords.
@@ -338,21 +347,26 @@ func lexExpr(l *lexer) stateFn {
 		return lexLiteral(l)
 	case v == eof:
 		return l.emitErrorf("unexpected eof in expression")
-	case v == '$':
+	case v == '$': // variable
 		l.backup()
+
 		return lexName(l)
-	case v == '|', v == '-' && isDigit(l.peek()):
+	case v == '|', v == '-' && isDigit(l.peek()): // quoted and number literal
 		l.backup()
 		return lexLiteral(l)
-	case v == ':', v == '+', v == '-':
+	case v == '#', // markup-open
+		v == '/', // markup-close
+		v == '@', // attribute
+		v == ':': // function
 		l.backup()
 
 		return lexIdentifier(l)
-	case v == '{':
+
+	case v == '{': // expression/markup start
 		l.isExpression = true
 
 		return l.emitItem(mk(itemExpressionOpen, "{"))
-	case v == '}':
+	case v == '}': // expression/markup end
 		l.isExpression = false
 		l.isFunction = false
 
@@ -364,7 +378,8 @@ func lexExpr(l *lexer) stateFn {
 		(l.prev.typ == itemFunction ||
 			l.prev.typ == itemQuotedLiteral ||
 			l.prev.typ == itemUnquotedLiteral ||
-			l.prev.typ == itemNumberLiteral):
+			l.prev.typ == itemNumberLiteral) ||
+		l.prev.typ == itemMarkupOpen:
 		l.backup()
 		return lexIdentifier(l)
 	case isReservedStart(v):
@@ -508,7 +523,22 @@ func lexIdentifier(l *lexer) stateFn {
 			l.backup()
 
 			return l.emitItem(mk(typ, s))
-		case len(s) > 0 && isName(r):
+		case typ == 0:
+			switch r {
+			default:
+				typ = itemOption
+				s += string(r)
+			case ':':
+				l.isFunction = true
+				typ = itemFunction
+			case '#':
+				typ = itemMarkupOpen
+			case '/':
+				typ = itemMarkupClose
+			case '@':
+				typ = itemAttribute
+			}
+		case isName(r):
 			s += string(r)
 		case len(s) > 0 && r == ':':
 			if ns {
@@ -519,24 +549,15 @@ func lexIdentifier(l *lexer) stateFn {
 			s += string(r)
 		case r == eof:
 			return l.emitErrorf("unexpected eof in identifier")
-		case len(s) == 0:
-			switch r {
-			default:
-				typ = itemOption
-			case '-', '+', ':':
-				l.isFunction = true
-				typ = itemFunction
-			}
 
-			s += string(r)
-		case len(s) == 1 && isNameStart(r):
+		case len(s) == 0 && isNameStart(r):
 			s = string(r)
 		}
 	}
 }
 
 func lexReserved(l *lexer, typ itemType) stateFn {
-	var s string
+	s := string(l.next())
 
 	for {
 		v := l.next()
@@ -597,7 +618,7 @@ func isAlpha(r rune) bool {
 //	           / %xC0-D6 / %xD8-F6 / %xF8-2FF
 //	           / %x370-37D / %x37F-1FFF / %x200C-200D
 //	           / %x2070-218F / %x2C00-2FEF / %x3001-D7FF
-//	           / %xF900-FDCF / %xFDF0-FFFD / %x10000-EFFFF
+//	           / %xF900-FDCF / %xFDF0-FFFC / %x10000-EFFFF
 func isNameStart(r rune) bool {
 	return isAlpha(r) ||
 		r == '_' ||
@@ -611,7 +632,7 @@ func isNameStart(r rune) bool {
 		0x2C00 <= r && r <= 0x2FEF ||
 		0x3001 <= r && r <= 0xD7FF ||
 		0xF900 <= r && r <= 0xFDCF ||
-		0xFDF0 <= r && r <= 0xFFFD ||
+		0xFDF0 <= r && r <= 0xFFFC ||
 		0x10000 <= r && r <= 0xEFFFF
 }
 
@@ -630,12 +651,11 @@ func isName(v rune) bool {
 		0x203F <= v && v <= 2040
 }
 
-// isQuotedChar returns true if v is quoted character.
+// isQuoted returns true if v is quoted character.
+//
+// quoted-char = content-char / s / "." / "@" / "{" / "}".
 func isQuoted(r rune) bool {
-	return 0x00 <= r && r <= 0x5B || // omit \
-		0x5D <= r && r <= 0x7B || // omit |
-		0x7D <= r && r <= 0xD7FF || // omit surrogates
-		0xE000 <= r && r <= 0x10FFFF
+	return isContent(r) || isWhitespace(r) || r == '.' || r == '@' || r == '{' || r == '}'
 }
 
 // isWhitespace returns true if r is whitespace character.
@@ -651,36 +671,22 @@ func isWhitespace(r rune) bool {
 }
 
 // isReservedStart returns true if r is the first reserved annotation character.
+//
+//	reserved-annotation-start = "!" / "%" / "*" / "+" / "<" / ">" / "?" / "~"
 func isReservedStart(r rune) bool {
 	switch r {
 	default:
 		return false
-	case '!', '@', '#', '%', '*', '<', '>', '/', '?', '~':
+	case '!', '%', '*', '+', '<', '>', '?', '~':
 		return true
 	}
 }
 
-// isReserved returs true if r is reserved annotation character.
+// isReserved returns true if v is reserved character.
 //
-// ABNF:
-//
-//	reserved-char  = %x00-08        ; omit HTAB and LF
-//	               / %x0B-0C        ; omit CR
-//	               / %x0E-19        ; omit SP
-//	               / %x21-5B        ; omit \
-//	               / %x5D-7A        ; omit { | }
-//	               / %x7E-2FFF      ; omit IDEOGRAPHIC SPACE
-//	               / %x3001-D7FF    ; omit surrogates
-//	               / %xE000-10FFFF
+//	reserved-char = content-char / ".".
 func isReserved(r rune) bool {
-	return 0x00 <= r && r <= 0x08 || // omit HTAB and LF
-		0x0B <= r && r <= 0x0C || // omit CR
-		0x0E <= r && r <= 0x19 || // omit SP
-		0x21 <= r && r <= 0x5B || // omit \
-		0x5D <= r && r <= 0x7A || // omit { | }
-		0x7E <= r && r <= 0x2FFF || // omit IDEOGRAPHIC SPACE
-		0x3001 <= r && r <= 0xD7FF || // omit surrogates
-		0xE000 <= r && r <= 0x10FFFF
+	return isContent(r) || r == '.'
 }
 
 // isReservedEscape returns true if r is reserved escape character.
@@ -692,31 +698,18 @@ func isReservedEscape(r rune) bool {
 	return r == '\\' || r == '{' || r == '|' || r == '}'
 }
 
-// isSimpleStart returns true if r is simple start character.
+// isSimpleStart returns true if v is simple start character.
 //
-// ABNF:
-//
-//	simple-start-char = %x0-2D         ; omit .
-//	                  / %x2F-5B        ; omit \
-//	                  / %x5D-7A        ; omit {
-//	                  / %x7C           ; omit }
-//	                  / %x7E-D7FF      ; omit surrogates
-//	                  / %xE000-10FFFF
+//	simple-start-char = content-char / s / "@" / "|"
 func isSimpleStart(r rune) bool {
-	return 0x0 <= r && r <= 0x2D || // omit .
-		0x2F <= r && r <= 0x5B || // omit \
-		0x5D <= r && r <= 0x7A || // omit {}
-		r == 0x7C || // omit }
-		0x7E <= r && r <= 0xD7FF || // omit surrogates
-		0xE000 <= r && r <= 0x10FFFF
+	return isContent(r) || isWhitespace(r) || r == '@' || r == '|'
 }
 
-// isText returns true if r is text character.
+// isText returns true if v is text character.
 //
-// ABNF:
-// text-char = simple-start-char / ".".
+//	text-char = content-char / s / "." / "@" / "|"
 func isText(r rune) bool {
-	return isSimpleStart(r) || r == '.'
+	return isContent(r) || isWhitespace(r) || r == '.' || r == '@' || r == '|'
 }
 
 // isDigit returns true if r is digit character.
@@ -731,4 +724,27 @@ func isDigit(r rune) bool {
 //	private-start = "^" / "&".
 func isPrivateStart(r rune) bool {
 	return r == '^' || r == '&'
+}
+
+// isContent returns true if v is content character.
+//
+//	content-char      = %x00-08        ; omit HTAB (%x09) and LF (%x0A)
+//	                  / %x0B-0C        ; omit CR (%x0D)
+//	                  / %x0E-19        ; omit SP (%x20)
+//	                  / %x21-2D        ; omit . (%x2E)
+//	                  / %x2F-3F        ; omit @ (%x40)
+//	                  / %x41-5B        ; omit \ (%x5C)
+//	                  / %x5D-7A        ; omit { | } (%x7B-7D)
+//	                  / %x7E-D7FF      ; omit surrogates
+//	                  / %xE000-10FFFF
+func isContent(r rune) bool {
+	return 0x00 <= r && r <= 0x08 || // omit HTAB (%x09) and LF (%x0A)
+		0x0B <= r && r <= 0x0C || // omit CR (%x0D)
+		0x0E <= r && r <= 0x19 || // omit SP (%x20)
+		0x21 <= r && r <= 0x2D || // omit . (%x2E)
+		0x2F <= r && r <= 0x3F || // omit @ (%x40)
+		0x41 <= r && r <= 0x5B || // omit \ (%x5C)
+		0x5D <= r && r <= 0x7A || // omit { | } (%x7B-7D)
+		0x7E <= r && r <= 0xD7FF || // omit surrogates
+		0xE000 <= r && r <= 0x10FFFF
 }
