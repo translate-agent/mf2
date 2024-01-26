@@ -291,8 +291,9 @@ type function struct {
 }
 
 type Expression struct {
-	operand  any // literal or variable
-	function function
+	operand    any // literal or variable
+	function   function
+	attributes []attribute
 }
 
 func (e *Expression) build(spacing string) string {
@@ -325,6 +326,22 @@ func (e *Expression) build(spacing string) string {
 			}
 
 			s += printLiteral(o.operand)
+		}
+	}
+
+	// attributes
+
+	for _, attr := range e.attributes {
+		s += spacing + "@" + attr.name
+
+		if attr.value != nil {
+			s += spacing + "=" + spacing
+
+			if v, ok := attr.value.(variable); ok {
+				s += varSymbol + string(v)
+			} else {
+				s += printLiteral(attr.value)
+			}
 		}
 	}
 
@@ -377,24 +394,26 @@ func (e *Expression) Func(name string, option ...FuncOption) *Expression {
 	return e
 }
 
-func OpenFunc(name string, option ...FuncOption) *Expression {
+func (e *Expression) Attr(name string, value ...any) *Expression {
 	if len(name) == 0 {
-		panic("function name cannot be empty")
+		panic("attribute name cannot be empty")
 	}
 
-	return &Expression{
-		function: function{name: "+" + name, options: option},
+	switch len(value) {
+	case 0:
+		e.attributes = append(e.attributes, attribute{name: name})
+	case 1:
+		e.attributes = append(e.attributes, attribute{name: name, value: value[0]})
+	default:
+		panic("only one attribute value is allowed")
 	}
+
+	return e
 }
 
-func CloseFunc(name string, option ...FuncOption) *Expression {
-	if len(name) == 0 {
-		panic("function name cannot be empty")
-	}
-
-	return &Expression{
-		function: function{name: "-" + name, options: option},
-	}
+type attribute struct {
+	value any    // optional: literal or variable
+	name  string // required
 }
 
 func printLiteral(l any) string {
