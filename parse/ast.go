@@ -361,6 +361,7 @@ func (ql QuotedLiteral) validate() error {
 	return nil
 }
 
+// TODO: Reduce Nesting: Remove UnquotedLiteral type, and use NameLiteral and NumberLiteral instead.
 type UnquotedLiteral struct {
 	Literal
 
