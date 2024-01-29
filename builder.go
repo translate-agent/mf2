@@ -386,7 +386,7 @@ func (m *markup) build(spacing string) string {
 	}
 
 	if m.typ == parse.SelfClose {
-		s += spacing + "/"
+		return fmt.Sprintf("{%s%s%s/}", spacing, s, spacing)
 	}
 
 	return fmt.Sprintf("{%s%s%s}", spacing, s, spacing)

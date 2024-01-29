@@ -176,7 +176,7 @@ func Test_Builder(t *testing.T) {
 				SelfCloseMarkup("nest3").
 				CloseMarkup("nest2").
 				CloseMarkup("nest1"),
-			"{ #open opt1 = val1 opt2 = $var @attr1 = 1 } something { /close @empty1 @attr1 = $var }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| / }{ #nest1 }{ #nest2 }nested{ #nest3 / }{ /nest2 }{ /nest1 }",
+			"{ #open opt1 = val1 opt2 = $var @attr1 = 1 } something { /close @empty1 @attr1 = $var }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| /}{ #nest1 }{ #nest2 }nested{ #nest3 /}{ /nest2 }{ /nest1 }",
 		},
 	} {
 		test := test
