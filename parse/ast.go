@@ -103,11 +103,6 @@ type Literal interface {
 	literal()
 }
 
-type Unquoted interface {
-	Value
-	unquoted()
-}
-
 type Annotation interface {
 	Node
 	annotation()
@@ -211,7 +206,7 @@ func (tp TextPattern) validate() error { return nil }
 type LiteralExpression struct {
 	Expression
 
-	Literal    Literal     // QuotedLiteral or UnquotedLiteral
+	Literal    Literal     // QuotedLiteral, NameLiteral, or NumberLiteral
 	Annotation Annotation  // Optional: Function, PrivateUseAnnotation, or ReservedAnnotation
 	Attributes []Attribute // Optional
 }
@@ -335,18 +330,13 @@ func (ae AnnotationExpression) validate() error {
 
 type QuotedLiteral string
 
-func (QuotedLiteral) node()    {}
-func (QuotedLiteral) literal() {}
-func (QuotedLiteral) value()   {}
-func (ql QuotedLiteral) String() string {
-	// quoted-escape = backslash ( backslash / "|" )
-	r := strings.NewReplacer(
-		`\`, `\\`,
-		`|`, `\|`,
-	)
+type NameLiteral string
 
-	return fmt.Sprintf("|%s|", r.Replace(string(ql)))
-}
+type NumberLiteral float64
+
+func (ql QuotedLiteral) String() string { return fmt.Sprintf("|%s|", string(ql)) }
+func (nl NameLiteral) String() string   { return string(nl) }
+func (nl NumberLiteral) String() string { return fmt.Sprint(float64(nl)) }
 
 func (ql QuotedLiteral) validate() error {
 	if isZeroValue(ql) {
@@ -356,34 +346,6 @@ func (ql QuotedLiteral) validate() error {
 	return nil
 }
 
-// TODO: Reduce Nesting: Remove UnquotedLiteral type, and use NameLiteral and NumberLiteral instead.
-type UnquotedLiteral struct {
-	Literal
-
-	Value Unquoted // NameLiteral or NumberLiteral
-}
-
-func (ul UnquotedLiteral) String() string { return fmt.Sprint(ul.Value) }
-func (ul UnquotedLiteral) validate() error {
-	if ul.Value == nil {
-		return errors.New("unquotedLiteral: literal is empty")
-	}
-
-	if err := ul.Value.validate(); err != nil {
-		return fmt.Errorf("unquotedLiteral.%w", err)
-	}
-
-	return nil
-}
-func (UnquotedLiteral) value() {}
-
-type NameLiteral string
-
-func (NameLiteral) node()             {}
-func (NameLiteral) literal()          {}
-func (NameLiteral) unquoted()         {}
-func (NameLiteral) value()            {}
-func (nl NameLiteral) String() string { return string(nl) }
 func (nl NameLiteral) validate() error {
 	if isZeroValue(nl) {
 		return errors.New("nameLiteral: literal is empty")
@@ -392,14 +354,19 @@ func (nl NameLiteral) validate() error {
 	return nil
 }
 
-type NumberLiteral float64
-
-func (NumberLiteral) node()              {}
-func (NumberLiteral) literal()           {}
-func (NumberLiteral) unquoted()          {}
-func (NumberLiteral) value()             {}
-func (nl NumberLiteral) String() string  { return fmt.Sprint(float64(nl)) }
 func (nl NumberLiteral) validate() error { return nil } // Zero value is valid
+
+func (QuotedLiteral) node() {}
+func (NameLiteral) node()   {}
+func (NumberLiteral) node() {}
+
+func (QuotedLiteral) literal() {}
+func (NameLiteral) literal()   {}
+func (NumberLiteral) literal() {}
+
+func (QuotedLiteral) value() {}
+func (NameLiteral) value()   {}
+func (NumberLiteral) value() {}
 
 // --------------------------------Annotation----------------------------------
 
@@ -506,7 +473,7 @@ func (ReservedStatement) validate() error { return nil }
 type LiteralKey struct {
 	VariantKey
 
-	Literal Literal // QuotedLiteral or UnquotedLiteral
+	Literal Literal // QuotedLiteral, NameLiteral, or NumberLiteral
 }
 
 func (lk LiteralKey) String() string { return fmt.Sprint(lk.Literal) }
