@@ -23,6 +23,17 @@ func (p *parser) next() item {
 	return p.items[p.pos]
 }
 
+// peekNonWS returns next non-whitespace token.
+func (p *parser) peekNonWS() item {
+	for pos := p.pos + 1; pos < len(p.items)-1; pos++ {
+		if itm := p.items[pos]; itm.typ != itemWhitespace {
+			return itm
+		}
+	}
+
+	return mk(itemError, "nothing to peek")
+}
+
 func (p *parser) current() item {
 	return p.items[p.pos]
 }
@@ -242,24 +253,102 @@ func (p *parser) parsePatterns() ([]Pattern, error) {
 		switch itm.typ {
 		case itemError:
 			return nil, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
 		case itemText:
 			pattern = append(pattern, TextPattern(itm.val))
 		case itemExpressionOpen:
-			p.next() // skip opening brace
+			// HACK: Find if it's a markup or expression, if it's markup, let the markup case handle it.
+			if typ := p.peekNonWS().typ; typ == itemMarkupOpen || typ == itemMarkupClose {
+				continue
+			}
+
+			p.next()
 
 			expression, err := p.parseExpression()
 			if err != nil {
 				return nil, fmt.Errorf("parse expression: %w", err)
 			}
 
-			pattern = append(pattern, PlaceholderPattern{Expression: expression})
+			pattern = append(pattern, expression)
+		case itemMarkupOpen, itemMarkupClose:
+			markup, err := p.parseMarkup()
+			if err != nil {
+				return nil, fmt.Errorf("parse markup: %w", err)
+			}
+
+			pattern = append(pattern, markup)
 		// bad tokens
 		default:
-			return nil, UnexpectedTokenError{Expected: []itemType{itemText, itemExpressionOpen}, Actual: itm.typ}
+			err := UnexpectedTokenError{
+				Actual: itm.typ,
+				Expected: []itemType{
+					itemWhitespace, itemText, itemExpressionOpen, itemMarkupOpen, itemMarkupClose,
+				},
+			}
+
+			return nil, err
 		}
 	}
 
 	return pattern, nil
+}
+
+// --------------------------------Markup--------------------------------
+
+func (p *parser) parseMarkup() (Markup, error) {
+	var markup Markup
+
+	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
+		switch itm.typ {
+		case itemError:
+			return Markup{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
+		case itemMarkupOpen:
+			markup.Typ = Open
+			markup.Identifier = p.parseIdentifier()
+
+		case itemMarkupClose:
+			if markup.Typ == Unspecified {
+				markup.Typ = Close
+				markup.Identifier = p.parseIdentifier()
+			} else {
+				markup.Typ = SelfClose
+			}
+
+		case itemOption:
+			if markup.Typ == Close {
+				return Markup{}, fmt.Errorf("close markup cannot have options: '%s'", itm.val)
+			}
+			// Markup with options
+			option, err := p.parseOption()
+			if err != nil {
+				return Markup{}, fmt.Errorf("parse option: %w", err)
+			}
+
+			markup.Options = append(markup.Options, option)
+
+		case itemAttribute:
+			attribute, err := p.parseAttribute()
+			if err != nil {
+				return Markup{}, fmt.Errorf("parse attribute: %w", err)
+			}
+
+			markup.Attributes = append(markup.Attributes, attribute)
+		default:
+			err := UnexpectedTokenError{
+				Actual: itm.typ,
+				Expected: []itemType{
+					itemWhitespace, itemMarkupOpen, itemMarkupClose, itemOption, itemAttribute,
+				},
+			}
+
+			return Markup{}, err
+		}
+	}
+
+	return markup, nil
 }
 
 // ------------------------------Expression------------------------------
@@ -405,12 +494,12 @@ func (p *parser) parseLiteralExpression() (LiteralExpression, error) {
 func (p *parser) parseAnnotation() (Annotation, error) { //nolint:ireturn
 	switch p.current().typ {
 	case itemFunction:
-		annotation, err := p.parseFunctionAnnotation()
+		function, err := p.parseFunction()
 		if err != nil {
-			return nil, fmt.Errorf("parse function annotation: %w", err)
+			return nil, fmt.Errorf("parse function: %w", err)
 		}
 
-		return annotation, nil
+		return FunctionAnnotation{Function: function}, nil
 	case itemPrivate:
 		annotation, err := p.parsePrivateUseAnnotation()
 		if err != nil {
@@ -434,40 +523,6 @@ func (p *parser) parseAnnotation() (Annotation, error) { //nolint:ireturn
 
 		return nil, err
 	}
-}
-
-func (p *parser) parseFunctionAnnotation() (FunctionAnnotation, error) {
-	var annotation FunctionAnnotation
-
-	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
-		switch itm.typ {
-		case itemError:
-			return FunctionAnnotation{}, fmt.Errorf("got error token: '%s'", itm.val)
-		case itemWhitespace:
-			continue
-		case itemFunction:
-			annotation.Function = p.parseFunction()
-		case itemOption:
-			// Function with options
-			option, err := p.parseOption()
-			if err != nil {
-				return FunctionAnnotation{}, fmt.Errorf("parse option: %w", err)
-			}
-
-			annotation.Options = append(annotation.Options, option)
-		// bad tokens
-		default:
-			err := UnexpectedTokenError{
-				Expected: []itemType{itemWhitespace, itemFunction, itemOption},
-				Actual:   itm.typ,
-			}
-
-			return FunctionAnnotation{}, err
-		}
-	}
-
-	// Function without options
-	return annotation, nil
 }
 
 func (p *parser) parsePrivateUseAnnotation() (PrivateUseAnnotation, error) {
@@ -616,13 +671,13 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 	return keys, nil
 }
 
-func (p *parser) parseOption() (Option, error) { //nolint:ireturn
+func (p *parser) parseOption() (Option, error) {
 	var identifier Identifier
 
 	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
 		switch itm.typ {
 		case itemError:
-			return nil, fmt.Errorf("got error token: '%s'", itm.val)
+			return Option{}, fmt.Errorf("got error token: '%s'", itm.val)
 		case itemWhitespace, itemOperator:
 			continue
 		case itemOption:
@@ -631,14 +686,14 @@ func (p *parser) parseOption() (Option, error) { //nolint:ireturn
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			literal, err := p.parseLiteral()
 			if err != nil {
-				return nil, fmt.Errorf("parse literal: %w", err)
+				return Option{}, fmt.Errorf("parse literal: %w", err)
 			}
 
-			return LiteralOption{Literal: literal, Identifier: identifier}, nil
+			return Option{Value: literal, Identifier: identifier}, nil
 
 		case itemVariable:
-			return VariableOption{
-				Variable:   Variable(itm.val),
+			return Option{
+				Value:      Variable(itm.val),
 				Identifier: identifier,
 			}, nil
 			// bad tokens
@@ -651,11 +706,51 @@ func (p *parser) parseOption() (Option, error) { //nolint:ireturn
 				Actual: itm.typ,
 			}
 
-			return nil, err
+			return Option{}, err
 		}
 	}
 
-	return nil, errors.New("no option value found")
+	return Option{}, errors.New("no option value found")
+}
+
+func (p *parser) parseAttribute() (Attribute, error) {
+	var attribute Attribute
+
+	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
+		switch itm.typ {
+		case itemError:
+			return Attribute{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace, itemOperator:
+			continue
+		case itemAttribute:
+			attribute.Identifier = p.parseIdentifier()
+		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
+			literal, err := p.parseLiteral()
+			if err != nil {
+				return Attribute{}, fmt.Errorf("parse literal: %w", err)
+			}
+
+			attribute.Value = literal
+
+			return attribute, nil
+		case itemVariable:
+			attribute.Value = Variable(itm.val)
+
+			return attribute, nil
+		default:
+			err := UnexpectedTokenError{
+				Actual: itm.typ,
+				Expected: []itemType{
+					itemWhitespace, itemOperator, itemAttribute, itemVariable,
+					itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
+				},
+			}
+
+			return Attribute{}, err
+		}
+	}
+
+	return attribute, nil // Attribute without value.
 }
 
 func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
@@ -682,8 +777,37 @@ func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
 	}
 }
 
-func (p *parser) parseFunction() Function {
-	return Function{Prefix: rune(p.current().val[0]), Identifier: p.parseIdentifier()}
+func (p *parser) parseFunction() (Function, error) {
+	var function Function
+
+	for itm := p.current(); itm.typ != itemAttribute && itm.typ != itemExpressionClose; itm = p.next() {
+		switch itm.typ {
+		case itemError:
+			return Function{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemWhitespace:
+			continue
+		case itemFunction:
+			function.Identifier = p.parseIdentifier()
+		case itemOption:
+			// Function with options
+			option, err := p.parseOption()
+			if err != nil {
+				return Function{}, fmt.Errorf("parse option: %w", err)
+			}
+
+			function.Options = append(function.Options, option)
+		// bad tokens
+		default:
+			err := UnexpectedTokenError{
+				Actual:   itm.typ,
+				Expected: []itemType{itemOption, itemWhitespace, itemFunction},
+			}
+
+			return Function{}, err
+		}
+	}
+
+	return function, nil
 }
 
 func (p *parser) parseIdentifier() Identifier {

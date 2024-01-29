@@ -29,10 +29,10 @@ func Test_lex(t *testing.T) {
 		},
 		{
 			name:  "function",
-			input: "{:rand seed=1 log:level=$log}",
+			input: "{:rand seed=1 log:level=$log @attr1=val1 @attr2}",
 			expected: []item{
 				mk(itemExpressionOpen, "{"),
-				mk(itemFunction, ":rand"),
+				mk(itemFunction, "rand"),
 				mk(itemWhitespace, " "),
 				mk(itemOption, "seed"),
 				mk(itemOperator, "="),
@@ -41,40 +41,12 @@ func Test_lex(t *testing.T) {
 				mk(itemOption, "log:level"),
 				mk(itemOperator, "="),
 				mk(itemVariable, "log"),
-				mk(itemExpressionClose, "}"),
-				mk(itemEOF, ""),
-			},
-		},
-		{
-			name:  "opening function",
-			input: "{+button}",
-			expected: []item{
-				mk(itemExpressionOpen, "{"),
-				mk(itemFunction, "+button"),
-				mk(itemExpressionClose, "}"),
-				mk(itemEOF, ""),
-			},
-		},
-		{
-			name:  "closing function",
-			input: "{-button}",
-			expected: []item{
-				mk(itemExpressionOpen, "{"),
-				mk(itemFunction, "-button"),
-				mk(itemExpressionClose, "}"),
-				mk(itemEOF, ""),
-			},
-		},
-		{
-			name:  "opening and closing functions",
-			input: "{+button}Submit{-button}",
-			expected: []item{
-				mk(itemExpressionOpen, "{"),
-				mk(itemFunction, "+button"),
-				mk(itemExpressionClose, "}"),
-				mk(itemText, "Submit"),
-				mk(itemExpressionOpen, "{"),
-				mk(itemFunction, "-button"),
+				mk(itemWhitespace, " "),
+				mk(itemAttribute, "attr1"),
+				mk(itemOperator, "="),
+				mk(itemUnquotedLiteral, "val1"),
+				mk(itemWhitespace, " "),
+				mk(itemAttribute, "attr2"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
 			},
@@ -86,7 +58,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "count"),
 				mk(itemWhitespace, " "),
-				mk(itemFunction, ":math:round"),
+				mk(itemFunction, "math:round"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
 			},
@@ -120,7 +92,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemQuotedLiteral, "| is escaped"),
 				mk(itemWhitespace, " "),
-				mk(itemFunction, ":uppercase"),
+				mk(itemFunction, "uppercase"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
 			},
@@ -132,7 +104,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemNumberLiteral, "-1.9e+10"),
 				mk(itemWhitespace, " "),
-				mk(itemFunction, ":odd"),
+				mk(itemFunction, "odd"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
 			},
@@ -144,14 +116,14 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemUnquotedLiteral, "hello"),
 				mk(itemWhitespace, " "),
-				mk(itemFunction, ":uppercase"),
+				mk(itemFunction, "uppercase"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
 			},
 		},
 		{
 			name:  "reserved annotations",
-			input: `{!a}{@b c}{# \{}{%|quoted|}{ *r }{<}{>a b c}{ / a b c }{?}{~}`,
+			input: `{!a}{%b c}{* \{}{+|quoted|}{ <r }{>}{?a b c}{ ~ a b c }`,
 			expected: []item{
 				// 1
 				mk(itemExpressionOpen, "{"),
@@ -159,44 +131,37 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionClose, "}"),
 				// 2
 				mk(itemExpressionOpen, "{"),
-				mk(itemReserved, "@b c"),
+				mk(itemReserved, "%b c"),
 				mk(itemExpressionClose, "}"),
 				// 3
 				mk(itemExpressionOpen, "{"),
-				mk(itemReserved, "# {"),
+				mk(itemReserved, "* {"),
 				mk(itemExpressionClose, "}"),
 				// 4
 				mk(itemExpressionOpen, "{"),
-				mk(itemReserved, "%|quoted|"),
+				mk(itemReserved, "+|quoted|"),
 				mk(itemExpressionClose, "}"),
 				// 5
 				mk(itemExpressionOpen, "{"),
 				mk(itemWhitespace, " "),
-				mk(itemReserved, "*r"),
+				mk(itemReserved, "<r"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionClose, "}"),
 				// 6
 				mk(itemExpressionOpen, "{"),
-				mk(itemReserved, "<"),
+				mk(itemReserved, ">"),
 				mk(itemExpressionClose, "}"),
 				// 7
 				mk(itemExpressionOpen, "{"),
-				mk(itemReserved, ">a b c"),
+				mk(itemReserved, "?a b c"),
 				mk(itemExpressionClose, "}"),
 				// 8
 				mk(itemExpressionOpen, "{"),
 				mk(itemWhitespace, " "),
-				mk(itemReserved, "/ a b c"),
+				mk(itemReserved, "~ a b c"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionClose, "}"),
-				// 9
-				mk(itemExpressionOpen, "{"),
-				mk(itemReserved, "?"),
-				mk(itemExpressionClose, "}"),
-				// 10
-				mk(itemExpressionOpen, "{"),
-				mk(itemReserved, "~"),
-				mk(itemExpressionClose, "}"),
+				//
 				mk(itemEOF, ""),
 			},
 		},
@@ -351,6 +316,57 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionClose, "}"),
 			},
 		},
+		{
+			name:  "markup",
+			input: `{#button}Submit{/button}{#img alt=|Cancel| @hello=world @goodbye /}{ #nest1}{#nest2}text{#nest3/}{/nest2}{/nest1}`, //nolint: lll
+			expected: []item{
+				// 1. simple open-close
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupOpen, "button"),
+				mk(itemExpressionClose, "}"),
+				mk(itemText, "Submit"),
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupClose, "button"),
+				mk(itemExpressionClose, "}"),
+				// 2. self-closing + options + attributes
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupOpen, "img"),
+				mk(itemWhitespace, " "),
+				mk(itemOption, "alt"),
+				mk(itemOperator, "="),
+				mk(itemQuotedLiteral, "Cancel"),
+				mk(itemWhitespace, " "),
+				mk(itemAttribute, "hello"),
+				mk(itemOperator, "="),
+				mk(itemUnquotedLiteral, "world"),
+				mk(itemWhitespace, " "),
+				mk(itemAttribute, "goodbye"),
+				mk(itemWhitespace, " "),
+				mk(itemMarkupClose, ""),
+				mk(itemExpressionClose, "}"),
+				// 3. nested
+				mk(itemExpressionOpen, "{"),
+				mk(itemWhitespace, " "),
+				mk(itemMarkupOpen, "nest1"),
+				mk(itemExpressionClose, "}"),
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupOpen, "nest2"),
+				mk(itemExpressionClose, "}"),
+				mk(itemText, "text"),
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupOpen, "nest3"),
+				mk(itemMarkupClose, ""),
+				mk(itemExpressionClose, "}"),
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupClose, "nest2"),
+				mk(itemExpressionClose, "}"),
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupClose, "nest1"),
+				mk(itemExpressionClose, "}"),
+				//
+				mk(itemEOF, ""),
+			},
+		},
 	} {
 		test := test
 
@@ -372,7 +388,7 @@ func assertItems(t *testing.T, expected []item, l *lexer) {
 
 		logItems = append(logItems, logItem(t, exp, *l))
 
-		if !assert.Equal(t, exp, v) {
+		if !assert.Equal(t, exp, v, "expected %s, got %s", exp.typ, v.typ) {
 			for _, f := range logItems {
 				f()
 			}

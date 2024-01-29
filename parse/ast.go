@@ -94,17 +94,17 @@ type Pattern interface {
 }
 
 type Expression interface {
-	Node
+	Pattern
 	expression()
 }
 
 type Literal interface {
-	Node
+	Value
 	literal()
 }
 
 type Unquoted interface {
-	Literal
+	Value
 	unquoted()
 }
 
@@ -113,9 +113,10 @@ type Annotation interface {
 	annotation()
 }
 
-type Option interface {
+// Value can be either a Literal or a Variable.
+type Value interface {
 	Node
-	option()
+	value()
 }
 
 type Declaration interface {
@@ -146,7 +147,7 @@ type VariantKey interface {
 type SimpleMessage struct {
 	Message
 
-	Patterns []Pattern // TextPattern or PlaceholderPattern
+	Patterns []Pattern // TextPattern, Expression, or Markup.
 }
 
 func (sm SimpleMessage) String() string { return sliceToString(sm.Patterns, "") }
@@ -208,41 +209,32 @@ func (tp TextPattern) String() string {
 }
 func (tp TextPattern) validate() error { return nil }
 
-type PlaceholderPattern struct {
-	Pattern
-
-	Expression Expression // LiteralExpression, VariableExpression, or AnnotationExpression
-}
-
-func (pp PlaceholderPattern) String() string { return fmt.Sprint(pp.Expression) }
-
-func (pp PlaceholderPattern) validate() error {
-	if pp.Expression == nil {
-		return errors.New("placeholderPattern: expression is required")
-	}
-
-	if err := pp.Expression.validate(); err != nil {
-		return fmt.Errorf("placeholderPattern.%w", err)
-	}
-
-	return nil
-}
-
 // --------------------------------Expression----------------------------------
+
+// TODO: Reduce complexity: One expression type instead of three
 
 type LiteralExpression struct {
 	Expression
 
-	Literal    Literal    // QuotedLiteral or UnquotedLiteral
-	Annotation Annotation // Optional: FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
+	Literal    Literal     // QuotedLiteral or UnquotedLiteral
+	Annotation Annotation  // Optional: FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
+	Attributes []Attribute // Optional
 }
 
 func (le LiteralExpression) String() string {
-	if le.Annotation == nil {
-		return fmt.Sprintf("{ %s }", le.Literal)
-	}
+	hasAnnotation := le.Annotation != nil
+	hasAttributes := len(le.Attributes) > 0
 
-	return fmt.Sprintf("{ %s %s }", le.Literal, le.Annotation)
+	switch {
+	case !hasAnnotation && !hasAttributes: // Only literal
+		return fmt.Sprintf("{ %s }", le.Literal)
+	case hasAnnotation && !hasAttributes: // Literal + annotation
+		return fmt.Sprintf("{ %s %s }", le.Literal, le.Annotation)
+	case !hasAnnotation && hasAttributes: // Literal + attributes
+		return fmt.Sprintf("{ %s %s }", le.Literal, sliceToString(le.Attributes, " "))
+	default: // Literal + annotation + attributes
+		return fmt.Sprintf("{ %s %s %s }", le.Literal, le.Annotation, sliceToString(le.Attributes, " "))
+	}
 }
 
 func (le LiteralExpression) validate() error {
@@ -262,6 +254,10 @@ func (le LiteralExpression) validate() error {
 		return fmt.Errorf("literalExpression.%w", err)
 	}
 
+	if err := validateSlice(le.Attributes); err != nil {
+		return fmt.Errorf("literalExpression.%w", err)
+	}
+
 	return nil
 }
 
@@ -270,14 +266,23 @@ type VariableExpression struct {
 
 	Annotation Annotation // Optional: FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
 	Variable   Variable
+	Attributes []Attribute // Optional
 }
 
 func (ve VariableExpression) String() string {
-	if ve.Annotation == nil {
-		return fmt.Sprintf("{ %s }", ve.Variable)
-	}
+	hasAnnotation := ve.Annotation != nil
+	hasAttributes := len(ve.Attributes) > 0
 
-	return fmt.Sprintf("{ %s %s }", ve.Variable, ve.Annotation)
+	switch {
+	case !hasAnnotation && !hasAttributes: // Only variable
+		return fmt.Sprintf("{ %s }", ve.Variable)
+	case hasAnnotation && !hasAttributes: // Variable + annotation
+		return fmt.Sprintf("{ %s %s }", ve.Variable, ve.Annotation)
+	case !hasAnnotation && hasAttributes: // Variable + attributes
+		return fmt.Sprintf("{ %s %s }", ve.Variable, sliceToString(ve.Attributes, " "))
+	default: // Variable + annotation + attributes
+		return fmt.Sprintf("{ %s %s %s }", ve.Variable, ve.Annotation, sliceToString(ve.Attributes, " "))
+	}
 }
 
 func (ve VariableExpression) validate() error {
@@ -293,16 +298,27 @@ func (ve VariableExpression) validate() error {
 		return fmt.Errorf("variableExpression.%w", err)
 	}
 
+	if err := validateSlice(ve.Attributes); err != nil {
+		return fmt.Errorf("variableExpression.%w", err)
+	}
+
 	return nil
 }
 
 type AnnotationExpression struct {
 	Expression
 
-	Annotation Annotation // FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
+	Annotation Annotation  // FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
+	Attributes []Attribute // Optional
 }
 
-func (ae AnnotationExpression) String() string { return fmt.Sprintf("{ %s }", ae.Annotation) }
+func (ae AnnotationExpression) String() string {
+	if len(ae.Attributes) == 0 {
+		return fmt.Sprintf("{ %s }", ae.Annotation)
+	}
+
+	return fmt.Sprintf("{ %s %s }", ae.Annotation, sliceToString(ae.Attributes, " "))
+}
 
 func (ae AnnotationExpression) validate() error {
 	if ae.Annotation == nil {
@@ -310,6 +326,10 @@ func (ae AnnotationExpression) validate() error {
 	}
 
 	if err := ae.Annotation.validate(); err != nil {
+		return fmt.Errorf("annotationExpression.%w", err)
+	}
+
+	if err := validateSlice(ae.Attributes); err != nil {
 		return fmt.Errorf("annotationExpression.%w", err)
 	}
 
@@ -322,6 +342,7 @@ type QuotedLiteral string
 
 func (QuotedLiteral) node()    {}
 func (QuotedLiteral) literal() {}
+func (QuotedLiteral) value()   {}
 func (ql QuotedLiteral) String() string {
 	// quoted-escape = backslash ( backslash / "|" )
 	r := strings.NewReplacer(
@@ -340,6 +361,7 @@ func (ql QuotedLiteral) validate() error {
 	return nil
 }
 
+// TODO: Reduce Nesting: Remove UnquotedLiteral type, and use NameLiteral and NumberLiteral instead.
 type UnquotedLiteral struct {
 	Literal
 
@@ -358,12 +380,14 @@ func (ul UnquotedLiteral) validate() error {
 
 	return nil
 }
+func (UnquotedLiteral) value() {}
 
 type NameLiteral string
 
 func (NameLiteral) node()             {}
 func (NameLiteral) literal()          {}
 func (NameLiteral) unquoted()         {}
+func (NameLiteral) value()            {}
 func (nl NameLiteral) String() string { return string(nl) }
 func (nl NameLiteral) validate() error {
 	if isZeroValue(nl) {
@@ -378,36 +402,23 @@ type NumberLiteral float64
 func (NumberLiteral) node()              {}
 func (NumberLiteral) literal()           {}
 func (NumberLiteral) unquoted()          {}
+func (NumberLiteral) value()             {}
 func (nl NumberLiteral) String() string  { return fmt.Sprint(float64(nl)) }
 func (nl NumberLiteral) validate() error { return nil } // Zero value is valid
 
 // --------------------------------Annotation----------------------------------
 
+// TODO: Reduce nesting: Function should implement Annotation, instead of FunctionAnnotation implementing Annotation.
 type FunctionAnnotation struct {
 	Annotation
 
 	Function Function
-	Options  []Option // Optional: LiteralOption or VariableOption
 }
 
-func (fa FunctionAnnotation) String() string {
-	if len(fa.Options) == 0 {
-		return fmt.Sprint(fa.Function)
-	}
-
-	return fmt.Sprintf("%s %s", fa.Function, sliceToString(fa.Options, " "))
-}
+func (fa FunctionAnnotation) String() string { return fmt.Sprint(fa.Function) }
 
 func (fa FunctionAnnotation) validate() error {
 	if err := fa.Function.validate(); err != nil {
-		return fmt.Errorf("functionAnnotation.%w", err)
-	}
-
-	if len(fa.Options) == 0 {
-		return nil
-	}
-
-	if err := validateSlice(fa.Options); err != nil {
 		return fmt.Errorf("functionAnnotation.%w", err)
 	}
 
@@ -431,54 +442,6 @@ type ReservedAnnotation struct {
 
 func (ReservedAnnotation) String() string  { return "! RESERVED_ANNOTATION_NOT_IMPLEMENTED" } // TODO: Implement
 func (ReservedAnnotation) validate() error { return nil }
-
-// ---------------------------------Option-------------------------------------
-
-type LiteralOption struct {
-	Option
-
-	Literal    Literal // QuotedLiteral or UnquotedLiteral
-	Identifier Identifier
-}
-
-func (lo LiteralOption) String() string { return fmt.Sprintf("%s = %s", lo.Identifier, lo.Literal) }
-
-func (lo LiteralOption) validate() error {
-	if lo.Literal == nil {
-		return errors.New("literalOption: literal is required")
-	}
-
-	if err := lo.Literal.validate(); err != nil {
-		return fmt.Errorf("literalOption.%w", err)
-	}
-
-	if err := lo.Identifier.validate(); err != nil {
-		return fmt.Errorf("literalOption.%w", err)
-	}
-
-	return nil
-}
-
-type VariableOption struct {
-	Option
-
-	Identifier Identifier
-	Variable   Variable
-}
-
-func (vo VariableOption) String() string { return fmt.Sprintf("%s = %s", vo.Identifier, vo.Variable) }
-
-func (vo VariableOption) validate() error {
-	if err := vo.Variable.validate(); err != nil {
-		return fmt.Errorf("variableOption.%w", err)
-	}
-
-	if err := vo.Identifier.validate(); err != nil {
-		return fmt.Errorf("variableOption.%w", err)
-	}
-
-	return nil
-}
 
 // --------------------------------Declaration---------------------------------
 
@@ -622,6 +585,7 @@ type Variable string
 
 func (Variable) node()            {}
 func (v Variable) String() string { return fmt.Sprintf("%c%s", variablePrefix, string(v)) }
+func (Variable) value()           {}
 func (v Variable) validate() error {
 	if isZeroValue(v) {
 		return errors.New("variable: name is empty")
@@ -657,22 +621,25 @@ type Function struct {
 	Node
 
 	Identifier Identifier
-	Prefix     rune // One of: ':', '+', '-'
+	Options    []Option // Optional
 }
 
-func (f Function) String() string { return fmt.Sprintf("%c%s", f.Prefix, f.Identifier) }
+func (f Function) String() string {
+	if len(f.Options) == 0 {
+		return fmt.Sprintf(":%s", f.Identifier)
+	}
+
+	return fmt.Sprintf(":%s %s", f.Identifier, sliceToString(f.Options, " "))
+}
+
 func (f Function) validate() error {
 	if err := f.Identifier.validate(); err != nil {
 		return fmt.Errorf("function.%w", err)
 	}
 
-	switch f.Prefix {
-	case ':', '+', '-':
-	default:
-		return fmt.Errorf("function: invalid prefix: %q", f.Prefix)
+	if err := validateSlice(f.Options); err != nil {
+		return fmt.Errorf("function.%w", err)
 	}
-
-	// TODO: If prefix is '+' (opening function), then there also must be a function with prefix '-' (closing function)
 
 	return nil
 }
@@ -699,6 +666,112 @@ func (v Variant) validate() error {
 
 	if err := v.QuotedPattern.validate(); err != nil {
 		return fmt.Errorf("variant.%w", err)
+	}
+
+	return nil
+}
+
+type Option struct {
+	Node
+
+	Value      Value // Literal or Variable
+	Identifier Identifier
+}
+
+func (o Option) String() string { return fmt.Sprintf("%s = %s", o.Identifier, o.Value) }
+func (o Option) validate() error {
+	if err := o.Identifier.validate(); err != nil {
+		return fmt.Errorf("option.%w", err)
+	}
+
+	if o.Value == nil {
+		return errors.New("option: value is required")
+	}
+
+	if err := o.Value.validate(); err != nil {
+		return fmt.Errorf("option.%w", err)
+	}
+
+	return nil
+}
+
+type MarkupType int
+
+const (
+	Unspecified MarkupType = iota
+	Open
+	Close
+	SelfClose
+)
+
+type Markup struct {
+	Pattern
+
+	Identifier Identifier
+	Options    []Option    // Optional. Options for Identifier, only allowed when markup-open.
+	Attributes []Attribute // Optional
+	Typ        MarkupType
+}
+
+func (m Markup) String() string {
+	switch m.Typ {
+	default:
+		return ""
+	case Open:
+		return fmt.Sprintf("{ #%s %s %s }", m.Identifier, sliceToString(m.Options, " "), sliceToString(m.Attributes, " "))
+	case Close:
+		return fmt.Sprintf("{ /%s %s }", m.Identifier, sliceToString(m.Attributes, " "))
+	case SelfClose:
+		return fmt.Sprintf("{ #%s %s %s /}", m.Identifier, sliceToString(m.Options, " "), sliceToString(m.Attributes, " "))
+	}
+}
+
+func (m Markup) validate() error {
+	if err := m.Identifier.validate(); err != nil {
+		return fmt.Errorf("markup.%w", err)
+	}
+
+	if m.Typ == Close && len(m.Options) != 0 {
+		return errors.New("markup: options are not allowed for markup-close")
+	}
+
+	if err := validateSlice(m.Options); err != nil {
+		return fmt.Errorf("markup.%w", err)
+	}
+
+	if err := validateSlice(m.Attributes); err != nil {
+		return fmt.Errorf("markup.%w", err)
+	}
+
+	return nil
+}
+
+type Attribute struct {
+	Node
+
+	Value      Value // Optional: Literal or Variable
+	Identifier Identifier
+}
+
+func (a Attribute) String() string {
+	if a.Value == nil {
+		return fmt.Sprintf("@%s", a.Identifier)
+	}
+
+	return fmt.Sprintf("@%s = %s", a.Identifier, a.Value)
+}
+
+func (a Attribute) validate() error {
+	if err := a.Identifier.validate(); err != nil {
+		return fmt.Errorf("attribute.%w", err)
+	}
+
+	if a.Value == nil {
+		return nil
+	}
+
+	if err := a.Value.validate(); err != nil {
+		return fmt.Errorf("attribute.%w", err)
 	}
 
 	return nil
