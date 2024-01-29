@@ -651,7 +651,7 @@ func isName(v rune) bool {
 		0x203F <= v && v <= 2040
 }
 
-// isQuoted returns true if v is quoted character.
+// isQuoted returns true if r is quoted character.
 //
 // quoted-char = content-char / s / "." / "@" / "{" / "}".
 func isQuoted(r rune) bool {
@@ -682,7 +682,7 @@ func isReservedStart(r rune) bool {
 	}
 }
 
-// isReserved returns true if v is reserved character.
+// isReserved returns true if r is reserved character.
 //
 //	reserved-char = content-char / ".".
 func isReserved(r rune) bool {
@@ -698,14 +698,14 @@ func isReservedEscape(r rune) bool {
 	return r == '\\' || r == '{' || r == '|' || r == '}'
 }
 
-// isSimpleStart returns true if v is simple start character.
+// isSimpleStart returns true if r is simple start character.
 //
 //	simple-start-char = content-char / s / "@" / "|"
 func isSimpleStart(r rune) bool {
 	return isContent(r) || isWhitespace(r) || r == '@' || r == '|'
 }
 
-// isText returns true if v is text character.
+// isText returns true if r is text character.
 //
 //	text-char = content-char / s / "." / "@" / "|"
 func isText(r rune) bool {
@@ -726,7 +726,7 @@ func isPrivateStart(r rune) bool {
 	return r == '^' || r == '&'
 }
 
-// isContent returns true if v is content character.
+// isContent returns true if r is content character.
 //
 //	content-char      = %x00-08        ; omit HTAB (%x09) and LF (%x0A)
 //	                  / %x0B-0C        ; omit CR (%x0D)
