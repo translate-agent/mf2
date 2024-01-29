@@ -259,7 +259,7 @@ func (p *parser) parsePatterns() ([]Pattern, error) {
 			pattern = append(pattern, TextPattern(itm.val))
 		case itemExpressionOpen:
 			// HACK: Find if it's a markup or expression, if it's markup, let the markup case handle it.
-			if next := p.peekNonWS(); next.typ == itemMarkupOpen || next.typ == itemMarkupClose {
+			if typ := p.peekNonWS().typ; typ == itemMarkupOpen || typ == itemMarkupClose {
 				continue
 			}
 
