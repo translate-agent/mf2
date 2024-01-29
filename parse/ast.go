@@ -94,11 +94,6 @@ type Pattern interface {
 	pattern()
 }
 
-type Expression interface {
-	Pattern
-	expression()
-}
-
 type Literal interface {
 	Value
 	VariantKey
@@ -203,130 +198,101 @@ func (tp TextPattern) validate() error { return nil }
 
 // --------------------------------Expression----------------------------------
 
-// TODO: Reduce complexity: One expression type instead of three
+// TODO: Do we need ExpressionType?
+// It was useful in Markup, because it changes the string representation of the node.
+// In this case, it doesn't change anything.
+type ExpressionType int
 
-type LiteralExpression struct {
-	Expression
+const (
+	UnspecifiedExpression ExpressionType = iota
+	LiteralExpression
+	VariableExpression
+	AnnotationExpression
+)
 
-	Literal    Literal     // QuotedLiteral, NameLiteral, or NumberLiteral
-	Annotation Annotation  // Optional: Function, PrivateUseAnnotation, or ReservedAnnotation
+func (et ExpressionType) String() string {
+	switch et {
+	case UnspecifiedExpression:
+		return "unspecified expression"
+	case LiteralExpression:
+		return "literal expression"
+	case VariableExpression:
+		return "variable expression"
+	case AnnotationExpression:
+		return "annotation expression"
+	}
+
+	return ""
+}
+
+type Expression struct {
+	// Literal or Variable. Required for LiteralExpression and VariableExpression.
+	// Not allowed for AnnotationExpression.
+	Operand    Value
+	Annotation Annotation  // Required for AnnotationExpression. Optional for LiteralExpression and VariableExpression.
 	Attributes []Attribute // Optional
+	Typ        ExpressionType
 }
 
-func (le LiteralExpression) String() string {
-	hasAnnotation := le.Annotation != nil
-	hasAttributes := len(le.Attributes) > 0
+func (e Expression) String() string {
+	var s string
 
-	switch {
-	case !hasAnnotation && !hasAttributes: // Only literal
-		return fmt.Sprintf("{ %s }", le.Literal)
-	case hasAnnotation && !hasAttributes: // Literal + annotation
-		return fmt.Sprintf("{ %s %s }", le.Literal, le.Annotation)
-	case !hasAnnotation && hasAttributes: // Literal + attributes
-		return fmt.Sprintf("{ %s %s }", le.Literal, sliceToString(le.Attributes, " "))
-	default: // Literal + annotation + attributes
-		return fmt.Sprintf("{ %s %s %s }", le.Literal, le.Annotation, sliceToString(le.Attributes, " "))
+	if e.Operand != nil {
+		s = " " + fmt.Sprint(e.Operand)
 	}
+
+	if e.Annotation != nil {
+		s += " " + fmt.Sprint(e.Annotation)
+	}
+
+	if len(e.Attributes) > 0 {
+		s += " " + sliceToString(e.Attributes, " ")
+	}
+
+	return fmt.Sprintf("{%s}", s)
 }
 
-func (le LiteralExpression) validate() error {
-	if le.Literal == nil {
-		return errors.New("literalExpression: literal is required")
+func (e Expression) validate() error {
+	if e.Typ == UnspecifiedExpression {
+		return errors.New("expression: type is required")
 	}
 
-	if err := le.Literal.validate(); err != nil {
-		return fmt.Errorf("literalExpression:.%w", err)
+	if (e.Typ == LiteralExpression || e.Typ == VariableExpression) && e.Operand == nil {
+		return errors.New("expression: operand is required for literal and variable expressions")
 	}
 
-	if le.Annotation == nil {
-		return nil
+	if e.Typ == AnnotationExpression && e.Operand != nil {
+		return errors.New("expression: operand is not allowed for annotation expressions")
 	}
 
-	if err := le.Annotation.validate(); err != nil {
-		return fmt.Errorf("literalExpression.%w", err)
+	// TODO: Check if VariableExpression operand type is Variable.
+	// TODO: Check if LiteralExpression operand type is Literal.
+
+	if e.Typ == AnnotationExpression && e.Annotation == nil {
+		return errors.New("expression: annotation is required for annotation expressions")
 	}
 
-	if err := validateSlice(le.Attributes); err != nil {
-		return fmt.Errorf("literalExpression.%w", err)
+	if err := validateSlice(e.Attributes); err != nil {
+		return fmt.Errorf("expression.%w", err)
+	}
+
+	if e.Operand != nil {
+		if err := e.Operand.validate(); err != nil {
+			return fmt.Errorf("expression.%w", err)
+		}
+	}
+
+	if e.Annotation != nil {
+		if err := e.Annotation.validate(); err != nil {
+			return fmt.Errorf("expression.%w", err)
+		}
 	}
 
 	return nil
 }
 
-type VariableExpression struct {
-	Expression
-
-	Annotation Annotation // Optional: Function, PrivateUseAnnotation, or ReservedAnnotation
-	Variable   Variable
-	Attributes []Attribute // Optional
-}
-
-func (ve VariableExpression) String() string {
-	hasAnnotation := ve.Annotation != nil
-	hasAttributes := len(ve.Attributes) > 0
-
-	switch {
-	case !hasAnnotation && !hasAttributes: // Only variable
-		return fmt.Sprintf("{ %s }", ve.Variable)
-	case hasAnnotation && !hasAttributes: // Variable + annotation
-		return fmt.Sprintf("{ %s %s }", ve.Variable, ve.Annotation)
-	case !hasAnnotation && hasAttributes: // Variable + attributes
-		return fmt.Sprintf("{ %s %s }", ve.Variable, sliceToString(ve.Attributes, " "))
-	default: // Variable + annotation + attributes
-		return fmt.Sprintf("{ %s %s %s }", ve.Variable, ve.Annotation, sliceToString(ve.Attributes, " "))
-	}
-}
-
-func (ve VariableExpression) validate() error {
-	if err := ve.Variable.validate(); err != nil {
-		return fmt.Errorf("variableExpression.%w", err)
-	}
-
-	if ve.Annotation == nil {
-		return nil
-	}
-
-	if err := ve.Annotation.validate(); err != nil {
-		return fmt.Errorf("variableExpression.%w", err)
-	}
-
-	if err := validateSlice(ve.Attributes); err != nil {
-		return fmt.Errorf("variableExpression.%w", err)
-	}
-
-	return nil
-}
-
-type AnnotationExpression struct {
-	Expression
-
-	Annotation Annotation  // Function, PrivateUseAnnotation, or ReservedAnnotation
-	Attributes []Attribute // Optional
-}
-
-func (ae AnnotationExpression) String() string {
-	if len(ae.Attributes) == 0 {
-		return fmt.Sprintf("{ %s }", ae.Annotation)
-	}
-
-	return fmt.Sprintf("{ %s %s }", ae.Annotation, sliceToString(ae.Attributes, " "))
-}
-
-func (ae AnnotationExpression) validate() error {
-	if ae.Annotation == nil {
-		return errors.New("annotationExpression: annotation is required")
-	}
-
-	if err := ae.Annotation.validate(); err != nil {
-		return fmt.Errorf("annotationExpression.%w", err)
-	}
-
-	if err := validateSlice(ae.Attributes); err != nil {
-		return fmt.Errorf("annotationExpression.%w", err)
-	}
-
-	return nil
-}
+func (Expression) node()    {}
+func (Expression) pattern() {}
 
 // ---------------------------------Literal------------------------------------
 
@@ -440,14 +406,21 @@ func (ReservedAnnotation) annotation()   {}
 
 // --------------------------------Declaration---------------------------------
 
+// TODO: Combine InputDeclaration and LocalDeclaration into one type.
 type InputDeclaration struct {
 	Declaration
 
-	Expression VariableExpression
+	Expression Expression // Only VariableExpression
 }
 
 func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, id.Expression) }
 func (id InputDeclaration) validate() error {
+	switch id.Expression.Typ {
+	default:
+		return fmt.Errorf("inputDeclaration: only variable expressions are allowed, got '%s'", id.Expression.Typ)
+	case VariableExpression: // noop
+	}
+
 	if err := id.Expression.validate(); err != nil {
 		return fmt.Errorf("inputDeclaration.%w", err)
 	}
@@ -458,8 +431,8 @@ func (id InputDeclaration) validate() error {
 type LocalDeclaration struct {
 	Declaration
 
-	Expression Expression // LiteralExpression, VariableExpression, or AnnotationExpression
 	Variable   Variable
+	Expression Expression
 }
 
 func (ld LocalDeclaration) String() string {
@@ -467,10 +440,6 @@ func (ld LocalDeclaration) String() string {
 }
 
 func (ld LocalDeclaration) validate() error {
-	if ld.Expression == nil {
-		return errors.New("localDeclaration: expression is required")
-	}
-
 	if err := ld.Expression.validate(); err != nil {
 		return fmt.Errorf("localDeclaration.%w", err)
 	}
@@ -644,10 +613,10 @@ func (o Option) validate() error {
 type MarkupType int
 
 const (
-	Unspecified MarkupType = iota
-	Open
-	Close
-	SelfClose
+	UnspecifiedMarkup MarkupType = iota
+	OpenMarkup
+	CloseMarkup
+	SelfCloseMarkup
 )
 
 type Markup struct {
@@ -663,11 +632,11 @@ func (m Markup) String() string {
 	switch m.Typ {
 	default:
 		return ""
-	case Open:
+	case OpenMarkup:
 		return fmt.Sprintf("{ #%s %s %s }", m.Identifier, sliceToString(m.Options, " "), sliceToString(m.Attributes, " "))
-	case Close:
+	case CloseMarkup:
 		return fmt.Sprintf("{ /%s %s }", m.Identifier, sliceToString(m.Attributes, " "))
-	case SelfClose:
+	case SelfCloseMarkup:
 		return fmt.Sprintf("{ #%s %s %s /}", m.Identifier, sliceToString(m.Options, " "), sliceToString(m.Attributes, " "))
 	}
 }
@@ -677,7 +646,7 @@ func (m Markup) validate() error {
 		return fmt.Errorf("markup.%w", err)
 	}
 
-	if m.Typ == Close && len(m.Options) != 0 {
+	if m.Typ == CloseMarkup && len(m.Options) != 0 {
 		return errors.New("markup: options are not allowed for markup-close")
 	}
 
