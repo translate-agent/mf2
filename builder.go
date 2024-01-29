@@ -393,9 +393,9 @@ func (m *markup) build(spacing string) string {
 }
 
 // Hack: limit to only options and attributes, instead of any.
-type optsAndAttr interface{ optsAndAttr() }
+type OptsAndAttr interface{ optsAndAttr() }
 
-func (b *Builder) OpenMarkup(name string, optionsAndAttributes ...optsAndAttr) *Builder {
+func (b *Builder) OpenMarkup(name string, optionsAndAttributes ...OptsAndAttr) *Builder {
 	if name == "" {
 		panic("markup name cannot be empty")
 	}
@@ -426,7 +426,7 @@ func (b *Builder) CloseMarkup(name string, attributes ...attribute) *Builder {
 	return b
 }
 
-func (b *Builder) SelfCloseMarkup(name string, optionsAndAttributes ...optsAndAttr) *Builder {
+func (b *Builder) SelfCloseMarkup(name string, optionsAndAttributes ...OptsAndAttr) *Builder {
 	// Same as OpenMarkup, but with SelfClose type. So, we can reuse the code.
 	b.OpenMarkup(name, optionsAndAttributes...)
 
