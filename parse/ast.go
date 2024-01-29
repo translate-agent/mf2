@@ -223,7 +223,7 @@ type LiteralExpression struct {
 
 func (le LiteralExpression) String() string {
 	hasAnnotation := le.Annotation != nil
-	hasAttributes := len(le.Attributes) != 0
+	hasAttributes := len(le.Attributes) > 0
 
 	switch {
 	case !hasAnnotation && !hasAttributes: // Only literal
@@ -271,7 +271,7 @@ type VariableExpression struct {
 
 func (ve VariableExpression) String() string {
 	hasAnnotation := ve.Annotation != nil
-	hasAttributes := len(ve.Attributes) != 0
+	hasAttributes := len(ve.Attributes) > 0
 
 	switch {
 	case !hasAnnotation && !hasAttributes: // Only variable

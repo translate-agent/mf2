@@ -23,6 +23,16 @@ func (p *parser) next() item {
 	return p.items[p.pos]
 }
 
+func (p *parser) peekNonWS() item {
+	for pos := p.pos + 1; pos < len(p.items)-1; pos++ {
+		if itm := p.items[pos]; itm.typ != itemWhitespace {
+			return itm
+		}
+	}
+
+	return mk(itemError, "nothing to peek")
+}
+
 func (p *parser) current() item {
 	return p.items[p.pos]
 }
@@ -247,26 +257,8 @@ func (p *parser) parsePatterns() ([]Pattern, error) {
 		case itemText:
 			pattern = append(pattern, TextPattern(itm.val))
 		case itemExpressionOpen:
-			// HACK: Find if it's a markup or expression.
-			isMarkup := func() bool {
-				i := 1
-
-				for next := p.next(); ; next = p.next() {
-					//nolint:exhaustive
-					switch next.typ {
-					case itemMarkupOpen, itemMarkupClose:
-						p.pos -= i // rewind
-						return true
-					case itemVariable, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral, itemFunction:
-						p.pos -= i // rewind
-						return false
-					}
-					i++
-				}
-			}()
-
-			// Let the other case handle it.
-			if isMarkup {
+			// HACK: Find if it's a markup or expression, if it's markup, let the markup case handle it.
+			if next := p.peekNonWS(); next.typ == itemMarkupOpen || next.typ == itemMarkupClose {
 				continue
 			}
 

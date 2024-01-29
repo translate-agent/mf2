@@ -523,7 +523,7 @@ func lexIdentifier(l *lexer) stateFn {
 			l.backup()
 
 			return l.emitItem(mk(typ, s))
-		case typ == 0:
+		case typ == itemError: // zero value for itemType
 			switch r {
 			default:
 				typ = itemOption

@@ -318,7 +318,7 @@ func Test_lex(t *testing.T) {
 		},
 		{
 			name:  "markup",
-			input: `{#button}Submit{/button}{#img alt=|Cancel| @hello=world @goodbye /}`,
+			input: `{#button}Submit{/button}{#img alt=|Cancel| @hello=world @goodbye /}{ #nest1}{#nest2}text{#nest3/}{/nest2}{/nest1}`, //nolint: lll
 			expected: []item{
 				// 1. simple open-close
 				mk(itemExpressionOpen, "{"),
@@ -343,6 +343,25 @@ func Test_lex(t *testing.T) {
 				mk(itemAttribute, "goodbye"),
 				mk(itemWhitespace, " "),
 				mk(itemMarkupClose, ""),
+				mk(itemExpressionClose, "}"),
+				// 3. nested
+				mk(itemExpressionOpen, "{"),
+				mk(itemWhitespace, " "),
+				mk(itemMarkupOpen, "nest1"),
+				mk(itemExpressionClose, "}"),
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupOpen, "nest2"),
+				mk(itemExpressionClose, "}"),
+				mk(itemText, "text"),
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupOpen, "nest3"),
+				mk(itemMarkupClose, ""),
+				mk(itemExpressionClose, "}"),
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupClose, "nest2"),
+				mk(itemExpressionClose, "}"),
+				mk(itemExpressionOpen, "{"),
+				mk(itemMarkupClose, "nest1"),
 				mk(itemExpressionClose, "}"),
 				//
 				mk(itemEOF, ""),

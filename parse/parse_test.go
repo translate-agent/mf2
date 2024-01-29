@@ -280,9 +280,10 @@ func TestParseSimpleMessage(t *testing.T) {
 		},
 		{
 			name:  "markup",
-			input: `It is a {#button opt1=val1 @attr1=val1 } button { /button } this is a { #br /} something else`,
+			input: `It is a {#button opt1=val1 @attr1=val1 } button { /button } this is a { #br /} something else, {#ns:tag1}{#tag2}text{ #img / }{/tag2}{/ns:tag1}`, //nolint:lll
 			expected: SimpleMessage{
 				Patterns: []Pattern{
+					// 1. Open-Close markup
 					TextPattern("It is a "),
 					Markup{
 						Typ: Open,
@@ -307,9 +308,17 @@ func TestParseSimpleMessage(t *testing.T) {
 					},
 					TextPattern(" button "),
 					Markup{Typ: Close, Identifier: Identifier{Name: "button"}},
+					// 2. Self-close markup
 					TextPattern(" this is a "),
 					Markup{Typ: SelfClose, Identifier: Identifier{Name: "br"}},
-					TextPattern(" something else"),
+					TextPattern(" something else, "),
+					// 3. Nested markup
+					Markup{Typ: Open, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
+					Markup{Typ: Open, Identifier: Identifier{Name: "tag2"}},
+					TextPattern("text"),
+					Markup{Typ: SelfClose, Identifier: Identifier{Name: "img"}},
+					Markup{Typ: Close, Identifier: Identifier{Name: "tag2"}},
+					Markup{Typ: Close, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
 				},
 			},
 		},
