@@ -142,15 +142,34 @@ func Test_Builder(t *testing.T) {
 				Text("Attributes for variable expression ").
 				Expr(
 					Var("i").
-						Attr("attr1", "val1").
-						Attr("empty"),
+						Attr(
+							VarAttribute("attr1", "var"),
+							LiteralAttribute("attr2", "literal"),
+							EmptyAttribute("empty"),
+						),
 				),
-			"Attributes for variable expression { $i @attr1 = val1 @empty }",
+			"Attributes for variable expression { $i @attr1 = $var @attr2 = literal @empty }",
 		},
 		{
 			"markup",
-			NewBuilder(),
-			"",
+			NewBuilder().
+				OpenMarkup(
+					"open",
+					LiteralOption("opt1", "val1"),
+					LiteralAttribute("attr1", 1),
+					VarOption("opt2", "var"),
+				).
+				Text(" something ").
+				CloseMarkup(
+					"close",
+					EmptyAttribute("empty1"),
+					VarAttribute("attr1", "var"),
+				).
+				SelfCloseMarkup(
+					"selfClosing",
+					LiteralAttribute("attr1", "༼ つ ◕_◕ ༽つ"),
+				),
+			"{ #open opt1 = val1 opt2 = $var @attr1 = 1 } something { /close @empty1 @attr1 = $var }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| / }",
 		},
 	} {
 		test := test
