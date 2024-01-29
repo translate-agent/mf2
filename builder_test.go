@@ -168,8 +168,15 @@ func Test_Builder(t *testing.T) {
 				SelfCloseMarkup(
 					"selfClosing",
 					LiteralAttribute("attr1", "༼ つ ◕_◕ ༽つ"),
-				),
-			"{ #open opt1 = val1 opt2 = $var @attr1 = 1 } something { /close @empty1 @attr1 = $var }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| / }",
+				).
+				// nested markup
+				OpenMarkup("nest1").
+				OpenMarkup("nest2").
+				Text("nested").
+				SelfCloseMarkup("nest3").
+				CloseMarkup("nest2").
+				CloseMarkup("nest1"),
+			"{ #open opt1 = val1 opt2 = $var @attr1 = 1 } something { /close @empty1 @attr1 = $var }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| / }{ #nest1 }{ #nest2 }nested{ #nest3 / }{ /nest2 }{ /nest1 }",
 		},
 	} {
 		test := test
