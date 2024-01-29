@@ -63,12 +63,10 @@ func TestParseSimpleMessage(t *testing.T) {
 				TextPattern("Hello, "),
 				VariableExpression{
 					Variable: Variable("variable"),
-					Annotation: FunctionAnnotation{
-						Function: Function{
-							Identifier: Identifier{
-								Namespace: "",
-								Name:      "function",
-							},
+					Annotation: Function{
+						Identifier: Identifier{
+							Namespace: "",
+							Name:      "function",
 						},
 					},
 				},
@@ -82,33 +80,31 @@ func TestParseSimpleMessage(t *testing.T) {
 				TextPattern("Hello, "),
 				VariableExpression{
 					Variable: Variable("variable"),
-					Annotation: FunctionAnnotation{
-						Function: Function{
-							Identifier: Identifier{
-								Namespace: "",
-								Name:      "function",
+					Annotation: Function{
+						Identifier: Identifier{
+							Namespace: "",
+							Name:      "function",
+						},
+						Options: []Option{
+							{
+								Value: UnquotedLiteral{Value: NumberLiteral(-3.14)},
+								Identifier: Identifier{
+									Namespace: "",
+									Name:      "option1",
+								},
 							},
-							Options: []Option{
-								{
-									Value: UnquotedLiteral{Value: NumberLiteral(-3.14)},
-									Identifier: Identifier{
-										Namespace: "",
-										Name:      "option1",
-									},
+							{
+								Value: QuotedLiteral("value2"),
+								Identifier: Identifier{
+									Namespace: "ns",
+									Name:      "option2",
 								},
-								{
-									Value: QuotedLiteral("value2"),
-									Identifier: Identifier{
-										Namespace: "ns",
-										Name:      "option2",
-									},
-								},
-								{
-									Value: Variable("variable2"),
-									Identifier: Identifier{
-										Namespace: "",
-										Name:      "option3",
-									},
+							},
+							{
+								Value: Variable("variable2"),
+								Identifier: Identifier{
+									Namespace: "",
+									Name:      "option3",
 								},
 							},
 						},
@@ -151,12 +147,10 @@ func TestParseSimpleMessage(t *testing.T) {
 				TextPattern("Hello, "),
 				LiteralExpression{
 					Literal: QuotedLiteral("name"),
-					Annotation: FunctionAnnotation{
-						Function: Function{
-							Identifier: Identifier{
-								Namespace: "",
-								Name:      "function",
-							},
+					Annotation: Function{
+						Identifier: Identifier{
+							Namespace: "",
+							Name:      "function",
 						},
 					},
 				},
@@ -170,33 +164,31 @@ func TestParseSimpleMessage(t *testing.T) {
 				TextPattern("Hello, "),
 				LiteralExpression{
 					Literal: QuotedLiteral("name"),
-					Annotation: FunctionAnnotation{
-						Function: Function{
-							Identifier: Identifier{
-								Namespace: "",
-								Name:      "function",
+					Annotation: Function{
+						Identifier: Identifier{
+							Namespace: "",
+							Name:      "function",
+						},
+						Options: []Option{
+							{
+								Value: UnquotedLiteral{Value: NumberLiteral(-1)},
+								Identifier: Identifier{
+									Namespace: "ns1",
+									Name:      "option1",
+								},
 							},
-							Options: []Option{
-								{
-									Value: UnquotedLiteral{Value: NumberLiteral(-1)},
-									Identifier: Identifier{
-										Namespace: "ns1",
-										Name:      "option1",
-									},
+							{
+								Value: UnquotedLiteral{Value: NumberLiteral(+1)},
+								Identifier: Identifier{
+									Namespace: "ns2",
+									Name:      "option2",
 								},
-								{
-									Value: UnquotedLiteral{Value: NumberLiteral(+1)},
-									Identifier: Identifier{
-										Namespace: "ns2",
-										Name:      "option2",
-									},
-								},
-								{
-									Value: QuotedLiteral("value3"),
-									Identifier: Identifier{
-										Namespace: "",
-										Name:      "option3",
-									},
+							},
+							{
+								Value: QuotedLiteral("value3"),
+								Identifier: Identifier{
+									Namespace: "",
+									Name:      "option3",
 								},
 							},
 						},
@@ -211,12 +203,10 @@ func TestParseSimpleMessage(t *testing.T) {
 			expected: SimpleMessage{
 				TextPattern("Hello "),
 				AnnotationExpression{
-					Annotation: FunctionAnnotation{
-						Function: Function{
-							Identifier: Identifier{
-								Namespace: "",
-								Name:      "function",
-							},
+					Annotation: Function{
+						Identifier: Identifier{
+							Namespace: "",
+							Name:      "function",
 						},
 					},
 				},
@@ -229,19 +219,17 @@ func TestParseSimpleMessage(t *testing.T) {
 			expected: SimpleMessage{
 				TextPattern("Hello "),
 				AnnotationExpression{
-					Annotation: FunctionAnnotation{
-						Function: Function{
-							Identifier: Identifier{
-								Namespace: "namespace",
-								Name:      "function",
-							},
-							Options: []Option{
-								{
-									Value: UnquotedLiteral{Value: NumberLiteral(999)},
-									Identifier: Identifier{
-										Namespace: "namespace",
-										Name:      "option999",
-									},
+					Annotation: Function{
+						Identifier: Identifier{
+							Namespace: "namespace",
+							Name:      "function",
+						},
+						Options: []Option{
+							{
+								Value: UnquotedLiteral{Value: NumberLiteral(999)},
+								Identifier: Identifier{
+									Namespace: "namespace",
+									Name:      "option999",
 								},
 							},
 						},
@@ -387,21 +375,19 @@ func TestParseComplexMessage(t *testing.T) {
 					LocalDeclaration{
 						Variable: Variable("var"),
 						Expression: AnnotationExpression{
-							Annotation: FunctionAnnotation{
-								Function: Function{
-									Identifier: Identifier{
-										Namespace: "ns1",
-										Name:      "function",
+							Annotation: Function{
+								Identifier: Identifier{
+									Namespace: "ns1",
+									Name:      "function",
+								},
+								Options: []Option{
+									{
+										Identifier: Identifier{Namespace: "", Name: "opt1"},
+										Value:      UnquotedLiteral{Value: NumberLiteral(1)},
 									},
-									Options: []Option{
-										{
-											Identifier: Identifier{Namespace: "", Name: "opt1"},
-											Value:      UnquotedLiteral{Value: NumberLiteral(1)},
-										},
-										{
-											Identifier: Identifier{Namespace: "", Name: "opt2"},
-											Value:      QuotedLiteral("val2"),
-										},
+									{
+										Identifier: Identifier{Namespace: "", Name: "opt2"},
+										Value:      QuotedLiteral("val2"),
 									},
 								},
 							},
@@ -419,12 +405,10 @@ func TestParseComplexMessage(t *testing.T) {
 					TextPattern("Hello "),
 					VariableExpression{
 						Variable: Variable("var"),
-						Annotation: FunctionAnnotation{
-							Function: Function{
-								Identifier: Identifier{
-									Namespace: "ns2",
-									Name:      "function2",
-								},
+						Annotation: Function{
+							Identifier: Identifier{
+								Namespace: "ns2",
+								Name:      "function2",
 							},
 						},
 					},
@@ -442,10 +426,8 @@ func TestParseComplexMessage(t *testing.T) {
 					MatchStatements: []Expression{
 						VariableExpression{
 							Variable: Variable("variable"),
-							Annotation: FunctionAnnotation{
-								Function: Function{
-									Identifier: Identifier{Namespace: "", Name: "number"},
-								},
+							Annotation: Function{
+								Identifier: Identifier{Namespace: "", Name: "number"},
 							},
 						},
 					},
@@ -481,10 +463,8 @@ func TestParseComplexMessage(t *testing.T) {
 					MatchStatements: []Expression{
 						VariableExpression{
 							Variable: Variable("variable"),
-							Annotation: FunctionAnnotation{
-								Function: Function{
-									Identifier: Identifier{Namespace: "", Name: "number"},
-								},
+							Annotation: Function{
+								Identifier: Identifier{Namespace: "", Name: "number"},
 							},
 						},
 					},
@@ -520,10 +500,8 @@ func TestParseComplexMessage(t *testing.T) {
 					MatchStatements: []Expression{
 						VariableExpression{
 							Variable: Variable("variable"),
-							Annotation: FunctionAnnotation{
-								Function: Function{
-									Identifier: Identifier{Namespace: "", Name: "number"},
-								},
+							Annotation: Function{
+								Identifier: Identifier{Namespace: "", Name: "number"},
 							},
 						},
 					},
@@ -570,12 +548,10 @@ male {{Hello sir!}}
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
 						AnnotationExpression{
-							Annotation: FunctionAnnotation{
-								Function: Function{
-									Identifier: Identifier{
-										Namespace: "",
-										Name:      "gender",
-									},
+							Annotation: Function{
+								Identifier: Identifier{
+									Namespace: "",
+									Name:      "gender",
 								},
 							},
 						},
@@ -720,12 +696,10 @@ func TestValidate(t *testing.T) {
 					TextPattern("Hello, "),
 					VariableExpression{
 						Variable: Variable("variable"),
-						Annotation: FunctionAnnotation{
-							Function: Function{
-								Identifier: Identifier{
-									Namespace: "",
-									Name:      "",
-								},
+						Annotation: Function{
+							Identifier: Identifier{
+								Namespace: "",
+								Name:      "",
 							},
 						},
 					},
