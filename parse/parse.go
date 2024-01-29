@@ -23,6 +23,7 @@ func (p *parser) next() item {
 	return p.items[p.pos]
 }
 
+// peekNonWS returns next non-whitespace token.
 func (p *parser) peekNonWS() item {
 	for pos := p.pos + 1; pos < len(p.items)-1; pos++ {
 		if itm := p.items[pos]; itm.typ != itemWhitespace {
