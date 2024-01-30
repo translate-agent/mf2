@@ -113,7 +113,7 @@ func TestParseSimpleMessage(t *testing.T) {
 					},
 					Attributes: []Attribute{
 						{
-							Value:      UnquotedLiteral{Value: NameLiteral("attr1")},
+							Value:      NameLiteral("attr1"),
 							Identifier: Identifier{Name: "attr1"},
 						},
 					},
