@@ -125,7 +125,12 @@ func Parse(input string) (AST, error) {
 		return AST{}, nil
 	}
 
-	message, err := p.parseMessage()
+	parse := func() (Message, error) { return p.parseSimpleMessage() }
+	if p.isComplexMessage() {
+		parse = func() (Message, error) { return p.parseComplexMessage() }
+	}
+
+	message, err := parse()
 	if err != nil {
 		return AST{}, fmt.Errorf("parse message: %w", err)
 	}
@@ -140,32 +145,13 @@ func Parse(input string) (AST, error) {
 
 // ------------------------------Message------------------------------
 
-// parseMessage parses message by its type.
-func (p *parser) parseMessage() (Message, error) { //nolint:ireturn
-	if p.isComplexMessage() {
-		message, err := p.parseComplexMessage()
-		if err != nil {
-			return nil, fmt.Errorf("parse complex message: %w", err)
-		}
-
-		return message, nil
-	}
-
-	message, err := p.parseSimpleMessage()
-	if err != nil {
-		return nil, fmt.Errorf("parse simple message: %w", err)
-	}
-
-	return message, nil
-}
-
 func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
 	patterns, err := p.parsePatterns()
 	if err != nil {
 		return SimpleMessage{}, fmt.Errorf("parse patterns: %w", err)
 	}
 
-	return SimpleMessage{Patterns: patterns}, nil
+	return SimpleMessage(patterns), nil
 }
 
 func (p *parser) parseComplexMessage() (ComplexMessage, error) {
