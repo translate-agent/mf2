@@ -705,7 +705,7 @@ func TestValidate(t *testing.T) {
 					},
 				},
 			},
-			errorPath: "functionAnnotation.function.identifier",
+			errorPath: "function.identifier",
 		},
 		{
 			// Hello, { } World!
