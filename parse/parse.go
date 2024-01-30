@@ -485,7 +485,7 @@ func (p *parser) parseAnnotation() (Annotation, error) { //nolint:ireturn
 			return nil, fmt.Errorf("parse function: %w", err)
 		}
 
-		return FunctionAnnotation{Function: function}, nil
+		return function, nil
 	case itemPrivate:
 		annotation, err := p.parsePrivateUseAnnotation()
 		if err != nil {

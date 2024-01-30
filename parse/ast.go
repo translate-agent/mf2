@@ -138,11 +138,7 @@ type VariantKey interface {
 //
 // Here we define the types that implement the interfaces defined above.
 //
-// Types with one concrete field (string, int, ...) are defined as types
-// Types with one interface field are defined as structs
-// Types with multiple fields are defined as structs
-
-// ---------------------------------Message------------------------------------
+// --------------------------------Message------------------------------------
 
 type SimpleMessage []Pattern
 
@@ -216,7 +212,7 @@ type LiteralExpression struct {
 	Expression
 
 	Literal    Literal     // QuotedLiteral or UnquotedLiteral
-	Annotation Annotation  // Optional: FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
+	Annotation Annotation  // Optional: Function, PrivateUseAnnotation, or ReservedAnnotation
 	Attributes []Attribute // Optional
 }
 
@@ -263,7 +259,7 @@ func (le LiteralExpression) validate() error {
 type VariableExpression struct {
 	Expression
 
-	Annotation Annotation // Optional: FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
+	Annotation Annotation // Optional: Function, PrivateUseAnnotation, or ReservedAnnotation
 	Variable   Variable
 	Attributes []Attribute // Optional
 }
@@ -307,7 +303,7 @@ func (ve VariableExpression) validate() error {
 type AnnotationExpression struct {
 	Expression
 
-	Annotation Annotation  // FunctionAnnotation, PrivateUseAnnotation, or ReservedAnnotation
+	Annotation Annotation  // Function, PrivateUseAnnotation, or ReservedAnnotation
 	Attributes []Attribute // Optional
 }
 
@@ -407,40 +403,50 @@ func (nl NumberLiteral) validate() error { return nil } // Zero value is valid
 
 // --------------------------------Annotation----------------------------------
 
-// TODO: Reduce nesting: Function should implement Annotation, instead of FunctionAnnotation implementing Annotation.
-type FunctionAnnotation struct {
-	Annotation
-
-	Function Function
+type Function struct {
+	Identifier Identifier
+	Options    []Option // Optional
 }
 
-func (fa FunctionAnnotation) String() string { return fmt.Sprint(fa.Function) }
+type PrivateUseAnnotation struct {
+	// TODO: Implementation
+}
 
-func (fa FunctionAnnotation) validate() error {
-	if err := fa.Function.validate(); err != nil {
-		return fmt.Errorf("functionAnnotation.%w", err)
+type ReservedAnnotation struct {
+	// TODO: Implementation
+}
+
+func (f Function) String() string {
+	if len(f.Options) == 0 {
+		return fmt.Sprintf(":%s", f.Identifier)
+	}
+
+	return fmt.Sprintf(":%s %s", f.Identifier, sliceToString(f.Options, " "))
+}
+func (PrivateUseAnnotation) String() string { return "^ PRIVATE_USE_ANNOTATION_NOT_IMPLEMENTED" } // TODO: Implement
+func (ReservedAnnotation) String() string   { return "! RESERVED_ANNOTATION_NOT_IMPLEMENTED" }    // TODO: Implement
+
+func (f Function) validate() error {
+	if err := f.Identifier.validate(); err != nil {
+		return fmt.Errorf("function.%w", err)
+	}
+
+	if err := validateSlice(f.Options); err != nil {
+		return fmt.Errorf("function.%w", err)
 	}
 
 	return nil
 }
-
-type PrivateUseAnnotation struct {
-	Annotation
-
-	// TODO: Implementation
-}
-
-func (PrivateUseAnnotation) String() string  { return "^ PRIVATE_USE_ANNOTATION_NOT_IMPLEMENTED" } // TODO: Implement
 func (PrivateUseAnnotation) validate() error { return nil }
+func (ReservedAnnotation) validate() error   { return nil }
 
-type ReservedAnnotation struct {
-	Annotation
+func (Function) node()             {}
+func (PrivateUseAnnotation) node() {}
+func (ReservedAnnotation) node()   {}
 
-	// TODO: Implementation
-}
-
-func (ReservedAnnotation) String() string  { return "! RESERVED_ANNOTATION_NOT_IMPLEMENTED" } // TODO: Implement
-func (ReservedAnnotation) validate() error { return nil }
+func (Function) annotation()             {}
+func (PrivateUseAnnotation) annotation() {}
+func (ReservedAnnotation) annotation()   {}
 
 // --------------------------------Declaration---------------------------------
 
@@ -608,33 +614,6 @@ func (i Identifier) String() string {
 func (i Identifier) validate() error {
 	if isZeroValue(i.Name) {
 		return errors.New("identifier: name is empty")
-	}
-
-	return nil
-}
-
-type Function struct {
-	Node
-
-	Identifier Identifier
-	Options    []Option // Optional
-}
-
-func (f Function) String() string {
-	if len(f.Options) == 0 {
-		return fmt.Sprintf(":%s", f.Identifier)
-	}
-
-	return fmt.Sprintf(":%s %s", f.Identifier, sliceToString(f.Options, " "))
-}
-
-func (f Function) validate() error {
-	if err := f.Identifier.validate(); err != nil {
-		return fmt.Errorf("function.%w", err)
-	}
-
-	if err := validateSlice(f.Options); err != nil {
-		return fmt.Errorf("function.%w", err)
 	}
 
 	return nil
