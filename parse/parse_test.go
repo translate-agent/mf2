@@ -34,7 +34,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			input: "Hello, { $variable } World!",
 			expected: SimpleMessage{
 				TextPattern("Hello, "),
-				Expression{Operand: Variable("variable"), Typ: VariableExpression},
+				Expression{Operand: Variable("variable")},
 				TextPattern(" World!"),
 			},
 		},
@@ -42,7 +42,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			name:  "variable expression at the start",
 			input: "{ $variable } Hello, World!",
 			expected: SimpleMessage{
-				Expression{Operand: Variable("variable"), Typ: VariableExpression},
+				Expression{Operand: Variable("variable")},
 				TextPattern(" Hello, World!"),
 			},
 		},
@@ -53,7 +53,6 @@ func TestParseSimpleMessage(t *testing.T) {
 				TextPattern("Hello, World! "),
 				Expression{
 					Operand: Variable("variable"),
-					Typ:     VariableExpression,
 				},
 			},
 		},
@@ -64,7 +63,6 @@ func TestParseSimpleMessage(t *testing.T) {
 				TextPattern("Hello, "),
 				Expression{
 					Operand: Variable("variable"),
-					Typ:     VariableExpression,
 					Annotation: Function{
 						Identifier: Identifier{
 							Namespace: "",
@@ -81,7 +79,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			expected: SimpleMessage{
 				TextPattern("Hello, "),
 				Expression{
-					Operand: Variable("variable"), Typ: VariableExpression,
+					Operand: Variable("variable"),
 					Annotation: Function{
 						Identifier: Identifier{
 							Namespace: "",
@@ -126,7 +124,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			input: "Hello, { |literal| }  World!",
 			expected: SimpleMessage{
 				TextPattern("Hello, "),
-				Expression{Operand: QuotedLiteral("literal"), Typ: LiteralExpression},
+				Expression{Operand: QuotedLiteral("literal")},
 				TextPattern("  World!"),
 			},
 		},
@@ -135,7 +133,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			input: "Hello, { 1e3 }  World!",
 			expected: SimpleMessage{
 				TextPattern("Hello, "),
-				Expression{Operand: NumberLiteral(1e3), Typ: LiteralExpression},
+				Expression{Operand: NumberLiteral(1e3)},
 				TextPattern("  World!"),
 			},
 		},
@@ -144,7 +142,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			input: "Hello, { name } World!",
 			expected: SimpleMessage{
 				TextPattern("Hello, "),
-				Expression{Operand: NameLiteral("name"), Typ: LiteralExpression},
+				Expression{Operand: NameLiteral("name")},
 				TextPattern(" World!"),
 			},
 		},
@@ -154,7 +152,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			expected: SimpleMessage{
 				TextPattern("Hello, "),
 				Expression{
-					Operand: QuotedLiteral("name"), Typ: LiteralExpression,
+					Operand: QuotedLiteral("name"),
 					Annotation: Function{
 						Identifier: Identifier{
 							Namespace: "",
@@ -171,7 +169,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			expected: SimpleMessage{
 				TextPattern("Hello, "),
 				Expression{
-					Operand: QuotedLiteral("name"), Typ: LiteralExpression,
+					Operand: QuotedLiteral("name"),
 					Annotation: Function{
 						Identifier: Identifier{
 							Namespace: "",
@@ -211,7 +209,6 @@ func TestParseSimpleMessage(t *testing.T) {
 			expected: SimpleMessage{
 				TextPattern("Hello "),
 				Expression{
-					Typ: AnnotationExpression,
 					Annotation: Function{
 						Identifier: Identifier{
 							Namespace: "",
@@ -228,7 +225,6 @@ func TestParseSimpleMessage(t *testing.T) {
 			expected: SimpleMessage{
 				TextPattern("Hello "),
 				Expression{
-					Typ: AnnotationExpression,
 					Annotation: Function{
 						Identifier: Identifier{
 							Namespace: "namespace",
@@ -335,7 +331,7 @@ func TestParseComplexMessage(t *testing.T) {
 				Declarations: nil,
 				ComplexBody: QuotedPattern{
 					TextPattern("Hello, "),
-					Expression{Operand: QuotedLiteral("literal"), Typ: LiteralExpression},
+					Expression{Operand: QuotedLiteral("literal")},
 					TextPattern(" World!"),
 				},
 			},
@@ -349,7 +345,6 @@ func TestParseComplexMessage(t *testing.T) {
 						Variable: Variable("var"),
 						Expression: Expression{
 							Operand: NumberLiteral(2),
-							Typ:     LiteralExpression,
 						},
 					},
 				},
@@ -366,14 +361,14 @@ func TestParseComplexMessage(t *testing.T) {
 					LocalDeclaration{
 						Variable: Variable("var"),
 						Expression: Expression{
-							Operand: Variable("anotherVar"), Typ: VariableExpression,
+							Operand:    Variable("anotherVar"),
 							Annotation: nil,
 						},
 					},
 				},
 				ComplexBody: QuotedPattern{
 					TextPattern("Hello "),
-					Expression{Operand: Variable("var"), Typ: VariableExpression},
+					Expression{Operand: Variable("var")},
 					TextPattern(" world"),
 				},
 			},
@@ -386,7 +381,6 @@ func TestParseComplexMessage(t *testing.T) {
 					LocalDeclaration{
 						Variable: Variable("var"),
 						Expression: Expression{
-							Typ: AnnotationExpression,
 							Annotation: Function{
 								Identifier: Identifier{
 									Namespace: "ns1",
@@ -409,7 +403,6 @@ func TestParseComplexMessage(t *testing.T) {
 						Variable: Variable("var"),
 						Expression: Expression{
 							Operand:    NumberLiteral(2),
-							Typ:        LiteralExpression,
 							Annotation: nil,
 						},
 					},
@@ -417,7 +410,7 @@ func TestParseComplexMessage(t *testing.T) {
 				ComplexBody: QuotedPattern{
 					TextPattern("Hello "),
 					Expression{
-						Operand: Variable("var"), Typ: VariableExpression,
+						Operand: Variable("var"),
 						Annotation: Function{
 							Identifier: Identifier{
 								Namespace: "ns2",
@@ -438,7 +431,7 @@ func TestParseComplexMessage(t *testing.T) {
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
 						{
-							Operand: Variable("variable"), Typ: VariableExpression,
+							Operand: Variable("variable"),
 							Annotation: Function{
 								Identifier: Identifier{Namespace: "", Name: "number"},
 							},
@@ -449,7 +442,7 @@ func TestParseComplexMessage(t *testing.T) {
 							Keys: []VariantKey{NumberLiteral(1)},
 							QuotedPattern: QuotedPattern{
 								TextPattern("Hello "),
-								Expression{Operand: Variable("variable"), Typ: VariableExpression},
+								Expression{Operand: Variable("variable")},
 								TextPattern(" world"),
 							},
 						},
@@ -457,7 +450,7 @@ func TestParseComplexMessage(t *testing.T) {
 							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
 								TextPattern("Hello "),
-								Expression{Operand: Variable("variable"), Typ: VariableExpression},
+								Expression{Operand: Variable("variable")},
 								TextPattern(" worlds"),
 							},
 						},
@@ -475,7 +468,7 @@ func TestParseComplexMessage(t *testing.T) {
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
 						{
-							Operand: Variable("variable"), Typ: VariableExpression,
+							Operand: Variable("variable"),
 							Annotation: Function{
 								Identifier: Identifier{Namespace: "", Name: "number"},
 							},
@@ -486,7 +479,7 @@ func TestParseComplexMessage(t *testing.T) {
 							Keys: []VariantKey{NumberLiteral(1)},
 							QuotedPattern: QuotedPattern{
 								TextPattern("Hello "),
-								Expression{Operand: Variable("variable"), Typ: VariableExpression},
+								Expression{Operand: Variable("variable")},
 								TextPattern(" world"),
 							},
 						},
@@ -494,7 +487,7 @@ func TestParseComplexMessage(t *testing.T) {
 							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
 								TextPattern("Hello "),
-								Expression{Operand: Variable("variable"), Typ: VariableExpression},
+								Expression{Operand: Variable("variable")},
 								TextPattern(" worlds"),
 							},
 						},
@@ -512,7 +505,7 @@ func TestParseComplexMessage(t *testing.T) {
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
 						{
-							Operand: Variable("variable"), Typ: VariableExpression,
+							Operand: Variable("variable"),
 							Annotation: Function{
 								Identifier: Identifier{Namespace: "", Name: "number"},
 							},
@@ -523,7 +516,7 @@ func TestParseComplexMessage(t *testing.T) {
 							Keys: []VariantKey{NumberLiteral(1)},
 							QuotedPattern: QuotedPattern{
 								TextPattern("Hello "),
-								Expression{Operand: Variable("variable"), Typ: VariableExpression},
+								Expression{Operand: Variable("variable")},
 								TextPattern(" world"),
 							},
 						},
@@ -531,7 +524,7 @@ func TestParseComplexMessage(t *testing.T) {
 							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
 								TextPattern("Hello "),
-								Expression{Operand: Variable("variable"), Typ: VariableExpression},
+								Expression{Operand: Variable("variable")},
 								TextPattern(" worlds"),
 							},
 						},
@@ -551,17 +544,16 @@ male {{Hello sir!}}
 				Declarations: []Declaration{
 					LocalDeclaration{
 						Variable:   Variable("var1"),
-						Expression: Expression{Operand: NameLiteral("male"), Typ: LiteralExpression},
+						Expression: Expression{Operand: NameLiteral("male")},
 					},
 					LocalDeclaration{
 						Variable:   Variable("var2"),
-						Expression: Expression{Operand: QuotedLiteral("female"), Typ: LiteralExpression},
+						Expression: Expression{Operand: QuotedLiteral("female")},
 					},
 				},
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
 						{
-							Typ: AnnotationExpression,
 							Annotation: Function{
 								Identifier: Identifier{
 									Namespace: "",
@@ -587,9 +579,9 @@ male {{Hello sir!}}
 							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
 								TextPattern("Hello "),
-								Expression{Operand: Variable("var1"), Typ: VariableExpression},
+								Expression{Operand: Variable("var1")},
 								TextPattern(" or "),
-								Expression{Operand: Variable("var2"), Typ: VariableExpression},
+								Expression{Operand: Variable("var2")},
 								TextPattern("!"),
 							},
 						},
@@ -609,8 +601,8 @@ no no {{Hello!}}`,
 				Declarations: nil,
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
-						{Operand: Variable("var1"), Typ: VariableExpression},
-						{Operand: Variable("var2"), Typ: VariableExpression},
+						{Operand: Variable("var1")},
+						{Operand: Variable("var2")},
 					},
 					Variants: []Variant{
 						{
@@ -697,7 +689,7 @@ func TestValidate(t *testing.T) {
 			ast: AST{
 				Message: SimpleMessage{
 					TextPattern("Hello, "),
-					Expression{Operand: Variable(""), Typ: VariableExpression},
+					Expression{Operand: Variable("")},
 				},
 			},
 			errorPath: "expression.variable",
@@ -710,7 +702,6 @@ func TestValidate(t *testing.T) {
 					TextPattern("Hello, "),
 					Expression{
 						Operand: Variable("variable"),
-						Typ:     VariableExpression,
 						Annotation: Function{
 							Identifier: Identifier{
 								Namespace: "",
@@ -728,7 +719,7 @@ func TestValidate(t *testing.T) {
 			ast: AST{
 				Message: SimpleMessage{
 					TextPattern("Hello, "),
-					Expression{Typ: AnnotationExpression},
+					Expression{},
 					TextPattern(" World!"),
 				},
 			},
@@ -741,7 +732,7 @@ func TestValidate(t *testing.T) {
 				Message: ComplexMessage{
 					Declarations: []Declaration{
 						InputDeclaration{
-							Expression: Expression{Operand: Variable(""), Typ: VariableExpression},
+							Expression: Expression{Operand: Variable("")},
 						},
 					},
 					ComplexBody: QuotedPattern{
@@ -798,7 +789,7 @@ func TestValidate(t *testing.T) {
 					Declarations: nil,
 					ComplexBody: Matcher{
 						MatchStatements: []Expression{
-							{Operand: Variable("variable"), Typ: VariableExpression},
+							{Operand: Variable("variable")},
 						},
 						Variants: nil,
 					},
@@ -813,7 +804,7 @@ func TestValidate(t *testing.T) {
 				Message: ComplexMessage{
 					ComplexBody: Matcher{
 						MatchStatements: []Expression{
-							{Operand: Variable("variable"), Typ: VariableExpression},
+							{Operand: Variable("variable")},
 						},
 						Variants: []Variant{
 							{

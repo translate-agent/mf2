@@ -198,82 +198,33 @@ func (tp TextPattern) validate() error { return nil }
 
 // --------------------------------Expression----------------------------------
 
-// TODO: Do we need ExpressionType?
-// It was useful in Markup, because it changes the string representation of the node.
-// In this case, it doesn't change anything.
-type ExpressionType int
-
-const (
-	UnspecifiedExpression ExpressionType = iota
-	LiteralExpression
-	VariableExpression
-	AnnotationExpression
-)
-
-func (et ExpressionType) String() string {
-	switch et {
-	case UnspecifiedExpression:
-		return "unspecified expression"
-	case LiteralExpression:
-		return "literal expression"
-	case VariableExpression:
-		return "variable expression"
-	case AnnotationExpression:
-		return "annotation expression"
-	}
-
-	return ""
-}
-
 type Expression struct {
-	// Literal or Variable. Required for LiteralExpression and VariableExpression.
-	// Not allowed for AnnotationExpression.
-	Operand    Value
-	Annotation Annotation  // Required for AnnotationExpression. Optional for LiteralExpression and VariableExpression.
+	Operand    Value       // Literal or Variable
+	Annotation Annotation  // Function, PrivateUseAnnotation or ReservedAnnotation
 	Attributes []Attribute // Optional
-	Typ        ExpressionType
 }
 
 func (e Expression) String() string {
 	var s string
 
 	if e.Operand != nil {
-		s = " " + fmt.Sprint(e.Operand)
+		s = fmt.Sprintf(" %s", e.Operand)
 	}
 
 	if e.Annotation != nil {
-		s += " " + fmt.Sprint(e.Annotation)
+		s += fmt.Sprintf(" %s", e.Annotation)
 	}
 
 	if len(e.Attributes) > 0 {
-		s += " " + sliceToString(e.Attributes, " ")
+		s += fmt.Sprintf(" %s", sliceToString(e.Attributes, " "))
 	}
 
 	return fmt.Sprintf("{%s}", s)
 }
 
 func (e Expression) validate() error {
-	if e.Typ == UnspecifiedExpression {
-		return errors.New("expression: type is required")
-	}
-
-	if (e.Typ == LiteralExpression || e.Typ == VariableExpression) && e.Operand == nil {
-		return errors.New("expression: operand is required for literal and variable expressions")
-	}
-
-	if e.Typ == AnnotationExpression && e.Operand != nil {
-		return errors.New("expression: operand is not allowed for annotation expressions")
-	}
-
-	// TODO: Check if VariableExpression operand type is Variable.
-	// TODO: Check if LiteralExpression operand type is Literal.
-
-	if e.Typ == AnnotationExpression && e.Annotation == nil {
-		return errors.New("expression: annotation is required for annotation expressions")
-	}
-
-	if err := validateSlice(e.Attributes); err != nil {
-		return fmt.Errorf("expression.%w", err)
+	if e.Operand == nil && e.Annotation == nil {
+		return errors.New("expression: at least one of operand or annotation is required")
 	}
 
 	if e.Operand != nil {
@@ -286,6 +237,10 @@ func (e Expression) validate() error {
 		if err := e.Annotation.validate(); err != nil {
 			return fmt.Errorf("expression.%w", err)
 		}
+	}
+
+	if err := validateSlice(e.Attributes); err != nil {
+		return fmt.Errorf("expression.%w", err)
 	}
 
 	return nil
@@ -410,15 +365,17 @@ func (ReservedAnnotation) annotation()   {}
 type InputDeclaration struct {
 	Declaration
 
-	Expression Expression // Only VariableExpression
+	Expression Expression // Only VariableExpression, i.e. operand is type Variable.
 }
 
 func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, id.Expression) }
 func (id InputDeclaration) validate() error {
-	switch id.Expression.Typ {
-	default:
-		return fmt.Errorf("inputDeclaration: only variable expressions are allowed, got '%s'", id.Expression.Typ)
-	case VariableExpression: // noop
+	if id.Expression.Operand == nil {
+		return errors.New("inputDeclaration: expression operand is required")
+	}
+
+	if _, ok := id.Expression.Operand.(Variable); !ok {
+		return fmt.Errorf("inputDeclaration: expression operand must be a variable, got '%T'", id.Expression.Operand)
 	}
 
 	if err := id.Expression.validate(); err != nil {

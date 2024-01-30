@@ -351,7 +351,6 @@ func (p *parser) parseExpression() (Expression, error) {
 			continue
 		case itemVariable:
 			expression.Operand = Variable(itm.val)
-			expression.Typ = VariableExpression
 
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			operand, err := p.parseLiteral()
@@ -360,7 +359,6 @@ func (p *parser) parseExpression() (Expression, error) {
 			}
 
 			expression.Operand = operand
-			expression.Typ = LiteralExpression
 		case itemFunction, itemPrivate, itemReserved:
 			annotation, err := p.parseAnnotation()
 			if err != nil {
@@ -368,9 +366,6 @@ func (p *parser) parseExpression() (Expression, error) {
 			}
 
 			expression.Annotation = annotation
-			if expression.Typ == UnspecifiedExpression {
-				expression.Typ = AnnotationExpression
-			}
 
 			p.pos--
 
