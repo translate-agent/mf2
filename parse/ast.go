@@ -144,35 +144,28 @@ type VariantKey interface {
 
 // ---------------------------------Message------------------------------------
 
-type SimpleMessage struct {
-	Message
-
-	Patterns []Pattern // TextPattern, Expression, or Markup.
-}
-
-func (sm SimpleMessage) String() string { return sliceToString(sm.Patterns, "") }
-
-func (sm SimpleMessage) validate() error {
-	if err := validateSlice(sm.Patterns); err != nil {
-		return fmt.Errorf("simpleMessage.%w", err)
-	}
-
-	return nil
-}
+type SimpleMessage []Pattern
 
 type ComplexMessage struct {
-	Message
-
 	ComplexBody  ComplexBody   // Matcher or QuotedPattern
 	Declarations []Declaration // Optional: InputDeclaration, LocalDeclaration or ReservedStatement
 }
 
+func (sm SimpleMessage) String() string { return sliceToString(sm, "") }
 func (cm ComplexMessage) String() string {
 	if len(cm.Declarations) == 0 {
 		return fmt.Sprint(cm.ComplexBody)
 	}
 
 	return fmt.Sprintf("%s\n%s", sliceToString(cm.Declarations, "\n"), cm.ComplexBody)
+}
+
+func (sm SimpleMessage) validate() error {
+	if err := validateSlice(sm); err != nil {
+		return fmt.Errorf("simpleMessage.%w", err)
+	}
+
+	return nil
 }
 
 func (cm ComplexMessage) validate() error {
@@ -190,6 +183,12 @@ func (cm ComplexMessage) validate() error {
 
 	return nil
 }
+
+func (sm SimpleMessage) message()  {}
+func (cm ComplexMessage) message() {}
+
+func (sm SimpleMessage) node()  {}
+func (cm ComplexMessage) node() {}
 
 // ---------------------------------Pattern------------------------------------
 

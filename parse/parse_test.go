@@ -19,50 +19,40 @@ func TestParseSimpleMessage(t *testing.T) {
 			name:  "text only",
 			input: "Hello, World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, World!"),
-				},
+				TextPattern("Hello, World!"),
 			},
 		},
 		{
 			name:  "text only with escaped chars",
 			input: "Hello, \\{World!\\}",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, {World!}"),
-				},
+				TextPattern("Hello, {World!}"),
 			},
 		},
 		{
 			name:  "variable expression in the middle",
 			input: "Hello, { $variable } World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, "),
-					VariableExpression{Variable: Variable("variable")},
-					TextPattern(" World!"),
-				},
+				TextPattern("Hello, "),
+				VariableExpression{Variable: Variable("variable")},
+				TextPattern(" World!"),
 			},
 		},
 		{
 			name:  "variable expression at the start",
 			input: "{ $variable } Hello, World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					VariableExpression{Variable: Variable("variable")},
-					TextPattern(" Hello, World!"),
-				},
+				VariableExpression{Variable: Variable("variable")},
+				TextPattern(" Hello, World!"),
 			},
 		},
 		{
 			name:  "variable expression at the end",
 			input: "Hello, World! { $variable }",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, World! "),
-					VariableExpression{
-						Variable: Variable("variable"),
-					},
+				TextPattern("Hello, World! "),
+				VariableExpression{
+					Variable: Variable("variable"),
 				},
 			},
 		},
@@ -70,256 +60,236 @@ func TestParseSimpleMessage(t *testing.T) {
 			name:  "variable expression with annotation",
 			input: "Hello, { $variable :function }  World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, "),
-					VariableExpression{
-						Variable: Variable("variable"),
-						Annotation: FunctionAnnotation{
-							Function: Function{
-								Identifier: Identifier{
-									Namespace: "",
-									Name:      "function",
-								},
+				TextPattern("Hello, "),
+				VariableExpression{
+					Variable: Variable("variable"),
+					Annotation: FunctionAnnotation{
+						Function: Function{
+							Identifier: Identifier{
+								Namespace: "",
+								Name:      "function",
 							},
 						},
 					},
-					TextPattern("  World!"),
 				},
+				TextPattern("  World!"),
 			},
 		},
 		{
 			name:  "variable expression with annotation and options",
 			input: "Hello, { $variable :function option1 = -3.14 ns:option2 = |value2| option3 = $variable2 } World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, "),
-					VariableExpression{
-						Variable: Variable("variable"),
-						Annotation: FunctionAnnotation{
-							Function: Function{
-								Identifier: Identifier{
-									Namespace: "",
-									Name:      "function",
+				TextPattern("Hello, "),
+				VariableExpression{
+					Variable: Variable("variable"),
+					Annotation: FunctionAnnotation{
+						Function: Function{
+							Identifier: Identifier{
+								Namespace: "",
+								Name:      "function",
+							},
+							Options: []Option{
+								{
+									Value: UnquotedLiteral{Value: NumberLiteral(-3.14)},
+									Identifier: Identifier{
+										Namespace: "",
+										Name:      "option1",
+									},
 								},
-								Options: []Option{
-									{
-										Value: UnquotedLiteral{Value: NumberLiteral(-3.14)},
-										Identifier: Identifier{
-											Namespace: "",
-											Name:      "option1",
-										},
+								{
+									Value: QuotedLiteral("value2"),
+									Identifier: Identifier{
+										Namespace: "ns",
+										Name:      "option2",
 									},
-									{
-										Value: QuotedLiteral("value2"),
-										Identifier: Identifier{
-											Namespace: "ns",
-											Name:      "option2",
-										},
-									},
-									{
-										Value: Variable("variable2"),
-										Identifier: Identifier{
-											Namespace: "",
-											Name:      "option3",
-										},
+								},
+								{
+									Value: Variable("variable2"),
+									Identifier: Identifier{
+										Namespace: "",
+										Name:      "option3",
 									},
 								},
 							},
 						},
 					},
-					TextPattern(" World!"),
 				},
+				TextPattern(" World!"),
 			},
 		},
 		{
 			name:  "quoted literal expression",
 			input: "Hello, { |literal| }  World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, "),
-					LiteralExpression{Literal: QuotedLiteral("literal")},
-					TextPattern("  World!"),
-				},
+				TextPattern("Hello, "),
+				LiteralExpression{Literal: QuotedLiteral("literal")},
+				TextPattern("  World!"),
 			},
 		},
 		{
 			name:  "unquoted scientific notation number literal expression",
 			input: "Hello, { 1e3 }  World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, "),
-					LiteralExpression{Literal: UnquotedLiteral{Value: NumberLiteral(1e3)}},
-					TextPattern("  World!"),
-				},
+				TextPattern("Hello, "),
+				LiteralExpression{Literal: UnquotedLiteral{Value: NumberLiteral(1e3)}},
+				TextPattern("  World!"),
 			},
 		},
 		{
 			name:  "unquoted name literal expression",
 			input: "Hello, { name } World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, "),
-					LiteralExpression{Literal: UnquotedLiteral{Value: NameLiteral("name")}},
-					TextPattern(" World!"),
-				},
+				TextPattern("Hello, "),
+				LiteralExpression{Literal: UnquotedLiteral{Value: NameLiteral("name")}},
+				TextPattern(" World!"),
 			},
 		},
 		{
 			name:  "quoted name literal expression with annotation",
 			input: "Hello, { |name| :function } World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, "),
-					LiteralExpression{
-						Literal: QuotedLiteral("name"),
-						Annotation: FunctionAnnotation{
-							Function: Function{
-								Identifier: Identifier{
-									Namespace: "",
-									Name:      "function",
-								},
+				TextPattern("Hello, "),
+				LiteralExpression{
+					Literal: QuotedLiteral("name"),
+					Annotation: FunctionAnnotation{
+						Function: Function{
+							Identifier: Identifier{
+								Namespace: "",
+								Name:      "function",
 							},
 						},
 					},
-					TextPattern(" World!"),
 				},
+				TextPattern(" World!"),
 			},
 		},
 		{
 			name:  "quoted name literal expression with annotation and options",
 			input: "Hello, { |name| :function ns1:option1 = -1 ns2:option2 = 1 option3 = |value3| } World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello, "),
-					LiteralExpression{
-						Literal: QuotedLiteral("name"),
-						Annotation: FunctionAnnotation{
-							Function: Function{
-								Identifier: Identifier{
-									Namespace: "",
-									Name:      "function",
+				TextPattern("Hello, "),
+				LiteralExpression{
+					Literal: QuotedLiteral("name"),
+					Annotation: FunctionAnnotation{
+						Function: Function{
+							Identifier: Identifier{
+								Namespace: "",
+								Name:      "function",
+							},
+							Options: []Option{
+								{
+									Value: UnquotedLiteral{Value: NumberLiteral(-1)},
+									Identifier: Identifier{
+										Namespace: "ns1",
+										Name:      "option1",
+									},
 								},
-								Options: []Option{
-									{
-										Value: UnquotedLiteral{Value: NumberLiteral(-1)},
-										Identifier: Identifier{
-											Namespace: "ns1",
-											Name:      "option1",
-										},
+								{
+									Value: UnquotedLiteral{Value: NumberLiteral(+1)},
+									Identifier: Identifier{
+										Namespace: "ns2",
+										Name:      "option2",
 									},
-									{
-										Value: UnquotedLiteral{Value: NumberLiteral(+1)},
-										Identifier: Identifier{
-											Namespace: "ns2",
-											Name:      "option2",
-										},
-									},
-									{
-										Value: QuotedLiteral("value3"),
-										Identifier: Identifier{
-											Namespace: "",
-											Name:      "option3",
-										},
+								},
+								{
+									Value: QuotedLiteral("value3"),
+									Identifier: Identifier{
+										Namespace: "",
+										Name:      "option3",
 									},
 								},
 							},
 						},
 					},
-					TextPattern(" World!"),
 				},
+				TextPattern(" World!"),
 			},
 		},
 		{
 			name:  "annotation expression",
 			input: "Hello { :function } World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello "),
-					AnnotationExpression{
-						Annotation: FunctionAnnotation{
-							Function: Function{
-								Identifier: Identifier{
-									Namespace: "",
-									Name:      "function",
-								},
+				TextPattern("Hello "),
+				AnnotationExpression{
+					Annotation: FunctionAnnotation{
+						Function: Function{
+							Identifier: Identifier{
+								Namespace: "",
+								Name:      "function",
 							},
 						},
 					},
-					TextPattern(" World!"),
 				},
+				TextPattern(" World!"),
 			},
 		},
 		{
 			name:  "annotation expression with options and namespace",
 			input: "Hello { :namespace:function namespace:option999 = 999 } World!",
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					TextPattern("Hello "),
-					AnnotationExpression{
-						Annotation: FunctionAnnotation{
-							Function: Function{
-								Identifier: Identifier{
-									Namespace: "namespace",
-									Name:      "function",
-								},
-								Options: []Option{
-									{
-										Value: UnquotedLiteral{Value: NumberLiteral(999)},
-										Identifier: Identifier{
-											Namespace: "namespace",
-											Name:      "option999",
-										},
+				TextPattern("Hello "),
+				AnnotationExpression{
+					Annotation: FunctionAnnotation{
+						Function: Function{
+							Identifier: Identifier{
+								Namespace: "namespace",
+								Name:      "function",
+							},
+							Options: []Option{
+								{
+									Value: UnquotedLiteral{Value: NumberLiteral(999)},
+									Identifier: Identifier{
+										Namespace: "namespace",
+										Name:      "option999",
 									},
 								},
 							},
 						},
 					},
-					TextPattern(" World!"),
 				},
+				TextPattern(" World!"),
 			},
 		},
 		{
 			name:  "markup",
 			input: `It is a {#button opt1=val1 @attr1=val1 } button { /button } this is a { #br /} something else, {#ns:tag1}{#tag2}text{ #img /}{/tag2}{/ns:tag1}`, //nolint:lll
 			expected: SimpleMessage{
-				Patterns: []Pattern{
-					// 1. Open-Close markup
-					TextPattern("It is a "),
-					Markup{
-						Typ: Open,
-						Identifier: Identifier{
-							Namespace: "",
-							Name:      "button",
-						},
-						Options: []Option{
-							{
-								Value: UnquotedLiteral{Value: NameLiteral("val1")},
-								Identifier: Identifier{
-									Name: "opt1",
-								},
-							},
-						},
-						Attributes: []Attribute{
-							{
-								Value:      UnquotedLiteral{Value: NameLiteral("val1")},
-								Identifier: Identifier{Name: "attr1"},
+				// 1. Open-Close markup
+				TextPattern("It is a "),
+				Markup{
+					Typ: Open,
+					Identifier: Identifier{
+						Namespace: "",
+						Name:      "button",
+					},
+					Options: []Option{
+						{
+							Value: UnquotedLiteral{Value: NameLiteral("val1")},
+							Identifier: Identifier{
+								Name: "opt1",
 							},
 						},
 					},
-					TextPattern(" button "),
-					Markup{Typ: Close, Identifier: Identifier{Name: "button"}},
-					// 2. Self-close markup
-					TextPattern(" this is a "),
-					Markup{Typ: SelfClose, Identifier: Identifier{Name: "br"}},
-					TextPattern(" something else, "),
-					// 3. Nested markup
-					Markup{Typ: Open, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
-					Markup{Typ: Open, Identifier: Identifier{Name: "tag2"}},
-					TextPattern("text"),
-					Markup{Typ: SelfClose, Identifier: Identifier{Name: "img"}},
-					Markup{Typ: Close, Identifier: Identifier{Name: "tag2"}},
-					Markup{Typ: Close, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
+					Attributes: []Attribute{
+						{
+							Value:      UnquotedLiteral{Value: NameLiteral("val1")},
+							Identifier: Identifier{Name: "attr1"},
+						},
+					},
 				},
+				TextPattern(" button "),
+				Markup{Typ: Close, Identifier: Identifier{Name: "button"}},
+				// 2. Self-close markup
+				TextPattern(" this is a "),
+				Markup{Typ: SelfClose, Identifier: Identifier{Name: "br"}},
+				TextPattern(" something else, "),
+				// 3. Nested markup
+				Markup{Typ: Open, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
+				Markup{Typ: Open, Identifier: Identifier{Name: "tag2"}},
+				TextPattern("text"),
+				Markup{Typ: SelfClose, Identifier: Identifier{Name: "img"}},
+				Markup{Typ: Close, Identifier: Identifier{Name: "tag2"}},
+				Markup{Typ: Close, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
 			},
 		},
 	}
@@ -762,10 +732,8 @@ func TestValidate(t *testing.T) {
 			name: "Variable expression empty variable name",
 			ast: AST{
 				Message: SimpleMessage{
-					Patterns: []Pattern{
-						TextPattern("Hello, "),
-						VariableExpression{Variable: Variable("")},
-					},
+					TextPattern("Hello, "),
+					VariableExpression{Variable: Variable("")},
 				},
 			},
 			errorPath: "variableExpression.variable",
@@ -775,16 +743,14 @@ func TestValidate(t *testing.T) {
 			name: "Variable expression with annotation empty function name",
 			ast: AST{
 				Message: SimpleMessage{
-					Patterns: []Pattern{
-						TextPattern("Hello, "),
-						VariableExpression{
-							Variable: Variable("variable"),
-							Annotation: FunctionAnnotation{
-								Function: Function{
-									Identifier: Identifier{
-										Namespace: "",
-										Name:      "",
-									},
+					TextPattern("Hello, "),
+					VariableExpression{
+						Variable: Variable("variable"),
+						Annotation: FunctionAnnotation{
+							Function: Function{
+								Identifier: Identifier{
+									Namespace: "",
+									Name:      "",
 								},
 							},
 						},
@@ -798,11 +764,9 @@ func TestValidate(t *testing.T) {
 			name: "Empty annotation expression",
 			ast: AST{
 				Message: SimpleMessage{
-					Patterns: []Pattern{
-						TextPattern("Hello, "),
-						AnnotationExpression{},
-						TextPattern(" World!"),
-					},
+					TextPattern("Hello, "),
+					AnnotationExpression{},
+					TextPattern(" World!"),
 				},
 			},
 			errorPath: "simpleMessage.annotationExpression",

@@ -151,21 +151,12 @@ func (p *parser) parseMessage() (Message, error) { //nolint:ireturn
 		return message, nil
 	}
 
-	message, err := p.parseSimpleMessage()
-	if err != nil {
-		return nil, fmt.Errorf("parse simple message: %w", err)
-	}
-
-	return message, nil
-}
-
-func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
 	patterns, err := p.parsePatterns()
 	if err != nil {
-		return SimpleMessage{}, fmt.Errorf("parse patterns: %w", err)
+		return nil, fmt.Errorf("parse simple message: parse patterns: %w", err)
 	}
 
-	return SimpleMessage{Patterns: patterns}, nil
+	return SimpleMessage(patterns), nil
 }
 
 func (p *parser) parseComplexMessage() (ComplexMessage, error) {
