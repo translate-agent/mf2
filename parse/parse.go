@@ -99,7 +99,7 @@ Examples:
 				MatchStatements: []Expression{VariableExpression{Variable: "count"}},
 				Variants: []Variant{
 					{
-						Key: LiteralKey{Literal: UnquotedLiteral{Value: NumberLiteral(1)}},
+						Key: LiteralKey{Literal: NumberLiteral(1)},
 						QuotedPattern: QuotedPattern{
 							Patterns: []Pattern{TextPattern("Hello world")},
 						},
@@ -747,11 +747,11 @@ func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
 			return nil, fmt.Errorf("parse number literal: %w", err)
 		}
 
-		return UnquotedLiteral{Value: NumberLiteral(num)}, nil
+		return NumberLiteral(num), nil
 	case itemQuotedLiteral:
 		return QuotedLiteral(p.current().val), nil
 	case itemUnquotedLiteral:
-		return UnquotedLiteral{Value: NameLiteral(p.current().val)}, nil
+		return NameLiteral(p.current().val), nil
 	// bad tokens
 	default:
 		err := UnexpectedTokenError{
