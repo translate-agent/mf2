@@ -51,9 +51,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			input: "Hello, World! { $variable }",
 			expected: SimpleMessage{
 				TextPattern("Hello, World! "),
-				Expression{
-					Operand: Variable("variable"),
-				},
+				Expression{Operand: Variable("variable")},
 			},
 		},
 		{

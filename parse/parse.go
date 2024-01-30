@@ -339,7 +339,6 @@ func (p *parser) parseMarkup() (Markup, error) {
 
 // ------------------------------Expression------------------------------
 
-// parseExpression parses expression by its type.
 func (p *parser) parseExpression() (Expression, error) {
 	var expression Expression
 
@@ -351,7 +350,6 @@ func (p *parser) parseExpression() (Expression, error) {
 			continue
 		case itemVariable:
 			expression.Operand = Variable(itm.val)
-
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			operand, err := p.parseLiteral()
 			if err != nil {
