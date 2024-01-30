@@ -519,7 +519,7 @@ func (i Identifier) validate() error {
 type Variant struct {
 	Node
 
-	Keys          []VariantKey // At least one: LiteralKey or WildcardKey
+	Keys          []VariantKey // At least one: Literal or CatchAllKey
 	QuotedPattern QuotedPattern
 }
 
