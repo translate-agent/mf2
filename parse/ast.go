@@ -138,11 +138,7 @@ type VariantKey interface {
 //
 // Here we define the types that implement the interfaces defined above.
 //
-// Types with one concrete field (string, int, ...) are defined as types
-// Types with one interface field are defined as structs
-// Types with multiple fields are defined as structs
-
-// ---------------------------------Message------------------------------------
+// --------------------------------Message------------------------------------
 
 type SimpleMessage []Pattern
 
