@@ -369,11 +369,11 @@ func (m *markup) build(spacing string) string {
 	var s string
 
 	switch m.typ {
-	case parse.Open, parse.SelfClose:
+	case parse.OpenMarkup, parse.SelfCloseMarkup:
 		s += "#" + m.name
-	case parse.Close:
+	case parse.CloseMarkup:
 		s += "/" + m.name
-	case parse.Unspecified:
+	case parse.UnspecifiedMarkup:
 		panic("unspecified markup type")
 	}
 
@@ -385,7 +385,7 @@ func (m *markup) build(spacing string) string {
 		s += attr.sprint(spacing)
 	}
 
-	if m.typ == parse.SelfClose {
+	if m.typ == parse.SelfCloseMarkup {
 		return fmt.Sprintf("{%s%s%s/}", spacing, s, spacing)
 	}
 
@@ -400,7 +400,7 @@ func (b *Builder) OpenMarkup(name string, optionsAndAttributes ...OptsAndAttr) *
 		panic("markup name cannot be empty")
 	}
 
-	markup := &markup{name: name, typ: parse.Open}
+	markup := &markup{name: name, typ: parse.OpenMarkup}
 
 	for _, v := range optionsAndAttributes {
 		switch v := v.(type) {
@@ -421,7 +421,7 @@ func (b *Builder) CloseMarkup(name string, attributes ...attribute) *Builder {
 		panic("markup name cannot be empty")
 	}
 
-	b.pattern = append(b.pattern, &markup{name: name, typ: parse.Close, attributes: attributes})
+	b.pattern = append(b.pattern, &markup{name: name, typ: parse.CloseMarkup, attributes: attributes})
 
 	return b
 }
@@ -431,7 +431,7 @@ func (b *Builder) SelfCloseMarkup(name string, optionsAndAttributes ...OptsAndAt
 	b.OpenMarkup(name, optionsAndAttributes...)
 
 	added := b.pattern[len(b.pattern)-1].(*markup) //nolint:forcetypeassert
-	added.typ = parse.SelfClose
+	added.typ = parse.SelfCloseMarkup
 
 	return b
 }
