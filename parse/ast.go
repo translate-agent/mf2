@@ -3,6 +3,7 @@ package parse
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -100,6 +101,7 @@ type Expression interface {
 
 type Literal interface {
 	Value
+	VariantKey
 	literal()
 }
 
@@ -362,7 +364,16 @@ func (nl NameLiteral) validate() error {
 	return nil
 }
 
-func (nl NumberLiteral) validate() error { return nil } // Zero value is valid
+func (nl NumberLiteral) validate() error {
+	switch {
+	case math.IsInf(float64(nl), 0):
+		return errors.New("numberLiteral: literal is infinite")
+	case math.IsNaN(float64(nl)):
+		return errors.New("numberLiteral: literal is NaN")
+	default:
+		return nil
+	}
+}
 
 func (QuotedLiteral) node() {}
 func (NameLiteral) node()   {}
@@ -375,6 +386,10 @@ func (NumberLiteral) literal() {}
 func (QuotedLiteral) value() {}
 func (NameLiteral) value()   {}
 func (NumberLiteral) value() {}
+
+func (QuotedLiteral) variantKey() {}
+func (NameLiteral) variantKey()   {}
+func (NumberLiteral) variantKey() {}
 
 // --------------------------------Annotation----------------------------------
 
@@ -478,32 +493,13 @@ func (ReservedStatement) validate() error { return nil }
 
 // --------------------------------VariantKey----------------------------------
 
-type LiteralKey struct {
-	VariantKey
-
-	Literal Literal // QuotedLiteral, NameLiteral, or NumberLiteral
-}
-
-func (lk LiteralKey) String() string { return fmt.Sprint(lk.Literal) }
-func (lk LiteralKey) validate() error {
-	if lk.Literal == nil {
-		return errors.New("literalKey: literal is required")
-	}
-
-	if err := lk.Literal.validate(); err != nil {
-		return fmt.Errorf("literalKey.%w", err)
-	}
-
-	return nil
-}
-
 // CatchAllKey is a special key, that matches any value.
-type CatchAllKey struct {
-	VariantKey
-}
+type CatchAllKey struct{}
 
 func (ck CatchAllKey) String() string  { return catchAllSymbol }
 func (ck CatchAllKey) validate() error { return nil }
+func (CatchAllKey) node()              {}
+func (CatchAllKey) variantKey()        {}
 
 // ---------------------------------ComplexBody--------------------------------------
 

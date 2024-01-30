@@ -642,7 +642,7 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 				return nil, fmt.Errorf("parse literal: %w", err)
 			}
 
-			keys = append(keys, LiteralKey{Literal: literal})
+			keys = append(keys, literal)
 		// bad tokens
 		default:
 			err := UnexpectedTokenError{
