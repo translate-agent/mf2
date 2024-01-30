@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"go.expect.digital/mf2/parse"
 )
 
 const (
@@ -75,6 +77,8 @@ func (b *Builder) Build() (string, error) {
 		case string:
 			s += textEscape(v)
 		case *Expression:
+			s += v.build(b.spacing)
+		case *markup:
 			s += v.build(b.spacing)
 		default:
 			return "", fmt.Errorf("unsupported pattern type: %T", v)
@@ -291,8 +295,9 @@ type function struct {
 }
 
 type Expression struct {
-	operand  any // literal or variable
-	function function
+	operand    any // literal or variable
+	function   function
+	attributes []attribute
 }
 
 func (e *Expression) build(spacing string) string {
@@ -316,16 +321,15 @@ func (e *Expression) build(spacing string) string {
 
 		s += e.function.name
 
-		for _, o := range e.function.options {
-			s += " " + o.key + spacing + "=" + spacing
-
-			if v, ok := o.operand.(variable); ok {
-				s += varSymbol + string(v)
-				continue
-			}
-
-			s += printLiteral(o.operand)
+		for _, opt := range e.function.options {
+			s += opt.sprint(spacing)
 		}
+	}
+
+	// attributes
+
+	for _, attr := range e.attributes {
+		s += attr.sprint(spacing)
 	}
 
 	return s + spacing + "}"
@@ -354,9 +358,100 @@ func (e *Expression) Var(name string) *Expression {
 	return e
 }
 
+type markup struct {
+	name       string       // required
+	options    []FuncOption // optional, only allowed for open markup
+	attributes []attribute  // optional
+	typ        parse.MarkupType
+}
+
+func (m *markup) build(spacing string) string {
+	var s string
+
+	switch m.typ {
+	case parse.Open, parse.SelfClose:
+		s += "#" + m.name
+	case parse.Close:
+		s += "/" + m.name
+	case parse.Unspecified:
+		panic("unspecified markup type")
+	}
+
+	for _, opt := range m.options {
+		s += opt.sprint(spacing)
+	}
+
+	for _, attr := range m.attributes {
+		s += attr.sprint(spacing)
+	}
+
+	if m.typ == parse.SelfClose {
+		return fmt.Sprintf("{%s%s%s/}", spacing, s, spacing)
+	}
+
+	return fmt.Sprintf("{%s%s%s}", spacing, s, spacing)
+}
+
+// Hack: limit to only options and attributes, instead of any.
+type OptsAndAttr interface{ optsAndAttr() }
+
+func (b *Builder) OpenMarkup(name string, optionsAndAttributes ...OptsAndAttr) *Builder {
+	if name == "" {
+		panic("markup name cannot be empty")
+	}
+
+	markup := &markup{name: name, typ: parse.Open}
+
+	for _, v := range optionsAndAttributes {
+		switch v := v.(type) {
+		case FuncOption:
+			markup.options = append(markup.options, v)
+		case attribute:
+			markup.attributes = append(markup.attributes, v)
+		}
+	}
+
+	b.pattern = append(b.pattern, markup)
+
+	return b
+}
+
+func (b *Builder) CloseMarkup(name string, attributes ...attribute) *Builder {
+	if name == "" {
+		panic("markup name cannot be empty")
+	}
+
+	b.pattern = append(b.pattern, &markup{name: name, typ: parse.Close, attributes: attributes})
+
+	return b
+}
+
+func (b *Builder) SelfCloseMarkup(name string, optionsAndAttributes ...OptsAndAttr) *Builder {
+	// Same as OpenMarkup, but with SelfClose type. So, we can reuse the code.
+	b.OpenMarkup(name, optionsAndAttributes...)
+
+	added := b.pattern[len(b.pattern)-1].(*markup) //nolint:forcetypeassert
+	added.typ = parse.SelfClose
+
+	return b
+}
+
 type FuncOption struct {
 	operand any // literal or variable
 	key     string
+}
+
+func (fo *FuncOption) sprint(spacing string) string {
+	var optVal string
+
+	switch v := fo.operand.(type) {
+	case variable:
+		optVal = "$" + string(v)
+	case literal:
+		optVal = printLiteral(v)
+	}
+
+	return fmt.Sprintf("%s%s%s=%s%s", spacing, fo.key, spacing, spacing, optVal)
 }
 
 func VarOption(name, varName string) FuncOption {
@@ -366,6 +461,8 @@ func VarOption(name, varName string) FuncOption {
 func LiteralOption(name string, value any) FuncOption {
 	return FuncOption{key: name, operand: value}
 }
+
+func (FuncOption) optsAndAttr() {}
 
 func (e *Expression) Func(name string, option ...FuncOption) *Expression {
 	if len(name) == 0 {
@@ -377,24 +474,45 @@ func (e *Expression) Func(name string, option ...FuncOption) *Expression {
 	return e
 }
 
-func OpenFunc(name string, option ...FuncOption) *Expression {
-	if len(name) == 0 {
-		panic("function name cannot be empty")
-	}
+// Attr adds attributes to the expression.
+func (e *Expression) Attr(attributes ...attribute) *Expression {
+	e.attributes = append(e.attributes, attributes...)
 
-	return &Expression{
-		function: function{name: "+" + name, options: option},
-	}
+	return e
 }
 
-func CloseFunc(name string, option ...FuncOption) *Expression {
-	if len(name) == 0 {
-		panic("function name cannot be empty")
+type attribute struct {
+	value any    // optional: literal or variable
+	name  string // required
+}
+
+func (a *attribute) sprint(spacing string) string {
+	var attrVal string
+
+	switch val := a.value.(type) {
+	case variable:
+		attrVal = "$" + string(val)
+	case literal:
+		attrVal = printLiteral(val)
+	default: // empty attribute
+		return fmt.Sprintf("%s@%s", spacing, a.name)
 	}
 
-	return &Expression{
-		function: function{name: "-" + name, options: option},
-	}
+	return fmt.Sprintf("%s@%s%s=%s%s", spacing, a.name, spacing, spacing, attrVal)
+}
+
+func (attribute) optsAndAttr() {}
+
+func VarAttribute(name, varName string) attribute {
+	return attribute{name: name, value: variable(varName)}
+}
+
+func LiteralAttribute(name string, value any) attribute {
+	return attribute{name: name, value: value}
+}
+
+func EmptyAttribute(name string) attribute {
+	return attribute{name: name}
 }
 
 func printLiteral(l any) string {

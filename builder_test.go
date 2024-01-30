@@ -58,15 +58,6 @@ func Test_Builder(t *testing.T) {
 			"Hello, { $world :upper limit = 2 min = $min type = integer x = |y z| host = || }!",
 		},
 		{
-			"simple message, text with markup-like function",
-			NewBuilder().
-				Text("Hello ").
-				Expr(OpenFunc("link")).
-				Text(" World ").
-				Expr(CloseFunc("link")),
-			"Hello { +link } World { -link }",
-		},
-		{
 			"complex message, period char",
 			NewBuilder().Text("."),
 			"{{.}}",
@@ -145,13 +136,58 @@ func Test_Builder(t *testing.T) {
 				Spacing(""),
 			".match{$i}{$j}\n1 2{{\\{first\\}}}\n2 0{{second {$i}}}\n3 0{{{|\\\\a\\||}}}\n* *{{{1}}}",
 		},
+		{
+			"attributes",
+			NewBuilder().
+				Text("Attributes for variable expression ").
+				Expr(
+					Var("i").
+						Attr(
+							VarAttribute("attr1", "var"),
+							LiteralAttribute("attr2", "literal"),
+							EmptyAttribute("empty"),
+						),
+				),
+			"Attributes for variable expression { $i @attr1 = $var @attr2 = literal @empty }",
+		},
+		{
+			"markup",
+			NewBuilder().
+				OpenMarkup(
+					"open",
+					LiteralOption("opt1", "val1"),
+					LiteralAttribute("attr1", 1),
+					VarOption("opt2", "var"),
+				).
+				Text(" something ").
+				CloseMarkup(
+					"close",
+					EmptyAttribute("empty1"),
+					VarAttribute("attr1", "var"),
+				).
+				SelfCloseMarkup(
+					"selfClosing",
+					LiteralAttribute("attr1", "༼ つ ◕_◕ ༽つ"),
+				).
+				// nested markup
+				OpenMarkup("nest1").
+				OpenMarkup("nest2").
+				Text("nested").
+				SelfCloseMarkup("nest3").
+				CloseMarkup("nest2").
+				CloseMarkup("nest1"),
+			"{ #open opt1 = val1 opt2 = $var @attr1 = 1 } something { /close @empty1 @attr1 = $var }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| /}{ #nest1 }{ #nest2 }nested{ #nest3 /}{ /nest2 }{ /nest1 }",
+		},
 	} {
 		test := test
 
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			require.Equal(t, test.expected, test.b.MustBuild())
+			actual, err := test.b.Build()
+			require.NoError(t, err)
+
+			require.Equal(t, test.expected, actual)
 		})
 	}
 }

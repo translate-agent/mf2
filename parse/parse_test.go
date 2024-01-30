@@ -280,7 +280,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		},
 		{
 			name:  "markup",
-			input: `It is a {#button opt1=val1 @attr1=val1 } button { /button } this is a { #br /} something else, {#ns:tag1}{#tag2}text{ #img / }{/tag2}{/ns:tag1}`, //nolint:lll
+			input: `It is a {#button opt1=val1 @attr1=val1 } button { /button } this is a { #br /} something else, {#ns:tag1}{#tag2}text{ #img /}{/tag2}{/ns:tag1}`, //nolint:lll
 			expected: SimpleMessage{
 				Patterns: []Pattern{
 					// 1. Open-Close markup
