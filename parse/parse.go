@@ -210,7 +210,7 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 				return ComplexMessage{}, fmt.Errorf("parse patterns: %w", err)
 			}
 
-			return ComplexMessage{Declarations: declarations, ComplexBody: QuotedPattern{Patterns: patterns}}, nil
+			return ComplexMessage{Declarations: declarations, ComplexBody: QuotedPattern(patterns)}, nil
 		// bad tokens
 		default:
 			err := UnexpectedTokenError{
@@ -608,7 +608,7 @@ func (p *parser) parseMatcher() (Matcher, error) {
 				return Matcher{}, fmt.Errorf("parse patterns: %w", err)
 			}
 
-			matcher.Variants = append(matcher.Variants, Variant{Keys: keys, QuotedPattern: QuotedPattern{Patterns: patterns}})
+			matcher.Variants = append(matcher.Variants, Variant{Keys: keys, QuotedPattern: QuotedPattern(patterns)})
 		// bad tokens
 		default:
 			err := UnexpectedTokenError{

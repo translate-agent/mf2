@@ -526,36 +526,27 @@ func (ck CatchAllKey) validate() error { return nil }
 
 // ---------------------------------ComplexBody--------------------------------------
 
-type QuotedPattern struct {
-	ComplexBody
-
-	Patterns []Pattern // TextPattern or PlaceholderPattern
-}
-
-func (qp QuotedPattern) String() string {
-	return fmt.Sprintf("{{%s}}", sliceToString(qp.Patterns, ""))
-}
-
-func (qp QuotedPattern) validate() error {
-	if err := validateSlice(qp.Patterns); err != nil {
-		return fmt.Errorf("quotedPattern.%w", err)
-	}
-
-	return nil
-}
+type QuotedPattern []Pattern
 
 type Matcher struct {
-	ComplexBody
-
 	MatchStatements []Expression // At least one
 	Variants        []Variant    // At least one
 }
 
+func (qp QuotedPattern) String() string { return fmt.Sprintf("{{%s}}", sliceToString(qp, "")) }
 func (m Matcher) String() string {
 	matchStr := sliceToString(m.MatchStatements, " ")
 	variantsStr := sliceToString(m.Variants, "\n")
 
 	return fmt.Sprintf("%s %s\n%s", match, matchStr, variantsStr)
+}
+
+func (qp QuotedPattern) validate() error {
+	if err := validateSlice(qp); err != nil {
+		return fmt.Errorf("quotedPattern.%w", err)
+	}
+
+	return nil
 }
 
 func (m Matcher) validate() error {
@@ -577,6 +568,12 @@ func (m Matcher) validate() error {
 
 	return nil
 }
+
+func (QuotedPattern) node() {}
+func (Matcher) node()       {}
+
+func (QuotedPattern) complexBody() {}
+func (Matcher) complexBody()       {}
 
 // ---------------------------------Node---------------------------------
 
