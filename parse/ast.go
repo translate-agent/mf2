@@ -486,10 +486,10 @@ func (ReservedStatement) validate() error { return nil }
 // CatchAllKey is a special key, that matches any value.
 type CatchAllKey struct{}
 
-func (CatchAllKey) node()              {}
-func (CatchAllKey) variantKey()        {}
 func (ck CatchAllKey) String() string  { return catchAllSymbol }
 func (ck CatchAllKey) validate() error { return nil }
+func (CatchAllKey) node()              {}
+func (CatchAllKey) variantKey()        {}
 
 // ---------------------------------ComplexBody--------------------------------------
 
