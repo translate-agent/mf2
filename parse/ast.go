@@ -3,6 +3,7 @@ package parse
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -363,7 +364,16 @@ func (nl NameLiteral) validate() error {
 	return nil
 }
 
-func (nl NumberLiteral) validate() error { return nil } // Zero value is valid
+func (nl NumberLiteral) validate() error {
+	switch {
+	case math.IsInf(float64(nl), 0):
+		return errors.New("numberLiteral: literal is infinite")
+	case math.IsNaN(float64(nl)):
+		return errors.New("numberLiteral: literal is NaN")
+	default:
+		return nil
+	}
+}
 
 func (QuotedLiteral) node() {}
 func (NameLiteral) node()   {}
