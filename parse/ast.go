@@ -361,7 +361,6 @@ func (ReservedAnnotation) annotation()   {}
 
 // --------------------------------Declaration---------------------------------
 
-// TODO: Combine InputDeclaration and LocalDeclaration into one type.
 type InputDeclaration struct {
 	Declaration
 
