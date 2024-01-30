@@ -334,7 +334,15 @@ type NameLiteral string
 
 type NumberLiteral float64
 
-func (ql QuotedLiteral) String() string { return fmt.Sprintf("|%s|", string(ql)) }
+func (ql QuotedLiteral) String() string {
+	// quoted-escape = backslash ( backslash / "|" )
+	r := strings.NewReplacer(
+		`\`, `\\`,
+		`|`, `\|`,
+	)
+
+	return fmt.Sprintf("|%s|", r.Replace(string(ql)))
+}
 func (nl NameLiteral) String() string   { return string(nl) }
 func (nl NumberLiteral) String() string { return fmt.Sprint(float64(nl)) }
 
