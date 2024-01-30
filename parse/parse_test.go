@@ -251,7 +251,7 @@ func TestParseSimpleMessage(t *testing.T) {
 				// 1. Open-Close markup
 				TextPattern("It is a "),
 				Markup{
-					Typ: OpenMarkup,
+					Typ: Open,
 					Identifier: Identifier{
 						Namespace: "",
 						Name:      "button",
@@ -272,18 +272,18 @@ func TestParseSimpleMessage(t *testing.T) {
 					},
 				},
 				TextPattern(" button "),
-				Markup{Typ: CloseMarkup, Identifier: Identifier{Name: "button"}},
+				Markup{Typ: Close, Identifier: Identifier{Name: "button"}},
 				// 2. Self-close markup
 				TextPattern(" this is a "),
-				Markup{Typ: SelfCloseMarkup, Identifier: Identifier{Name: "br"}},
+				Markup{Typ: SelfClose, Identifier: Identifier{Name: "br"}},
 				TextPattern(" something else, "),
 				// 3. Nested markup
-				Markup{Typ: OpenMarkup, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
-				Markup{Typ: OpenMarkup, Identifier: Identifier{Name: "tag2"}},
+				Markup{Typ: Open, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
+				Markup{Typ: Open, Identifier: Identifier{Name: "tag2"}},
 				TextPattern("text"),
-				Markup{Typ: SelfCloseMarkup, Identifier: Identifier{Name: "img"}},
-				Markup{Typ: CloseMarkup, Identifier: Identifier{Name: "tag2"}},
-				Markup{Typ: CloseMarkup, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
+				Markup{Typ: SelfClose, Identifier: Identifier{Name: "img"}},
+				Markup{Typ: Close, Identifier: Identifier{Name: "tag2"}},
+				Markup{Typ: Close, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
 			},
 		},
 	}

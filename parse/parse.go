@@ -292,19 +292,19 @@ func (p *parser) parseMarkup() (Markup, error) {
 		case itemWhitespace:
 			continue
 		case itemMarkupOpen:
-			markup.Typ = OpenMarkup
+			markup.Typ = Open
 			markup.Identifier = p.parseIdentifier()
 
 		case itemMarkupClose:
-			if markup.Typ == UnspecifiedMarkup {
-				markup.Typ = CloseMarkup
+			if markup.Typ == Unspecified {
+				markup.Typ = Close
 				markup.Identifier = p.parseIdentifier()
 			} else {
-				markup.Typ = SelfCloseMarkup
+				markup.Typ = SelfClose
 			}
 
 		case itemOption:
-			if markup.Typ == CloseMarkup {
+			if markup.Typ == Close {
 				return Markup{}, fmt.Errorf("close markup cannot have options: '%s'", itm.val)
 			}
 			// Markup with options

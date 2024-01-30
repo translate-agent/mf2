@@ -570,10 +570,10 @@ func (o Option) validate() error {
 type MarkupType int
 
 const (
-	UnspecifiedMarkup MarkupType = iota
-	OpenMarkup
-	CloseMarkup
-	SelfCloseMarkup
+	Unspecified MarkupType = iota
+	Open
+	Close
+	SelfClose
 )
 
 type Markup struct {
@@ -589,11 +589,11 @@ func (m Markup) String() string {
 	switch m.Typ {
 	default:
 		return ""
-	case OpenMarkup:
+	case Open:
 		return fmt.Sprintf("{ #%s %s %s }", m.Identifier, sliceToString(m.Options, " "), sliceToString(m.Attributes, " "))
-	case CloseMarkup:
+	case Close:
 		return fmt.Sprintf("{ /%s %s }", m.Identifier, sliceToString(m.Attributes, " "))
-	case SelfCloseMarkup:
+	case SelfClose:
 		return fmt.Sprintf("{ #%s %s %s /}", m.Identifier, sliceToString(m.Options, " "), sliceToString(m.Attributes, " "))
 	}
 }
@@ -603,7 +603,7 @@ func (m Markup) validate() error {
 		return fmt.Errorf("markup.%w", err)
 	}
 
-	if m.Typ == CloseMarkup && len(m.Options) != 0 {
+	if m.Typ == Close && len(m.Options) != 0 {
 		return errors.New("markup: options are not allowed for markup-close")
 	}
 
