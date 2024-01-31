@@ -339,139 +339,58 @@ func (p *parser) parseMarkup() (Markup, error) {
 
 // ------------------------------Expression------------------------------
 
-// parseExpression parses expression by its type.
-func (p *parser) parseExpression() (Expression, error) { //nolint:ireturn
+func (p *parser) parseExpression() (Expression, error) {
+	var expression Expression
+
 	for itm := p.current(); p.current().typ != itemExpressionClose; itm = p.next() {
 		switch itm.typ {
 		case itemError:
-			return nil, fmt.Errorf("got error token: '%s'", itm.val)
+			return Expression{}, fmt.Errorf("got error token: '%s'", itm.val)
 		case itemWhitespace:
 			continue
-		case itemVariable: // Variable expression
-			expression, err := p.parseVariableExpression()
+		case itemVariable:
+			expression.Operand = Variable(itm.val)
+		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
+			operand, err := p.parseLiteral()
 			if err != nil {
-				return nil, fmt.Errorf("parse variable expression: %w", err)
+				return Expression{}, fmt.Errorf("parse literal: %w", err)
 			}
 
-			return expression, nil
-		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral: // Literal expression
-			expression, err := p.parseLiteralExpression()
-			if err != nil {
-				return nil, fmt.Errorf("parse literal expression: %w", err)
-			}
-
-			return expression, nil
-		case itemFunction: // Annotation expression
+			expression.Operand = operand
+		case itemFunction, itemPrivate, itemReserved:
 			annotation, err := p.parseAnnotation()
 			if err != nil {
-				return nil, fmt.Errorf("parse annotation expression: %w", err)
+				return Expression{}, fmt.Errorf("parse annotation: %w", err)
 			}
 
-			return AnnotationExpression{Annotation: annotation}, nil
+			expression.Annotation = annotation
+
+			p.pos--
+
+		case itemAttribute:
+			attribute, err := p.parseAttribute()
+			if err != nil {
+				return Expression{}, fmt.Errorf("parse attribute: %w", err)
+			}
+
+			expression.Attributes = append(expression.Attributes, attribute)
+
 		// bad tokens
 		default:
 			err := UnexpectedTokenError{
 				Expected: []itemType{
-					itemWhitespace, itemVariable, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral, itemFunction,
+					itemWhitespace, itemVariable, itemNumberLiteral,
+					itemQuotedLiteral, itemUnquotedLiteral, itemFunction, itemAttribute,
+					itemPrivate, itemReserved,
 				},
 				Actual: itm.typ,
 			}
 
-			return nil, err
+			return Expression{}, err
 		}
 	}
 
-	return nil, errors.New("no expression start found")
-}
-
-func (p *parser) parseVariableExpression() (VariableExpression, error) {
-	var (
-		variable      Variable
-		foundVariable bool // flag to check if variable is already found
-	)
-
-	for itm := p.current(); p.current().typ != itemExpressionClose; itm = p.next() {
-		switch itm.typ {
-		case itemError:
-			return VariableExpression{}, fmt.Errorf("got error token: '%s'", itm.val)
-		case itemWhitespace:
-			continue
-		case itemVariable:
-			if foundVariable {
-				return VariableExpression{}, errors.New("expression contains more than one variable")
-			}
-
-			foundVariable = true
-			variable = Variable(itm.val)
-		case itemFunction, itemPrivate, itemReserved:
-			// Variable expression with annotation.
-			annotation, err := p.parseAnnotation()
-			if err != nil {
-				return VariableExpression{}, fmt.Errorf("parse annotation: %w", err)
-			}
-
-			return VariableExpression{Variable: variable, Annotation: annotation}, nil
-		// bad tokens
-		default:
-			err := UnexpectedTokenError{
-				Expected: []itemType{itemWhitespace, itemVariable, itemFunction, itemPrivate, itemReserved},
-				Actual:   itm.typ,
-			}
-
-			return VariableExpression{}, err
-		}
-	}
-
-	// Variable expression without annotation.
-	return VariableExpression{Variable: variable}, nil
-}
-
-func (p *parser) parseLiteralExpression() (LiteralExpression, error) {
-	var (
-		literal      Literal
-		foundLiteral bool // flag to check if literal is already found
-	)
-
-	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
-		switch itm.typ {
-		case itemError:
-			return LiteralExpression{}, fmt.Errorf("got error token: '%s'", itm.val)
-		case itemWhitespace:
-			continue
-		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
-			if foundLiteral {
-				return LiteralExpression{}, errors.New("expression contains more than one literal")
-			}
-
-			foundLiteral = true
-
-			var err error
-
-			literal, err = p.parseLiteral()
-			if err != nil {
-				return LiteralExpression{}, fmt.Errorf("parse literal: %w", err)
-			}
-		case itemFunction:
-			// Literal expression with annotation.
-			annotation, err := p.parseAnnotation()
-			if err != nil {
-				return LiteralExpression{}, fmt.Errorf("parse annotation: %w", err)
-			}
-
-			return LiteralExpression{Literal: literal, Annotation: annotation}, nil
-		// bad tokens
-		default:
-			err := UnexpectedTokenError{
-				Expected: []itemType{itemWhitespace, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral, itemFunction},
-				Actual:   itm.typ,
-			}
-
-			return LiteralExpression{}, err
-		}
-	}
-
-	// Literal expression without annotation.
-	return LiteralExpression{Literal: literal}, nil
+	return expression, nil
 }
 
 // ------------------------------Annotation------------------------------
