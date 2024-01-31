@@ -729,9 +729,7 @@ func TestValidate(t *testing.T) {
 			ast: AST{
 				Message: ComplexMessage{
 					Declarations: []Declaration{
-						InputDeclaration{
-							Operand: Variable(""),
-						},
+						InputDeclaration{Operand: Variable("")},
 					},
 					ComplexBody: QuotedPattern{
 						TextPattern("Hello, World!"),
