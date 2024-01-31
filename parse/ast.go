@@ -21,7 +21,7 @@ Example:
 		Message: SimpleMessage{
 			Patterns: []Pattern{
 				TextPattern("Hello, "),
-				PlaceholderPattern{Expression: VariableExpression{Variable: Variable("variable")}},
+				Expression{Operand: Variable("variable")}
 				TextPattern(" World!"),
 			},
 		},
@@ -46,15 +46,13 @@ Example:
 		Message: SimpleMessage{
 			Patterns: []Pattern{
 				TextPattern("Hello, "),
-				PlaceholderPattern{
-					Expression: VariableExpression{Variable: Variable("")},
-				},
+				Expression{Operand: Variable("")},
 				TextPattern(" World!"),
 			},
 		},
 	},
 
-	err := ast.validate() // err: ast.message.patterns.placeholderPattern.expression.variable: name is empty '{ $ }'
+	err := ast.validate() // err: ast.simpleMessage.expression.variable: name is empty '{ $}'
 */
 func (a AST) validate() error {
 	if a.Message == nil {
@@ -72,7 +70,7 @@ func (a AST) validate() error {
 //
 // Here we define the Nodes that can have multiple types.
 // For example Message could be either a SimpleMessage or a ComplexMessage.
-// Pattern could be either a TextPattern or a PlaceholderPattern.
+// Pattern could be either a TextPattern, Expression or a Markup.
 // etc.
 
 // Node is the interface implemented by all AST nodes.
