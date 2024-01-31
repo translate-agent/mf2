@@ -730,7 +730,7 @@ func TestValidate(t *testing.T) {
 				Message: ComplexMessage{
 					Declarations: []Declaration{
 						InputDeclaration{
-							Expression: Expression{Operand: Variable("")},
+							Operand: Variable(""),
 						},
 					},
 					ComplexBody: QuotedPattern{

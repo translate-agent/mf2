@@ -361,38 +361,37 @@ func (ReservedAnnotation) annotation()   {}
 
 // --------------------------------Declaration---------------------------------
 
-type InputDeclaration struct {
-	Declaration
-
-	Expression Expression // Only VariableExpression, i.e. operand is type Variable.
-}
-
-func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, id.Expression) }
-func (id InputDeclaration) validate() error {
-	if id.Expression.Operand == nil {
-		return errors.New("inputDeclaration: expression operand is required")
-	}
-
-	if _, ok := id.Expression.Operand.(Variable); !ok {
-		return fmt.Errorf("inputDeclaration: expression operand must be a variable, got '%T'", id.Expression.Operand)
-	}
-
-	if err := id.Expression.validate(); err != nil {
-		return fmt.Errorf("inputDeclaration.%w", err)
-	}
-
-	return nil
-}
+type InputDeclaration Expression // Only VariableExpression, i.e. operand is type Variable.
 
 type LocalDeclaration struct {
-	Declaration
-
 	Variable   Variable
 	Expression Expression
 }
 
+type ReservedStatement struct {
+	// TODO: Implementation
+}
+
+func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, Expression(id)) }
 func (ld LocalDeclaration) String() string {
 	return fmt.Sprintf("%s %s = %s", local, ld.Variable, ld.Expression)
+}
+func (ReservedStatement) String() string { return ".RESERVED STATEMENT_NOT_IMPLEMENTED { TODO }" } // TODO: Implement
+
+func (id InputDeclaration) validate() error {
+	if id.Operand == nil {
+		return errors.New("inputDeclaration: expression operand is required")
+	}
+
+	if _, ok := id.Operand.(Variable); !ok {
+		return fmt.Errorf("inputDeclaration: expression operand must be a variable, got '%T'", id.Operand)
+	}
+
+	if err := Expression(id).validate(); err != nil {
+		return fmt.Errorf("inputDeclaration.%w", err)
+	}
+
+	return nil
 }
 
 func (ld LocalDeclaration) validate() error {
@@ -407,14 +406,15 @@ func (ld LocalDeclaration) validate() error {
 	return nil
 }
 
-type ReservedStatement struct {
-	Declaration
-
-	// TODO: Implementation
-}
-
-func (ReservedStatement) String() string  { return ".RESERVED STATEMENT_NOT_IMPLEMENTED { TODO }" } // TODO: Implement
 func (ReservedStatement) validate() error { return nil }
+
+func (InputDeclaration) node()  {}
+func (LocalDeclaration) node()  {}
+func (ReservedStatement) node() {}
+
+func (InputDeclaration) declaration()  {}
+func (LocalDeclaration) declaration()  {}
+func (ReservedStatement) declaration() {}
 
 // --------------------------------VariantKey----------------------------------
 
