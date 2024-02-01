@@ -124,6 +124,11 @@ type VariantKey interface {
 	variantKey()
 }
 
+type ReservedBody interface {
+	Node
+	reservedBody()
+}
+
 // ---------------------------------Types------------------------------------
 //
 // Here we define the types that implement the interfaces defined above.
@@ -310,6 +315,8 @@ func (QuotedLiteral) variantKey() {}
 func (NameLiteral) variantKey()   {}
 func (NumberLiteral) variantKey() {}
 
+func (QuotedLiteral) reservedBody() {}
+
 // --------------------------------Annotation----------------------------------
 
 type Function struct {
@@ -318,12 +325,11 @@ type Function struct {
 }
 
 type PrivateUseAnnotation struct {
-	// TODO: Implementation
+	ReservedBody []ReservedBody // QuotedLiteral or ReservedText
+	Start        rune
 }
 
-type ReservedAnnotation struct {
-	// TODO: Implementation
-}
+type ReservedAnnotation PrivateUseAnnotation
 
 func (f Function) String() string {
 	if len(f.Options) == 0 {
@@ -332,8 +338,12 @@ func (f Function) String() string {
 
 	return fmt.Sprintf(":%s %s", f.Identifier, sliceToString(f.Options, " "))
 }
-func (PrivateUseAnnotation) String() string { return "^ PRIVATE_USE_ANNOTATION_NOT_IMPLEMENTED" } // TODO: Implement
-func (ReservedAnnotation) String() string   { return "! RESERVED_ANNOTATION_NOT_IMPLEMENTED" }    // TODO: Implement
+
+func (p PrivateUseAnnotation) String() string {
+	return fmt.Sprintf("%c%s", p.Start, sliceToString(p.ReservedBody, ""))
+}
+
+func (p ReservedAnnotation) String() string { return PrivateUseAnnotation(p).String() }
 
 func (f Function) validate() error {
 	if err := f.Identifier.validate(); err != nil {
@@ -346,8 +356,34 @@ func (f Function) validate() error {
 
 	return nil
 }
-func (PrivateUseAnnotation) validate() error { return nil }
-func (ReservedAnnotation) validate() error   { return nil }
+
+func (p PrivateUseAnnotation) validate() error {
+	if !isPrivateStart(p.Start) {
+		return fmt.Errorf("privateUseAnnotation: start must be a private start char, got '%c'", p.Start)
+	}
+
+	if p.ReservedBody != nil {
+		if err := validateSlice(p.ReservedBody); err != nil {
+			return fmt.Errorf("privateUseAnnotation.%w", err)
+		}
+	}
+
+	return nil
+}
+
+func (p ReservedAnnotation) validate() error {
+	if !isReservedStart(p.Start) {
+		return fmt.Errorf("reservedAnnotation: start must be a reserved start char, got '%c'", p.Start)
+	}
+
+	if p.ReservedBody != nil {
+		if err := validateSlice(p.ReservedBody); err != nil {
+			return fmt.Errorf("reservedAnnotation.%w", err)
+		}
+	}
+
+	return nil
+}
 
 func (Function) node()             {}
 func (PrivateUseAnnotation) node() {}
@@ -489,6 +525,28 @@ func (v Variable) validate() error {
 
 	return nil
 }
+
+type ReservedText string
+
+func (rt ReservedText) String() string {
+	return strings.NewReplacer(
+		`\`, `\\`,
+		`{`, `\{`,
+		`}`, `\}`,
+		`|`, `\|`,
+	).Replace(string(rt))
+}
+
+func (rt ReservedText) validate() error {
+	if isZeroValue(string(rt)) {
+		return errors.New("reservedText: text is empty")
+	}
+
+	return nil
+}
+
+func (ReservedText) node()         {}
+func (ReservedText) reservedBody() {}
 
 type Identifier struct {
 	Node

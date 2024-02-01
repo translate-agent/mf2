@@ -296,33 +296,41 @@ type function struct {
 
 type Expression struct {
 	operand    any // literal or variable
-	function   function
+	annotation any // function or annotation
 	attributes []attribute
 }
 
 func (e *Expression) build(spacing string) string {
-	s := "{" + spacing
+	s := "{"
 
 	switch v := e.operand.(type) {
 	case variable:
-		s += varSymbol + string(v)
+		s += spacing + varSymbol + string(v)
 	case nil:
 		// noop
 	case literal:
-		s += printLiteral(v)
+		s += spacing + printLiteral(v)
 	default:
 		panic(fmt.Sprintf("unsupported operand type: %T", v))
 	}
 
-	if e.function.name != "" {
-		if e.operand != nil { // literal or variable
-			s += " "
+	switch f := e.annotation.(type) {
+	case function:
+		s += spacing + ":" + f.name
+		for _, opt := range f.options {
+			s += opt.sprint(spacing)
 		}
 
-		s += e.function.name
+	case annotation:
+		s += spacing + f.start.String()
 
-		for _, opt := range e.function.options {
-			s += opt.sprint(spacing)
+		for _, v := range f.body {
+			switch v := v.(type) {
+			case Quoted:
+				s += spacing + printQuoted(string(v))
+			case ReservedText:
+				s += spacing + reservedEscape(string(v))
+			}
 		}
 	}
 
@@ -464,12 +472,86 @@ func LiteralOption(name string, value any) FuncOption {
 
 func (FuncOption) optsAndAttr() {}
 
+type TextOrQuoted interface{ textOrQuoted() }
+
+type (
+	Quoted       string
+	ReservedText string
+)
+
+func (q Quoted) textOrQuoted()       {}
+func (r ReservedText) textOrQuoted() {}
+
+type annotation struct {
+	body  []TextOrQuoted
+	start AnnotationStart
+}
+
+type AnnotationStart int
+
+// Private Use start character.
+const (
+	Caret     AnnotationStart = iota // ^
+	Ampersand                        // &
+)
+
+// Reserved start character.
+const (
+	Exclamation AnnotationStart = iota + 2 // !
+	Percent                                // %
+	Asterisk                               // *
+	Plus                                   // +
+	LessThan                               // <
+	GreaterThan                            // >
+	Question                               // ?
+	Tilde                                  // ~
+)
+
+func (a AnnotationStart) String() string {
+	switch a {
+	case Caret:
+		return "^"
+	case Ampersand:
+		return "&"
+	case Exclamation:
+		return "!"
+	case Percent:
+		return "%"
+	case Asterisk:
+		return "*"
+	case Plus:
+		return "+"
+	case LessThan:
+		return "<"
+	case GreaterThan:
+		return ">"
+	case Question:
+		return "?"
+	case Tilde:
+		return "~"
+	default:
+		panic(fmt.Sprintf("unknown annotation start: %d", a))
+	}
+}
+
+// Annotation adds Private Use or Reserved annotation to the expression.
+func Annotation(start AnnotationStart, textOrQuoted ...TextOrQuoted) *Expression {
+	return Expr().Annotation(start, textOrQuoted...)
+}
+
+// Annotation adds Private Use or Reserved annotation to the expression.
+func (e *Expression) Annotation(start AnnotationStart, textOrQuoted ...TextOrQuoted) *Expression {
+	e.annotation = annotation{body: textOrQuoted, start: start}
+
+	return e
+}
+
 func (e *Expression) Func(name string, option ...FuncOption) *Expression {
 	if len(name) == 0 {
 		panic("function name cannot be empty")
 	}
 
-	e.function = function{name: ":" + name, options: option}
+	e.annotation = function{name: name, options: option}
 
 	return e
 }
@@ -564,6 +646,10 @@ text-escape     = backslash ( backslash / "{" / "}" )
 */
 func textEscape(s string) string {
 	return strings.NewReplacer("\\", "\\\\", "{", "\\{", "}", "\\}").Replace(s)
+}
+
+func reservedEscape(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `{`, `\{`, `|`, `\|`, `}`, `\}`).Replace(s)
 }
 
 // hasSimpleStart returns true if the string has a simple start.
