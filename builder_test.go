@@ -58,6 +58,41 @@ func Test_Builder(t *testing.T) {
 			"Hello, { $world :upper limit = 2 min = $min type = integer x = |y z| host = || }!",
 		},
 		{
+			"simple message, annotations",
+			NewBuilder().
+				Text("Hello, ").
+				// Variable expression and private use annotation with quoted and text
+				Expr(
+					Var("f").
+						Annotation(Caret,
+							Quoted("a"),
+							ReservedText("reserved")),
+				).
+				// Annotation expression, reserved use annotation without body
+				Expr(Annotation(Exclamation)).
+				// Annotation expression, reserved use annotation with escaped quoted and text
+				Expr(
+					Annotation(GreaterThan,
+						Quoted("b|"),
+						ReservedText("escaped |}"),
+					),
+				).
+				// Literal expression with attribute and reserved use annotation with multiple texts
+				Expr(
+					Literal("c").
+						Annotation(Ampersand,
+							ReservedText("hey1 hey2"),
+							ReservedText("hey3 hey4"),
+							ReservedText("hey5"),
+						).
+						Attr(
+							VarAttribute("attr1", "var"),
+						),
+				).
+				Text("world!"),
+			`Hello, { $f ^ |a| reserved }{ ! }{ > |b\|| escaped \|\} }{ c & hey1 hey2 hey3 hey4 hey5 @attr1 = $var }world!`,
+		},
+		{
 			"complex message, period char",
 			NewBuilder().Text("."),
 			"{{.}}",

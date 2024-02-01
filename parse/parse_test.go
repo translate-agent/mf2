@@ -202,7 +202,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			},
 		},
 		{
-			name:  "annotation expression",
+			name:  "function expression",
 			input: "Hello { :function } World!",
 			expected: SimpleMessage{
 				TextPattern("Hello "),
@@ -218,7 +218,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			},
 		},
 		{
-			name:  "annotation expression with options and namespace",
+			name:  "function expression with options and namespace",
 			input: "Hello { :namespace:function namespace:option999 = 999 } World!",
 			expected: SimpleMessage{
 				TextPattern("Hello "),
@@ -236,6 +236,46 @@ func TestParseSimpleMessage(t *testing.T) {
 									Name:      "option999",
 								},
 							},
+						},
+					},
+				},
+				TextPattern(" World!"),
+			},
+		},
+		{
+			name:  "private use and reserved annotation",
+			input: `Hello { $hey ^private }{ !|reserved| \|hey\| \{ @v @k=2 @l:l=$s} World!`,
+			expected: SimpleMessage{
+				TextPattern("Hello "),
+				Expression{
+					Operand: Variable("hey"),
+					Annotation: PrivateUseAnnotation{
+						Start: '^',
+						ReservedBody: []ReservedBody{
+							ReservedText("private"),
+						},
+					},
+				},
+				Expression{
+					Annotation: ReservedAnnotation{
+						Start: '!',
+						ReservedBody: []ReservedBody{
+							QuotedLiteral("reserved"),
+							ReservedText("|hey|"),
+							ReservedText("{"),
+						},
+					},
+					Attributes: []Attribute{
+						{
+							Identifier: Identifier{Name: "v"},
+						},
+						{
+							Identifier: Identifier{Name: "k"},
+							Value:      NumberLiteral(2),
+						},
+						{
+							Identifier: Identifier{Namespace: "l", Name: "l"},
+							Value:      Variable("s"),
 						},
 					},
 				},

@@ -36,9 +36,10 @@ const (
 	itemOption
 	itemAttribute
 	itemWhitespace
-	itemReserved
 	itemOperator
-	itemPrivate
+	itemPrivateStart
+	itemReservedStart
+	itemReservedText
 )
 
 // String returns a string representation of the item type.
@@ -78,22 +79,24 @@ func (t itemType) String() string {
 		return "option"
 	case itemAttribute:
 		return "attribute"
-	case itemPrivate:
-		return "private"
 	case itemQuotedLiteral:
 		return "quoted literal"
 	case itemQuotedPatternClose:
 		return "quoted pattern close"
 	case itemQuotedPatternOpen:
 		return "quoted pattern open"
-	case itemReserved:
-		return "reserved"
 	case itemUnquotedLiteral:
 		return "unquoted literal"
 	case itemVariable:
 		return "variable"
 	case itemWhitespace:
 		return "whitespace"
+	case itemPrivateStart:
+		return "private start"
+	case itemReservedStart:
+		return "reserved start"
+	case itemReservedText:
+		return "reserved text"
 	}
 
 	return "unknown"
@@ -122,13 +125,14 @@ func lex(input string) *lexer { return &lexer{input: input, line: 1} }
 
 // lexer is a lexical analyzer for MessageFormat2.
 //
-// See https://github.com/unicode-org/message-format-wg/blob/7c00820a0462679eba696181c45bfadb43d2eedd/spec/message.abnf
+// See https://github.com/unicode-org/message-format-wg/blob/122e64c2482b54b6eff4563120915e0f86de8e4d/spec/message.abnf
 type lexer struct {
 	input      string
 	item, prev item // prev non-whitespace
 	pos, line  int
 
 	isFunction,
+	isReservedBody,
 	isExpression,
 	isPattern,
 	isComplexMessage bool
@@ -338,13 +342,14 @@ func lexComplexMessage(l *lexer) stateFn {
 
 // lexExpr is the state function for lexing expressions.
 func lexExpr(l *lexer) stateFn {
-	v := l.next()
-
-	switch {
+	switch v := l.next(); {
 	default:
 		l.backup()
 
 		return lexLiteral(l)
+	case l.isReservedBody:
+		l.backup()
+		return lexReservedBody(l)
 	case v == eof:
 		return l.emitErrorf("unexpected eof in expression")
 	case v == '$': // variable
@@ -383,15 +388,13 @@ func lexExpr(l *lexer) stateFn {
 		l.backup()
 		return lexIdentifier(l)
 	case isReservedStart(v):
-		l.backup()
+		l.isReservedBody = true
 
-		return lexReserved(l, itemReserved)
-
+		return l.emitItem(mk(itemReservedStart, string(v)))
 	case isPrivateStart(v):
-		l.backup()
+		l.isReservedBody = true
 
-		return lexReserved(l, itemPrivate)
-
+		return l.emitItem(mk(itemPrivateStart, string(v)))
 	case v == '=':
 		return l.emitItem(mk(itemOperator, "="))
 	}
@@ -556,18 +559,35 @@ func lexIdentifier(l *lexer) stateFn {
 	}
 }
 
-func lexReserved(l *lexer, typ itemType) stateFn {
-	s := string(l.next())
+func lexReservedBody(l *lexer) stateFn {
+	var s string
 
 	for {
-		v := l.next()
+		switch v := l.next(); {
+		case v == '{', v == '}', v == '@':
+			l.backup()
+			l.isReservedBody = false
 
-		switch {
-		default:
-			return l.emitErrorf("unexpected reserved character: %s", string(v))
-		case v == eof:
-			return l.emitErrorf("unexpected eof in reserved")
-		case v == '\\':
+			if s == "" {
+				return lexExpr(l)
+			}
+
+			return l.emitItem(mk(itemReservedText, s))
+
+		case isWhitespace(v):
+			l.backup()
+
+			if s == "" {
+				return lexWhitespace(l)
+			}
+
+			return l.emitItem(mk(itemReservedText, s))
+
+		case v == '|':
+			l.backup()
+			return lexLiteral(l)
+
+		case v == '\\': // Reserved escape
 			v = l.next()
 
 			if !isReservedEscape(v) {
@@ -578,27 +598,6 @@ func lexReserved(l *lexer, typ itemType) stateFn {
 
 		case isReserved(v):
 			s += string(v)
-		case v == '|':
-			l.backup()
-			lexLiteral(l)
-
-			if l.item.typ == itemError {
-				return l.emitItem(l.item)
-			}
-
-			s += fmt.Sprintf("|%s|", l.item.val)
-		case isWhitespace(v):
-			if l.peek() == '}' {
-				l.backup()
-
-				return l.emitItem(mk(typ, s))
-			}
-
-			s += string(v)
-		case v == '}':
-			l.backup()
-
-			return l.emitItem(mk(typ, s))
 		}
 	}
 }
