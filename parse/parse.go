@@ -84,7 +84,7 @@ Examples:
 
 	mf2.Parse("Hello World!")
 	// result
-	AST{Message: SimpleMessage{Patterns: []Pattern{TextPattern("Hello World!")}}}
+	AST{Message: SimpleMessage{TextPattern("Hello World!")}}
 
 	// -----------------------------------------------------------
 
@@ -92,10 +92,8 @@ Examples:
 	// result
 	AST{
 		Message: SimpleMessage{
-			Patterns: []Pattern{
-				TextPattern("Hello "),
-				PlaceholderPattern{Expression: VariableExpression{Variable: "name"}},
-			},
+			TextPattern("Hello "),
+			Expression{Operand: Variable("name")},
 		},
 	}
 
@@ -106,18 +104,18 @@ Examples:
 	AST{
 		Message: ComplexMessage{
 			ComplexBody: Matcher{
-				MatchStatements: []Expression{VariableExpression{Variable: "count"}},
+				MatchStatements: []Expression{{Operand: Variable("count")}},
 				Variants: []Variant{
 					{
-						Key: LiteralKey{Literal: NumberLiteral(1)},
+						Keys: []VariantKey{NumberLiteral(1)},
 						QuotedPattern: QuotedPattern{
-							Patterns: []Pattern{TextPattern("Hello world")},
+							TextPattern("Hello world"),
 						},
 					},
 					{
-						Key: WildcardKey{},
+						Keys: []VariantKey{CatchAllKey{}},
 						QuotedPattern: QuotedPattern{
-							Patterns: []Pattern{TextPattern("Hello worlds")},
+							TextPattern("Hello worlds"),
 						},
 					},
 				},
@@ -126,7 +124,7 @@ Examples:
 	}
 */
 func Parse(input string) (AST, error) {
-	p := &parser{lexer: lex(input)}
+	p := &parser{lexer: lex(input), pos: -1}
 	if err := p.collect(); err != nil {
 		return AST{}, fmt.Errorf("collect tokens: %w", err)
 	}
@@ -165,77 +163,61 @@ func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
 }
 
 func (p *parser) parseComplexMessage() (ComplexMessage, error) {
-	var declarations []Declaration
+	var message ComplexMessage
 
-	for itm := p.current(); p.current().typ != itemEOF; itm = p.next() {
-		switch itm.typ {
+	for {
+		switch itm := p.nextNonWS(); itm.typ {
+		// Ending tokens
+		default:
+			return ComplexMessage{}, &UnexpectedTokenError{
+				Actual: itm.typ,
+				Expected: []itemType{
+					itemInputKeyword, itemLocalKeyword, itemReservedKeyword,
+					itemMatchKeyword, itemQuotedPatternOpen,
+				},
+			}
 		case itemError:
 			return ComplexMessage{}, fmt.Errorf("got error token: '%s'", itm.val)
-		case itemWhitespace:
-			continue
-		// Declarations
+		case itemEOF:
+			return message, nil
+		// Non-ending tokens
 		case itemInputKeyword:
-			p.next() // skip keyword
-
 			declaration, err := p.parseInputDeclaration()
 			if err != nil {
 				return ComplexMessage{}, fmt.Errorf("parse input declaration: %w", err)
 			}
 
-			declarations = append(declarations, declaration)
+			message.Declarations = append(message.Declarations, declaration)
 		case itemLocalKeyword:
-			p.next() // skip keyword
-
 			declaration, err := p.parseLocalDeclaration()
 			if err != nil {
 				return ComplexMessage{}, fmt.Errorf("parse local declaration: %w", err)
 			}
 
-			declarations = append(declarations, declaration)
+			message.Declarations = append(message.Declarations, declaration)
 		case itemReservedKeyword:
-			p.next() // skip keyword
-
 			declaration, err := p.parseReservedStatement()
 			if err != nil {
 				return ComplexMessage{}, fmt.Errorf("parse reserved statement: %w", err)
 			}
 
-			declarations = append(declarations, declaration)
-		// Complex body
-		case itemMatchKeyword: // Zero or more Declarations + Matcher
-			p.next() // skip keyword
-
+			message.Declarations = append(message.Declarations, declaration)
+		case itemMatchKeyword:
 			matcher, err := p.parseMatcher()
 			if err != nil {
 				return ComplexMessage{}, fmt.Errorf("parse matcher: %w", err)
 			}
 
-			return ComplexMessage{Declarations: declarations, ComplexBody: matcher}, nil
-
-		case itemQuotedPatternOpen: // Zero or more Declarations + QuotedPattern
-			p.next() // skip opening quote
-
+			message.ComplexBody = matcher
+		case itemQuotedPatternOpen:
 			patterns, err := p.parsePatterns()
 			if err != nil {
 				return ComplexMessage{}, fmt.Errorf("parse patterns: %w", err)
 			}
 
-			return ComplexMessage{Declarations: declarations, ComplexBody: QuotedPattern(patterns)}, nil
-		// bad tokens
-		default:
-			err := UnexpectedTokenError{
-				Expected: []itemType{
-					itemWhitespace, itemInputKeyword, itemLocalKeyword,
-					itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen,
-				},
-				Actual: itm.typ,
-			}
-
-			return ComplexMessage{}, err
+			message.ComplexBody = QuotedPattern(patterns)
 		}
 	}
-
-	return ComplexMessage{}, errors.New("no complex body found")
 }
 
 // ------------------------------Pattern------------------------------
@@ -245,7 +227,7 @@ func (p *parser) parsePatterns() ([]Pattern, error) {
 	var pattern []Pattern
 
 	// Loop until the end, or closing pattern quote, if parsing complex message.
-	for itm := p.current(); itm.typ != itemEOF && itm.typ != itemQuotedPatternClose; itm = p.next() {
+	for itm := p.next(); itm.typ != itemEOF && itm.typ != itemQuotedPatternClose; itm = p.next() {
 		switch itm.typ {
 		case itemError:
 			return nil, fmt.Errorf("got error token: '%s'", itm.val)
@@ -458,53 +440,84 @@ func (p *parser) parsePrivateUseAnnotation() (PrivateUseAnnotation, error) {
 // ------------------------------Declaration------------------------------
 
 func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
-	var (
-		variable      Variable
-		foundVariable bool // flag to check if variable is already found
-	)
-
-	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
-		switch itm.typ {
-		case itemError:
-			return LocalDeclaration{}, fmt.Errorf("got error token: '%s'", itm.val)
-		case itemWhitespace, itemOperator:
-			continue
-		case itemVariable:
-			if foundVariable {
-				return LocalDeclaration{}, errors.New("local declaration contains more than one variable")
-			}
-
-			foundVariable = true
-			variable = Variable(itm.val)
-		case itemExpressionOpen:
-			expression, err := p.parseExpression()
-			if err != nil {
-				return LocalDeclaration{}, fmt.Errorf("parse expression: %w", err)
-			}
-
-			return LocalDeclaration{Variable: variable, Expression: expression}, nil
-		// bad tokens
-		default:
-			err := UnexpectedTokenError{
-				Expected: []itemType{itemWhitespace, itemOperator, itemVariable, itemExpressionOpen},
-				Actual:   itm.typ,
-			}
-
-			return LocalDeclaration{}, err
-		}
+	next := p.next()
+	if next.typ != itemWhitespace {
+		return LocalDeclaration{}, &UnexpectedTokenError{Actual: next.typ, Expected: []itemType{itemWhitespace}}
 	}
 
-	return LocalDeclaration{}, errors.New("no expression found start")
+	if next = p.next(); next.typ != itemVariable {
+		return LocalDeclaration{}, &UnexpectedTokenError{Actual: next.typ, Expected: []itemType{itemVariable}}
+	}
+
+	declaration := LocalDeclaration{Variable: Variable(next.val)}
+
+	if next = p.nextNonWS(); next.typ != itemOperator {
+		return LocalDeclaration{}, &UnexpectedTokenError{Actual: next.typ, Expected: []itemType{itemOperator}}
+	}
+
+	if next = p.nextNonWS(); next.typ != itemExpressionOpen {
+		return LocalDeclaration{}, &UnexpectedTokenError{Actual: next.typ, Expected: []itemType{itemExpressionOpen}}
+	}
+
+	expression, err := p.parseExpression()
+	if err != nil {
+		return LocalDeclaration{}, fmt.Errorf("parse expression: %w", err)
+	}
+
+	declaration.Expression = expression
+
+	return declaration, nil
 }
 
 func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
-	// TODO: implement
-	return InputDeclaration{}, errors.New("not implemented")
+	next := p.nextNonWS()
+	if next.typ != itemExpressionOpen {
+		return InputDeclaration{}, &UnexpectedTokenError{Actual: next.typ, Expected: []itemType{itemExpressionOpen}}
+	}
+
+	expression, err := p.parseExpression()
+	if err != nil {
+		return InputDeclaration{}, fmt.Errorf("parse expression: %w", err)
+	}
+
+	if _, ok := expression.Operand.(Variable); !ok {
+		return InputDeclaration{}, fmt.Errorf("input declaration must have a variable as operand, got %T", expression.Operand)
+	}
+
+	return InputDeclaration(expression), nil
 }
 
 func (p *parser) parseReservedStatement() (ReservedStatement, error) {
-	// TODO: implement.
-	return ReservedStatement{}, errors.New("not implemented")
+	statement := ReservedStatement{Keyword: p.current().val}
+
+	for {
+		switch itm := p.nextNonWS(); itm.typ {
+		// Ending tokens
+		default:
+			return ReservedStatement{}, &UnexpectedTokenError{
+				Actual:   itm.typ,
+				Expected: []itemType{itemReservedText, itemQuotedLiteral, itemExpressionOpen},
+			}
+		case itemError:
+			return ReservedStatement{}, fmt.Errorf("got error token: '%s'", itm.val)
+		case itemReservedKeyword, itemInputKeyword, itemLocalKeyword, // Another declaration
+			itemQuotedPatternOpen, itemMatchKeyword: // End of declarations
+			p.pos-- // rewind
+			return statement, nil
+		// Non-ending tokens
+		case itemReservedText:
+			statement.ReservedBody = append(statement.ReservedBody, ReservedText(itm.val))
+		case itemQuotedLiteral:
+			statement.ReservedBody = append(statement.ReservedBody, QuotedLiteral(itm.val))
+		case itemExpressionOpen:
+			expression, err := p.parseExpression()
+			if err != nil {
+				return ReservedStatement{}, fmt.Errorf("parse expression: %w", err)
+			}
+
+			statement.Expressions = append(statement.Expressions, expression)
+		}
+	}
 }
 
 // ---------------------------------------------------------------------
@@ -512,7 +525,7 @@ func (p *parser) parseReservedStatement() (ReservedStatement, error) {
 func (p *parser) parseMatcher() (Matcher, error) {
 	var matcher Matcher
 
-	for itm := p.current(); itm.typ != itemEOF; itm = p.next() {
+	for itm := p.next(); itm.typ != itemEOF; itm = p.next() {
 		switch itm.typ {
 		case itemError:
 			return Matcher{}, fmt.Errorf("got error token: '%s'", itm.val)
@@ -530,8 +543,6 @@ func (p *parser) parseMatcher() (Matcher, error) {
 			if err != nil {
 				return Matcher{}, fmt.Errorf("parse variant keys: %w", err)
 			}
-
-			p.next() // skip opening quoted pattern
 
 			patterns, err := p.parsePatterns()
 			if err != nil {
@@ -551,6 +562,8 @@ func (p *parser) parseMatcher() (Matcher, error) {
 			return Matcher{}, err
 		}
 	}
+
+	p.pos--
 
 	return matcher, nil
 }

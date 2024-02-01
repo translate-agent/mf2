@@ -403,14 +403,23 @@ type LocalDeclaration struct {
 }
 
 type ReservedStatement struct {
-	// TODO: Implementation
+	Keyword      string
+	ReservedBody []ReservedBody // QuotedLiteral or ReservedText
+	Expressions  []Expression   // At least one
 }
 
 func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, Expression(id)) }
 func (ld LocalDeclaration) String() string {
 	return fmt.Sprintf("%s %s = %s", local, ld.Variable, ld.Expression)
 }
-func (ReservedStatement) String() string { return ".RESERVED STATEMENT_NOT_IMPLEMENTED { TODO }" } // TODO: Implement
+
+func (rs ReservedStatement) String() string {
+	if len(rs.ReservedBody) > 0 {
+		return fmt.Sprintf(".%s %s %s", rs.Keyword, sliceToString(rs.ReservedBody, " "), sliceToString(rs.Expressions, " "))
+	}
+
+	return fmt.Sprintf(".%s %s", rs.Keyword, sliceToString(rs.Expressions, " "))
+}
 
 func (id InputDeclaration) validate() error {
 	if id.Operand == nil {
@@ -440,7 +449,25 @@ func (ld LocalDeclaration) validate() error {
 	return nil
 }
 
-func (ReservedStatement) validate() error { return nil }
+func (rs ReservedStatement) validate() error {
+	if isZeroValue(rs.Keyword) {
+		return errors.New("reservedStatement: keyword is empty")
+	}
+
+	if len(rs.Expressions) == 0 {
+		return errors.New("reservedStatement: at least one expression is required")
+	}
+
+	if err := validateSlice(rs.ReservedBody); err != nil {
+		return fmt.Errorf("reservedStatement.%w", err)
+	}
+
+	if err := validateSlice(rs.Expressions); err != nil {
+		return fmt.Errorf("reservedStatement.%w", err)
+	}
+
+	return nil
+}
 
 func (InputDeclaration) node()  {}
 func (LocalDeclaration) node()  {}

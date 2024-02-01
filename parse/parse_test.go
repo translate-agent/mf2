@@ -374,89 +374,128 @@ func TestParseComplexMessage(t *testing.T) {
 				},
 			},
 		},
+		//nolint:dupword
 		{
-			name:  "local declaration simple text",
-			input: ".local $var={2} {{Hello world}}",
+			name: "all declarations",
+			input: `.input{$input :number @a}
+.input { $input2 ^|quot| @b=c}
+.input { $input3 ! hey hey @c=1 @d=2}
+.local $local1={1}
+.local $local2={|2| ^private @a @b=2}
+.local $local3 = { > reserved}
+.reserved1 {$reserved1}
+.reserved2 hey |quot| hey { |reserved| :func }
+.reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
+{{Text}}`,
 			expected: ComplexMessage{
+				ComplexBody: QuotedPattern{TextPattern("Text")},
 				Declarations: []Declaration{
-					LocalDeclaration{
-						Variable: Variable("var"),
-						Expression: Expression{
-							Operand: NumberLiteral(2),
+					// .input{$input :number @a}
+					InputDeclaration{
+						Operand:    Variable("input"),
+						Annotation: Function{Identifier: Identifier{Name: "number"}},
+						Attributes: []Attribute{{Identifier: Identifier{Name: "a"}}},
+					},
+					// .input { $input2 ^|quot| @b=c}
+					InputDeclaration{
+						Operand: Variable("input2"),
+						Annotation: PrivateUseAnnotation{
+							Start:        '^',
+							ReservedBody: []ReservedBody{QuotedLiteral("quot")},
+						},
+						Attributes: []Attribute{{Identifier: Identifier{Name: "b"}, Value: NameLiteral("c")}},
+					},
+					// .input { $input3 ! hey hey @c=1 @d=2}
+					InputDeclaration{
+						Operand: Variable("input3"),
+						Annotation: ReservedAnnotation{
+							Start: '!',
+							ReservedBody: []ReservedBody{
+								ReservedText("hey"),
+								ReservedText("hey"),
+							},
+						},
+						Attributes: []Attribute{
+							{Identifier: Identifier{Name: "c"}, Value: NumberLiteral(1)},
+							{Identifier: Identifier{Name: "d"}, Value: NumberLiteral(2)},
 						},
 					},
-				},
-				ComplexBody: QuotedPattern{
-					TextPattern("Hello world"),
-				},
-			},
-		},
-		{
-			name:  "local declaration and expressions",
-			input: ".local $var = { $anotherVar } {{Hello { $var } world}}",
-			expected: ComplexMessage{
-				Declarations: []Declaration{
+					// .local $local1={1}
 					LocalDeclaration{
-						Variable: Variable("var"),
+						Variable:   Variable("local1"),
+						Expression: Expression{Operand: NumberLiteral(1)},
+					},
+					// .local $local2={|2| ^private @a @b=2}
+					LocalDeclaration{
+						Variable: Variable("local2"),
 						Expression: Expression{
-							Operand:    Variable("anotherVar"),
-							Annotation: nil,
+							Operand: QuotedLiteral("2"),
+							Annotation: PrivateUseAnnotation{
+								Start:        '^',
+								ReservedBody: []ReservedBody{ReservedText("private")},
+							},
+							Attributes: []Attribute{
+								{Identifier: Identifier{Name: "a"}},
+								{Identifier: Identifier{Name: "b"}, Value: NumberLiteral(2)},
+							},
 						},
 					},
-				},
-				ComplexBody: QuotedPattern{
-					TextPattern("Hello "),
-					Expression{Operand: Variable("var")},
-					TextPattern(" world"),
-				},
-			},
-		},
-		{
-			name:  "multiple local declaration one line",
-			input: ".local $var = { :ns1:function opt1 = 1 opt2 = |val2| } .local $var = { 2 } {{Hello { $var :ns2:function2 } world}}", //nolint:lll
-			expected: ComplexMessage{
-				Declarations: []Declaration{
+					// .local $local3 = { > reserved}
 					LocalDeclaration{
-						Variable: Variable("var"),
+						Variable: Variable("local3"),
 						Expression: Expression{
-							Annotation: Function{
-								Identifier: Identifier{
-									Namespace: "ns1",
-									Name:      "function",
+							Annotation: ReservedAnnotation{
+								Start:        '>',
+								ReservedBody: []ReservedBody{ReservedText("reserved")},
+							},
+						},
+					},
+					// .reserved1 {$reserved1}
+					ReservedStatement{
+						Keyword: "reserved1",
+						Expressions: []Expression{
+							{Operand: Variable("reserved1")},
+						},
+					},
+					// .reserved2 hey |quot| hey { |reserved| :func }
+					ReservedStatement{
+						Keyword: "reserved2",
+						ReservedBody: []ReservedBody{
+							ReservedText("hey"),
+							QuotedLiteral("quot"),
+							ReservedText("hey"),
+						},
+						Expressions: []Expression{
+							{
+								Operand:    QuotedLiteral("reserved"),
+								Annotation: Function{Identifier: Identifier{Name: "func"}},
+							},
+						},
+					},
+					// .reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
+					ReservedStatement{
+						Keyword: "reserved3",
+						ReservedBody: []ReservedBody{
+							QuotedLiteral("body"),
+							QuotedLiteral("body2"),
+						},
+						Expressions: []Expression{
+							{Operand: Variable("expr1")},
+							{Operand: QuotedLiteral("expr2")},
+							{Annotation: Function{Identifier: Identifier{Name: "expr3"}}},
+							{
+								Operand: Variable("expr4"),
+								Annotation: PrivateUseAnnotation{
+									Start:        '^',
+									ReservedBody: []ReservedBody{ReservedText("hey")},
 								},
-								Options: []Option{
-									{
-										Identifier: Identifier{Namespace: "", Name: "opt1"},
-										Value:      NumberLiteral(1),
-									},
-									{
-										Identifier: Identifier{Namespace: "", Name: "opt2"},
-										Value:      QuotedLiteral("val2"),
-									},
+								Attributes: []Attribute{
+									{Identifier: Identifier{Name: "beep"}},
+									{Identifier: Identifier{Name: "boop"}},
 								},
 							},
 						},
 					},
-					LocalDeclaration{
-						Variable: Variable("var"),
-						Expression: Expression{
-							Operand:    NumberLiteral(2),
-							Annotation: nil,
-						},
-					},
-				},
-				ComplexBody: QuotedPattern{
-					TextPattern("Hello "),
-					Expression{
-						Operand: Variable("var"),
-						Annotation: Function{
-							Identifier: Identifier{
-								Namespace: "ns2",
-								Name:      "function2",
-							},
-						},
-					},
-					TextPattern(" world"),
 				},
 			},
 		},
