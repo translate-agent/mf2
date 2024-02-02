@@ -203,6 +203,7 @@ func (d declaration) build(spacing string) string {
 	return s
 }
 
+// Local adds local declaration to the builder.
 func (b *Builder) Local(v string, expr *Expression) *Builder {
 	if b.err != nil {
 		return b
@@ -217,6 +218,7 @@ func (b *Builder) Local(v string, expr *Expression) *Builder {
 	return b
 }
 
+// Input adds input declaration to the builder.
 func (b *Builder) Input(expr *Expression) *Builder {
 	if b.err != nil {
 		return b
@@ -230,12 +232,17 @@ func (b *Builder) Input(expr *Expression) *Builder {
 	return b
 }
 
-func (b *Builder) Reserved(keyword string, reservedOrExpression ...ReservedOrExpression) *Builder {
+// Reserved adds reserved statement to the builder.
+func (b *Builder) Reserved(
+	keyword string,
+	expression *Expression,
+	reservedOrExpression ...ReservedOrExpression,
+) *Builder {
 	if b.err != nil {
 		return b
 	}
 
-	decl := declaration{keyword: keyword}
+	decl := declaration{keyword: keyword, expressions: []Expression{*expression}}
 
 	for _, v := range reservedOrExpression {
 		switch v := v.(type) {
