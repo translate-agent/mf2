@@ -383,7 +383,8 @@ func lexExpr(l *lexer) stateFn {
 		(l.prev.typ == itemFunction ||
 			l.prev.typ == itemQuotedLiteral ||
 			l.prev.typ == itemUnquotedLiteral ||
-			l.prev.typ == itemNumberLiteral) ||
+			l.prev.typ == itemNumberLiteral ||
+			l.prev.typ == itemVariable) ||
 		l.prev.typ == itemMarkupOpen:
 		l.backup()
 		return lexIdentifier(l)
