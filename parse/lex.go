@@ -283,16 +283,17 @@ func lexComplexMessage(l *lexer) stateFn {
 
 		switch {
 		default:
-			l.backup()
+			return l.emitErrorf("unknown character in complex message: %s", string(r))
 
-			return lexLiteral(l)
 		case r == '.':
 			l.isComplexMessage = true
 
 			switch {
 			default: // reserved keyword
 				l.backup()
-				return lexName(l) // TODO: return lexReservedKeyword
+				l.isReservedBody = true
+
+				return lexName(l)
 			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
 				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
@@ -303,7 +304,9 @@ func lexComplexMessage(l *lexer) stateFn {
 				l.pos += len(keywordMatch)
 				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
 			}
-		// TODO: parse reserved-statement
+		case l.isReservedBody:
+			l.backup()
+			return lexReservedBody(l)
 		case r == '$':
 			l.backup()
 			return lexName(l)
@@ -334,6 +337,13 @@ func lexComplexMessage(l *lexer) stateFn {
 			}
 		case r == '*':
 			return l.emitItem(mk(itemCatchAllKey, "*"))
+		case isDigit(r),
+			r == '-' && isDigit(l.peek()),
+			r == '|',
+			isName(r):
+			l.backup()
+
+			return lexLiteral(l)
 		case r == eof:
 			return nil
 		}

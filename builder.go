@@ -19,11 +19,10 @@ type Builder struct {
 	newline string
 	err     error
 
-	locals    []local
-	inputs    []*Expression
-	selectors []*Expression // matcher selectors
-	variants  []variant     // matcher variants
-	pattern   []any
+	declarations []declaration // input, local, reserved
+	selectors    []*Expression // matcher selectors
+	variants     []variant     // matcher variants
+	pattern      []any
 }
 
 func NewBuilder() *Builder {
@@ -44,16 +43,11 @@ func (b *Builder) Build() (string, error) {
 
 	var s string
 
-	for _, v := range b.inputs {
-		s += ".input" + b.spacing + v.build(b.spacing) + b.newline
+	for _, decl := range b.declarations {
+		s += decl.build(b.spacing) + b.newline
 	}
 
-	for _, v := range b.locals {
-		s += ".local" + b.spacing + varSymbol + string(v.variable) + b.spacing + "=" +
-			b.spacing + v.expr.build(b.spacing) + b.newline
-	}
-
-	quotedPattern := (len(b.inputs) > 0 || len(b.locals) > 0) && (len(b.variants) == 0 && len(b.selectors) == 0)
+	quotedPattern := len(b.declarations) > 0 && (len(b.variants) == 0 && len(b.selectors) == 0)
 
 	if len(b.pattern) > 0 {
 		if v, ok := b.pattern[0].(string); ok && !hasSimpleStart(v) {
@@ -176,25 +170,95 @@ func (b *Builder) Text(s string) *Builder {
 	return b
 }
 
+type declaration struct {
+	keyword      string
+	operand      variable // only for local
+	expressions  []Expression
+	reservedBody []ReservedBody // only for reserved
+}
+
+func (d declaration) build(spacing string) string {
+	s := "." + d.keyword
+
+	switch d.keyword {
+	case "local":
+		s += spacing + varSymbol + string(d.operand) + spacing + "="
+	case "input":
+		// noop
+	default: // reserved
+		for _, rb := range d.reservedBody {
+			switch rb := rb.(type) {
+			case Quoted:
+				s += spacing + printQuoted(string(rb))
+			case ReservedText:
+				s += spacing + reservedEscape(string(rb))
+			}
+		}
+	}
+
+	for _, expr := range d.expressions {
+		s += spacing + expr.build(spacing)
+	}
+
+	return s
+}
+
+// Local adds local declaration to the builder.
 func (b *Builder) Local(v string, expr *Expression) *Builder {
 	if b.err != nil {
 		return b
 	}
 
-	b.locals = append(b.locals, local{variable: variable(v), expr: expr})
+	b.declarations = append(b.declarations, declaration{
+		keyword:     "local",
+		operand:     variable(v),
+		expressions: []Expression{*expr},
+	})
 
 	return b
 }
 
+// Input adds input declaration to the builder.
 func (b *Builder) Input(expr *Expression) *Builder {
 	if b.err != nil {
 		return b
 	}
 
-	b.inputs = append(b.inputs, expr)
+	b.declarations = append(b.declarations, declaration{
+		keyword:     "input",
+		expressions: []Expression{*expr},
+	})
 
 	return b
 }
+
+// Reserved adds reserved statement to the builder.
+func (b *Builder) Reserved(
+	keyword string,
+	expression *Expression,
+	reservedOrExpression ...ReservedOrExpression,
+) *Builder {
+	if b.err != nil {
+		return b
+	}
+
+	decl := declaration{keyword: keyword, expressions: []Expression{*expression}}
+
+	for _, v := range reservedOrExpression {
+		switch v := v.(type) {
+		case ReservedBody:
+			decl.reservedBody = append(decl.reservedBody, v)
+		case *Expression:
+			decl.expressions = append(decl.expressions, *v)
+		}
+	}
+
+	b.declarations = append(b.declarations, decl)
+
+	return b
+}
+
+type ReservedOrExpression interface{ reservedOrExpression() }
 
 func Expr() *Expression { return new(Expression) }
 
@@ -280,11 +344,6 @@ func (v *variant) build(spacing string) string {
 	return s + "}}"
 }
 
-type local struct {
-	expr     *Expression
-	variable variable
-}
-
 type literal any
 
 type variable string
@@ -299,6 +358,8 @@ type Expression struct {
 	annotation any // function or annotation
 	attributes []attribute
 }
+
+func (Expression) reservedOrExpression() {}
 
 func (e *Expression) build(spacing string) string {
 	s := "{"
@@ -472,18 +533,21 @@ func LiteralOption(name string, value any) FuncOption {
 
 func (FuncOption) optsAndAttr() {}
 
-type TextOrQuoted interface{ textOrQuoted() }
+type ReservedBody interface{ reservedBody() }
 
 type (
 	Quoted       string
 	ReservedText string
 )
 
-func (q Quoted) textOrQuoted()       {}
-func (r ReservedText) textOrQuoted() {}
+func (Quoted) reservedBody()         {}
+func (Quoted) reservedOrExpression() {}
+
+func (ReservedText) reservedBody()         {}
+func (ReservedText) reservedOrExpression() {}
 
 type annotation struct {
-	body  []TextOrQuoted
+	body  []ReservedBody
 	start AnnotationStart
 }
 
@@ -535,13 +599,13 @@ func (a AnnotationStart) String() string {
 }
 
 // Annotation adds Private Use or Reserved annotation to the expression.
-func Annotation(start AnnotationStart, textOrQuoted ...TextOrQuoted) *Expression {
-	return Expr().Annotation(start, textOrQuoted...)
+func Annotation(start AnnotationStart, reservedBody ...ReservedBody) *Expression {
+	return Expr().Annotation(start, reservedBody...)
 }
 
 // Annotation adds Private Use or Reserved annotation to the expression.
-func (e *Expression) Annotation(start AnnotationStart, textOrQuoted ...TextOrQuoted) *Expression {
-	e.annotation = annotation{body: textOrQuoted, start: start}
+func (e *Expression) Annotation(start AnnotationStart, reservedBody ...ReservedBody) *Expression {
+	e.annotation = annotation{body: reservedBody, start: start}
 
 	return e
 }
