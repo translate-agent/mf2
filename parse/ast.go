@@ -454,6 +454,11 @@ func (rs ReservedStatement) validate() error {
 		return errors.New("reservedStatement: keyword is empty")
 	}
 
+	switch k := rs.Keyword; k {
+	case keywordMatch, keywordLocal, keywordInput:
+		return fmt.Errorf("reservedStatement: keyword '%s' is not allowed", k)
+	}
+
 	if len(rs.Expressions) == 0 {
 		return errors.New("reservedStatement: at least one expression is required")
 	}
