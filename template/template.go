@@ -120,6 +120,7 @@ func (t *Template) resolveExpression(expr ast.Expression) error {
 	}
 
 	if expr.Annotation == nil {
+		// NOTE: Parser won't allow value to be nil if annotation is nil.
 		valueStr := fmt.Sprint(value) // TODO: If value does not implement fmt.Stringer, what then ?
 		return t.executer.writeString(valueStr)
 	}
