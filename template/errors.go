@@ -20,7 +20,7 @@ var (
 )
 
 func syntaxErr(err error) error {
-	return fmt.Errorf("%w: %w", ErrSyntax, err)
+	return errors.Join(ErrSyntax, err)
 }
 
 func unresolvedVariableErr(v ast.Variable) error {
@@ -48,5 +48,5 @@ func unsupportedExpressionErr(annotation ast.Annotation) error {
 }
 
 func formattingErr(err error) error {
-	return fmt.Errorf("%w: %w", ErrFormatting, err)
+	return errors.Join(ErrFormatting, err)
 }
