@@ -39,7 +39,7 @@ func Must(t *Template, err error) *Template {
 func (t *Template) Parse(input string) (*Template, error) {
 	ast, err := ast.Parse(input)
 	if err != nil {
-		return nil, syntaxErr(err)
+		return nil, fmt.Errorf("%w: %s", ErrSyntax, err.Error())
 	}
 
 	*t = Template(ast)
@@ -170,7 +170,7 @@ func resolveAnnotation(operand any, annotation ast.Annotation, input map[string]
 
 	result, err := execF(operand, opts)
 	if err != nil {
-		return "", formattingErr(err)
+		return "", fmt.Errorf("%w: %s", ErrFormatting, err.Error())
 	}
 
 	return result, nil

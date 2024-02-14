@@ -19,10 +19,6 @@ var (
 	ErrFormatting            = errors.New("formatting error")
 )
 
-func syntaxErr(err error) error {
-	return errors.Join(ErrSyntax, err)
-}
-
 func unresolvedVariableErr(v ast.Variable) error {
 	return fmt.Errorf("%w '%s'", ErrUnresolvedVariable, v)
 }
@@ -45,8 +41,4 @@ func unsupportedExpressionErr(annotation ast.Annotation) error {
 	}
 
 	return fmt.Errorf("%w with %s: '%s'", ErrUnsupportedExpression, typ, annotation)
-}
-
-func formattingErr(err error) error {
-	return errors.Join(ErrFormatting, err)
 }
