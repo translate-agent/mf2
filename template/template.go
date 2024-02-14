@@ -70,14 +70,14 @@ func (t *Template) Execute(wr io.Writer, input map[string]any) error {
 	t.executer = newExecuter(wr, input)
 
 	switch message := t.ast.Message.(type) {
+	default:
+		return fmt.Errorf("unknown message type: '%T'", message)
 	case nil:
 		return nil
 	case ast.SimpleMessage:
 		return t.resolveSimpleMessage(message)
 	case ast.ComplexMessage:
 		return errors.New("complex message not implemented") // TODO: Implement.
-	default:
-		return fmt.Errorf("unknown message type: '%T'", message)
 	}
 }
 
