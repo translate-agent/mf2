@@ -269,7 +269,6 @@ func (ql QuotedLiteral) String() string {
 
 	return fmt.Sprintf("|%s|", r.Replace(string(ql)))
 }
-
 func (nl NameLiteral) String() string   { return string(nl) }
 func (nl NumberLiteral) String() string { return fmt.Sprint(float64(nl)) }
 
