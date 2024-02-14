@@ -10,7 +10,7 @@ import (
 )
 
 type fn struct {
-	f    execFn
+	f    ExecFn
 	name string
 }
 

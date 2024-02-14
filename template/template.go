@@ -9,11 +9,11 @@ import (
 	ast "go.expect.digital/mf2/parse"
 )
 
-type execFn func(operand any, opts map[string]any) (string, error)
+type ExecFn func(operand any, opts map[string]any) (string, error)
 
 type Template struct {
 	ast       *ast.AST
-	execFuncs map[string]execFn
+	execFuncs map[string]ExecFn
 	executer  *executer
 }
 
@@ -35,7 +35,7 @@ func newExecuter(wr io.Writer, input map[string]any) *executer {
 }
 
 func New() *Template {
-	return &Template{execFuncs: make(map[string]execFn)}
+	return &Template{execFuncs: make(map[string]ExecFn)}
 }
 
 func Must(t *Template, err error) *Template {
@@ -47,7 +47,7 @@ func Must(t *Template, err error) *Template {
 }
 
 // AddFunc adds a function to the template's function map.
-func (t *Template) AddFunc(name string, f execFn) {
+func (t *Template) AddFunc(name string, f ExecFn) {
 	t.execFuncs[name] = f
 }
 
