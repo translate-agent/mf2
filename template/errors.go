@@ -32,13 +32,12 @@ func duplicateOptionNameErr(name string) error {
 }
 
 func unsupportedExpressionErr(annotation ast.Annotation) error {
-	var typ string
 	switch annotation.(type) {
+	default:
+		return ErrUnsupportedExpression
 	case ast.PrivateUseAnnotation:
-		typ = "private use annotation"
+		return fmt.Errorf("%w with private use annotation: '%s'", ErrUnsupportedExpression, annotation)
 	case ast.ReservedAnnotation:
-		typ = "reserved annotation"
+		return fmt.Errorf("%w with reserved annotation: '%s'", ErrUnsupportedExpression, annotation)
 	}
-
-	return fmt.Errorf("%w with %s: '%s'", ErrUnsupportedExpression, typ, annotation)
 }
