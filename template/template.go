@@ -1,31 +1,41 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
-	"sync"
 
 	ast "go.expect.digital/mf2/parse"
 )
 
 type execFn func(operand any, opts map[string]any) (string, error)
 
-var execFuncs = map[string]execFn{}
-
-var mutex sync.Mutex
-
-// AddFunc adds a function to the template's function map.
-func AddFunc(name string, f func(any, map[string]any) (string, error)) {
-	mutex.Lock()
-	execFuncs[name] = f
-	mutex.Unlock()
+type Template struct {
+	ast       *ast.AST
+	execFuncs map[string]execFn
+	executer  *executer
 }
 
-type Template ast.AST
+type executer struct {
+	wr    io.Writer
+	input map[string]any
+}
+
+func (e *executer) writeString(s string) error {
+	if _, err := e.wr.Write([]byte(s)); err != nil {
+		return fmt.Errorf("write: %w", err)
+	}
+
+	return nil
+}
+
+func newExecuter(wr io.Writer, input map[string]any) *executer {
+	return &executer{wr: wr, input: input}
+}
 
 func New() *Template {
-	return new(Template)
+	return &Template{execFuncs: make(map[string]execFn)}
 }
 
 func Must(t *Template, err error) *Template {
@@ -36,39 +46,39 @@ func Must(t *Template, err error) *Template {
 	return t
 }
 
+// AddFunc adds a function to the template's function map.
+func (t *Template) AddFunc(name string, f execFn) {
+	t.execFuncs[name] = f
+}
+
 func (t *Template) Parse(input string) (*Template, error) {
 	ast, err := ast.Parse(input)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrSyntax, err.Error())
 	}
 
-	*t = Template(ast)
+	t.ast = &ast
 
 	return t, nil
 }
 
 func (t *Template) Execute(wr io.Writer, input map[string]any) error {
-	var resolve func() (string, error)
+	if t.ast == nil {
+		return errors.New("AST is nil")
+	}
 
-	switch message := t.Message.(type) {
+	t.executer = newExecuter(wr, input)
+
+	switch message := t.ast.Message.(type) {
 	case nil:
 		return nil
 	case ast.SimpleMessage:
-		resolve = func() (string, error) { return resolveSimpleMessage(message, input) }
+		return t.resolveSimpleMessage(message)
 	case ast.ComplexMessage:
-		return fmt.Errorf("'%T' not implemented", message) // TODO: Implement.
+		return errors.New("complex message not implemented") // TODO: Implement.
+	default:
+		return fmt.Errorf("unknown message type: '%T'", message)
 	}
-
-	s, err := resolve()
-	if err != nil {
-		return fmt.Errorf("resolve message: %w", err)
-	}
-
-	if _, err = wr.Write([]byte(s)); err != nil {
-		return fmt.Errorf("write: %w", err)
-	}
-
-	return nil
 }
 
 // Sprint wraps Execute and returns the result as a string.
@@ -84,51 +94,48 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 
 // ------------------------------------Resolvers------------------------------------
 
-func resolveSimpleMessage(message ast.SimpleMessage, input map[string]any) (string, error) {
-	var s string
-
+func (t *Template) resolveSimpleMessage(message ast.SimpleMessage) error {
 	for _, pattern := range message {
 		switch pattern := pattern.(type) {
 		case ast.TextPattern:
-			s += string(pattern)
-		case ast.Expression:
-			expr, err := resolveExpression(pattern, input)
-			if err != nil {
-				return "", fmt.Errorf("resolve expression: %w", err)
+			if err := t.executer.writeString(string(pattern)); err != nil {
+				return err
 			}
-
-			s += expr
+		case ast.Expression:
+			if err := t.resolveExpression(pattern); err != nil {
+				return fmt.Errorf("resolve expression: %w", err)
+			}
 		case ast.Markup: // TODO: Implement.
-			return "", fmt.Errorf("'%T' not implemented", pattern)
+			return fmt.Errorf("'%T' not implemented", pattern)
 		}
 	}
 
-	return s, nil
+	return nil
 }
 
-func resolveExpression(expr ast.Expression, input map[string]any) (string, error) {
-	value, err := resolveValue(expr.Operand, input)
+func (t *Template) resolveExpression(expr ast.Expression) error {
+	value, err := t.resolveValue(expr.Operand)
 	if err != nil {
-		return "", fmt.Errorf("resolve value: %w", err)
+		return fmt.Errorf("resolve value: %w", err)
 	}
 
 	if expr.Annotation == nil {
-		return fmt.Sprint(value), nil // TODO: If value does not implement fmt.Stringer, what then ?
+		valueStr := fmt.Sprint(value) // TODO: If value does not implement fmt.Stringer, what then ?
+		return t.executer.writeString(valueStr)
 	}
 
-	result, err := resolveAnnotation(value, expr.Annotation, input)
-	if err != nil {
-		return "", err
+	if err := t.resolveAnnotation(value, expr.Annotation); err != nil {
+		return err
 	}
 
-	return result, nil
+	return nil
 }
 
 // resolveValue resolves the value of an expression's operand.
 //
 //   - If the operand is a literal, it returns the literal's value.
 //   - If the operand is a variable, it returns the value of the variable from the input map.
-func resolveValue(v ast.Value, input map[string]any) (any, error) {
+func (t *Template) resolveValue(v ast.Value) (any, error) {
 	var resolved any
 
 	switch v := v.(type) {
@@ -141,7 +148,7 @@ func resolveValue(v ast.Value, input map[string]any) (any, error) {
 	case ast.NumberLiteral:
 		resolved = float64(v)
 	case ast.Variable:
-		val, ok := input[string(v)]
+		val, ok := t.executer.input[string(v)]
 		if !ok {
 			return nil, unresolvedVariableErr(v)
 		}
@@ -152,31 +159,31 @@ func resolveValue(v ast.Value, input map[string]any) (any, error) {
 	return resolved, nil
 }
 
-func resolveAnnotation(operand any, annotation ast.Annotation, input map[string]any) (string, error) {
+func (t *Template) resolveAnnotation(operand any, annotation ast.Annotation) error {
 	annoFn, ok := annotation.(ast.Function)
 	if !ok {
-		return "", unsupportedExpressionErr(annotation)
+		return unsupportedExpressionErr(annotation)
 	}
 
-	execF, ok := execFuncs[annoFn.Identifier.Name]
+	execF, ok := t.execFuncs[annoFn.Identifier.Name]
 	if !ok {
-		return "", unknownFunctionErr(annoFn.Identifier.Name)
+		return unknownFunctionErr(annoFn.Identifier.Name)
 	}
 
-	opts, err := resolveOptions(annoFn.Options, input)
+	opts, err := t.resolveOptions(annoFn.Options)
 	if err != nil {
-		return "", fmt.Errorf("resolve options: %w", err)
+		return fmt.Errorf("resolve options: %w", err)
 	}
 
 	result, err := execF(operand, opts)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrFormatting, err.Error())
+		return fmt.Errorf("%w: %s", ErrFormatting, err.Error())
 	}
 
-	return result, nil
+	return t.executer.writeString(result)
 }
 
-func resolveOptions(options []ast.Option, input map[string]any) (map[string]any, error) {
+func (t *Template) resolveOptions(options []ast.Option) (map[string]any, error) {
 	m := make(map[string]any, len(options))
 
 	for _, opt := range options {
@@ -185,7 +192,7 @@ func resolveOptions(options []ast.Option, input map[string]any) (map[string]any,
 			return nil, duplicateOptionNameErr(name)
 		}
 
-		value, err := resolveValue(opt.Value, input)
+		value, err := t.resolveValue(opt.Value)
 		if err != nil {
 			return nil, fmt.Errorf("resolve value: %w", err)
 		}

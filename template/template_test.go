@@ -9,13 +9,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type fn struct {
+	f    execFn
+	name string
+}
+
 func Test_ExecuteSimpleMessage(t *testing.T) {
 	t.Parallel()
-
-	type fn struct {
-		f    execFn
-		name string
-	}
 
 	type args struct {
 		inputMap map[string]any
@@ -144,12 +144,12 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			for _, f := range tt.funcs {
-				AddFunc(f.name, f.f)
-			}
-
 			template, err := New().Parse(tt.args.inputStr)
 			require.NoError(t, err)
+
+			for _, f := range tt.funcs {
+				template.AddFunc(f.name, f.f)
+			}
 
 			actual, err := template.Sprint(tt.args.inputMap)
 			require.NoError(t, err)
@@ -162,14 +162,12 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 func Test_ExecuteErrors(t *testing.T) {
 	t.Parallel()
 
-	AddFunc("existing", func(any, map[string]any) (string, error) { return "", nil })
-	AddFunc("error", func(any, map[string]any) (string, error) { return "", fmt.Errorf("error") })
-
 	tests := []struct {
 		name               string
 		expectedParseErr   error
 		expectedExecuteErr error
 		inputStr           string
+		fn                 fn // exec function to be added before executing
 	}{
 		{
 			name:             "syntax error",
@@ -190,6 +188,10 @@ func Test_ExecuteErrors(t *testing.T) {
 			name:               "duplicate option name",
 			inputStr:           "Hello, { :existing style=first style=second }!",
 			expectedExecuteErr: ErrDuplicateOptionName,
+			fn: fn{
+				name: "existing",
+				f:    func(any, map[string]any) (string, error) { return "", nil },
+			},
 		},
 		{
 			name:               "unsupported expression",
@@ -200,6 +202,10 @@ func Test_ExecuteErrors(t *testing.T) {
 			name:               "formatting error",
 			inputStr:           "Hello, { :error }!",
 			expectedExecuteErr: ErrFormatting,
+			fn: fn{
+				name: "error",
+				f:    func(any, map[string]any) (string, error) { return "", fmt.Errorf("error occurred") },
+			},
 		},
 	}
 
@@ -213,6 +219,8 @@ func Test_ExecuteErrors(t *testing.T) {
 				require.ErrorIs(t, err, tt.expectedParseErr)
 				return
 			}
+
+			template.AddFunc(tt.fn.name, tt.fn.f)
 
 			_, err = template.Sprint(nil)
 			require.ErrorIs(t, err, tt.expectedExecuteErr)
