@@ -126,7 +126,7 @@ func (t *Template) resolveExpression(expr ast.Expression) error {
 	}
 
 	if err := t.resolveAnnotation(value, expr.Annotation); err != nil {
-		return err
+		return fmt.Errorf("resolve annotation: %w", err)
 	}
 
 	return nil
@@ -137,27 +137,25 @@ func (t *Template) resolveExpression(expr ast.Expression) error {
 //   - If the operand is a literal, it returns the literal's value.
 //   - If the operand is a variable, it returns the value of the variable from the input map.
 func (t *Template) resolveValue(v ast.Value) (any, error) {
-	var resolved any
-
 	switch v := v.(type) {
+	default:
+		return nil, fmt.Errorf("unknown value type: '%T'", v)
 	case nil:
-		// noop
+		return v, nil // nil is also a valid value.
 	case ast.QuotedLiteral:
-		resolved = string(v)
+		return string(v), nil
 	case ast.NameLiteral:
-		resolved = string(v)
+		return string(v), nil
 	case ast.NumberLiteral:
-		resolved = float64(v)
+		return float64(v), nil
 	case ast.Variable:
 		val, ok := t.executer.input[string(v)]
 		if !ok {
 			return nil, unresolvedVariableErr(v)
 		}
 
-		resolved = val
+		return val, nil
 	}
-
-	return resolved, nil
 }
 
 func (t *Template) resolveAnnotation(operand any, annotation ast.Annotation) error {
