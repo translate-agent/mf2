@@ -9,6 +9,18 @@ import (
 	ast "go.expect.digital/mf2/parse"
 )
 
+// MessageFormat2 Errors as defined in the specification.
+//
+// https://github.com/unicode-org/message-format-wg/blob/122e64c2482b54b6eff4563120915e0f86de8e4d/spec/errors.md
+var (
+	ErrSyntax                = errors.New("syntax error")
+	ErrUnresolvedVariable    = errors.New("unresolved variable")
+	ErrUnknownFunction       = errors.New("unknown function reference")
+	ErrDuplicateOptionName   = errors.New("duplicate option name")
+	ErrUnsupportedExpression = errors.New("unsupported expression")
+	ErrFormatting            = errors.New("formatting error")
+)
+
 type ExecFn func(operand any, opts map[string]any) (string, error)
 
 type Template struct {
@@ -151,7 +163,7 @@ func (t *Template) resolveValue(v ast.Value) (any, error) {
 	case ast.Variable:
 		val, ok := t.executer.input[string(v)]
 		if !ok {
-			return nil, unresolvedVariableErr(v)
+			return nil, fmt.Errorf("%w '%s'", ErrUnresolvedVariable, v)
 		}
 
 		return val, nil
@@ -161,12 +173,12 @@ func (t *Template) resolveValue(v ast.Value) (any, error) {
 func (t *Template) resolveAnnotation(operand any, annotation ast.Annotation) error {
 	annoFn, ok := annotation.(ast.Function)
 	if !ok {
-		return unsupportedExpressionErr(annotation)
+		return fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, annotation, annotation)
 	}
 
 	execF, ok := t.execFuncs[annoFn.Identifier.Name]
 	if !ok {
-		return unknownFunctionErr(annoFn.Identifier.Name)
+		return fmt.Errorf("%w '%s'", ErrUnknownFunction, annoFn.Identifier.Name)
 	}
 
 	opts, err := t.resolveOptions(annoFn.Options)
@@ -188,7 +200,7 @@ func (t *Template) resolveOptions(options []ast.Option) (map[string]any, error) 
 	for _, opt := range options {
 		name := opt.Identifier.Name
 		if _, ok := m[name]; ok {
-			return nil, duplicateOptionNameErr(name)
+			return nil, fmt.Errorf("%w '%s'", ErrDuplicateOptionName, name)
 		}
 
 		value, err := t.resolveValue(opt.Value)
