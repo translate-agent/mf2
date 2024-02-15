@@ -123,8 +123,7 @@ func (e *executer) resolveExpression(expr ast.Expression) error {
 
 	if expr.Annotation == nil {
 		// NOTE: Parser won't allow value to be nil if annotation is nil.
-		valueStr := fmt.Sprint(value) // TODO: If value does not implement fmt.Stringer, what then ?
-		return e.writeString(valueStr)
+		return e.writeString(fmt.Sprint(value)) // TODO: If value does not implement fmt.Stringer, what then ?
 	}
 
 	if err := e.resolveAnnotation(value, expr.Annotation); err != nil {
