@@ -21,8 +21,10 @@ var (
 	ErrFormatting            = errors.New("formatting error")
 )
 
-type Func func(operand any, opts map[string]any) (string, error)
+// Func is a function, that will be called when a function is encountered in the template.
+type Func func(operand any, options map[string]any) (string, error)
 
+// Template represents a MessageFormat2 template.
 type Template struct {
 	ast   *ast.AST
 	funcs map[string]Func
@@ -33,6 +35,7 @@ func (t *Template) AddFunc(name string, f Func) {
 	t.funcs[name] = f
 }
 
+// Parse parses the MessageFormat2 string and returns the template.
 func (t *Template) Parse(input string) (*Template, error) {
 	ast, err := ast.Parse(input)
 	if err != nil {
@@ -44,6 +47,7 @@ func (t *Template) Parse(input string) (*Template, error) {
 	return t, nil
 }
 
+// Execute writes the result of the template to the given writer.
 func (t *Template) Execute(wr io.Writer, input map[string]any) error {
 	if t.ast == nil {
 		return errors.New("AST is nil")
@@ -65,6 +69,7 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 	return sb.String(), nil
 }
 
+// New returns a new Template.
 func New() *Template { return &Template{funcs: make(map[string]Func)} }
 
 type executer struct {
