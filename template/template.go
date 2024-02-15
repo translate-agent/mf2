@@ -21,16 +21,16 @@ var (
 	ErrFormatting            = errors.New("formatting error")
 )
 
-type ExecFn func(operand any, opts map[string]any) (string, error)
+type Func func(operand any, opts map[string]any) (string, error)
 
 type Template struct {
-	ast       *ast.AST
-	execFuncs map[string]ExecFn
+	ast   *ast.AST
+	funcs map[string]Func
 }
 
 // AddFunc adds a function to the template's function map.
-func (t *Template) AddFunc(name string, f ExecFn) {
-	t.execFuncs[name] = f
+func (t *Template) AddFunc(name string, f Func) {
+	t.funcs[name] = f
 }
 
 func (t *Template) Parse(input string) (*Template, error) {
@@ -65,9 +65,7 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 	return sb.String(), nil
 }
 
-func New() *Template {
-	return &Template{execFuncs: make(map[string]ExecFn)}
-}
+func New() *Template { return &Template{funcs: make(map[string]Func)} }
 
 type executer struct {
 	template *Template
@@ -165,7 +163,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) err
 		return fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, annotation, annotation)
 	}
 
-	execF, ok := e.template.execFuncs[annoFn.Identifier.Name]
+	fn, ok := e.template.funcs[annoFn.Identifier.Name]
 	if !ok {
 		return fmt.Errorf("%w '%s'", ErrUnknownFunction, annoFn.Identifier.Name)
 	}
@@ -175,7 +173,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) err
 		return fmt.Errorf("resolve options: %w", err)
 	}
 
-	result, err := execF(operand, opts)
+	result, err := fn(operand, opts)
 	if err != nil {
 		return fmt.Errorf("%w: %s", ErrFormatting, err.Error())
 	}
