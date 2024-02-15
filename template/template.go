@@ -75,7 +75,7 @@ type executer struct {
 	input    map[string]any
 }
 
-func (e *executer) writeString(s string) error {
+func (e *executer) write(s string) error {
 	if _, err := e.wr.Write([]byte(s)); err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
@@ -100,7 +100,7 @@ func (e *executer) resolveSimpleMessage(message ast.SimpleMessage) error {
 	for _, pattern := range message {
 		switch pattern := pattern.(type) {
 		case ast.TextPattern:
-			if err := e.writeString(string(pattern)); err != nil {
+			if err := e.write(string(pattern)); err != nil {
 				return err
 			}
 		case ast.Expression:
@@ -123,7 +123,7 @@ func (e *executer) resolveExpression(expr ast.Expression) error {
 
 	if expr.Annotation == nil {
 		// NOTE: Parser won't allow value to be nil if annotation is nil.
-		return e.writeString(fmt.Sprint(value)) // TODO: If value does not implement fmt.Stringer, what then ?
+		return e.write(fmt.Sprint(value)) // TODO: If value does not implement fmt.Stringer, what then ?
 	}
 
 	if err := e.resolveAnnotation(value, expr.Annotation); err != nil {
@@ -180,7 +180,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) err
 		return fmt.Errorf("%w: %s", ErrFormatting, err.Error())
 	}
 
-	return e.writeString(result)
+	return e.write(result)
 }
 
 func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) {
