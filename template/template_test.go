@@ -159,6 +159,85 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 	}
 }
 
+func Test_ExecuteComplexMessage(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		inputMap map[string]any
+		inputStr string
+	}
+
+	tests := []struct {
+		name     string
+		args     args
+		expected string
+		funcs    []fn // exec functions to be added before executing
+	}{
+		{
+			name: "complex message without declaration",
+			args: args{
+				inputStr: "{{Hello, {|literal|} World!}}",
+				inputMap: nil,
+			},
+			expected: "Hello, literal World!",
+		},
+		{
+			name: "local declarations",
+			args: args{
+				inputStr: `.local $var1 = { literalExpression }
+		.local $var2 = { $anotherVar }
+		.local $var3 = { :randNum }
+		{{Hello, {$var1} {$var2} {$var3}!}}`,
+				inputMap: map[string]any{"anotherVar": "World"},
+			},
+			funcs: []fn{
+				{
+					name: "randNum",
+					f: func(_ any, _ map[string]any) (string, error) {
+						return "0", nil
+					},
+				},
+			},
+			expected: "Hello, literalExpression World 0!",
+		},
+		{
+			name: "input declaration",
+			args: args{
+				inputStr: ".input { $name :upper } {{Hello, {$name}!}}",
+				inputMap: map[string]any{"name": "john"},
+			},
+			funcs: []fn{
+				{
+					name: "upper",
+					f: func(v any, _ map[string]any) (string, error) {
+						return strings.ToUpper(fmt.Sprint(v)), nil
+					},
+				},
+			},
+			expected: "Hello, JOHN!",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			template, err := New().Parse(tt.args.inputStr)
+			require.NoError(t, err)
+
+			for _, f := range tt.funcs {
+				template.AddFunc(f.name, f.f)
+			}
+
+			actual, err := template.Sprint(tt.args.inputMap)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
 func Test_ExecuteErrors(t *testing.T) {
 	t.Parallel()
 
