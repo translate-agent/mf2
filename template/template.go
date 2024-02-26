@@ -181,6 +181,7 @@ func (e *executer) resolvePattern(pattern ast.Pattern) error {
 	default:
 		return fmt.Errorf("unknown pattern type: %T", patternType)
 	}
+
 	return nil
 }
 
