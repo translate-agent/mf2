@@ -241,31 +241,49 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 func Test_ExecuteErrors(t *testing.T) {
 	t.Parallel()
 
+	type args struct {
+		inputMap map[string]any
+		inputStr string
+	}
+
 	tests := []struct {
 		name               string
 		expectedParseErr   error
 		expectedExecuteErr error
 		inputStr           string
+		args               args
 		fn                 fn // exec function to be added before executing
 	}{
 		{
-			name:             "syntax error",
-			inputStr:         "Hello { $name",
+			name: "syntax error",
+			args: args{
+				inputStr: "Hello { $name",
+				inputMap: nil,
+			},
 			expectedParseErr: ErrSyntax,
 		},
 		{
-			name:               "unresolved variable",
-			inputStr:           "Hello, { $name }!",
+			name: "unresolved variable",
+			args: args{
+				inputStr: "Hello, { $name }!",
+				inputMap: nil,
+			},
 			expectedExecuteErr: ErrUnresolvedVariable,
 		},
 		{
-			name:               "unknown function",
-			inputStr:           "Hello, { :f }!",
+			name: "unknown function",
+			args: args{
+				inputStr: "Hello, { :f }!",
+				inputMap: nil,
+			},
 			expectedExecuteErr: ErrUnknownFunction,
 		},
 		{
-			name:               "duplicate option name",
-			inputStr:           "Hello, { :existing style=first style=second }!",
+			name: "duplicate option name",
+			args: args{
+				inputStr: "Hello, { :existing style=first style=second }!",
+				inputMap: nil,
+			},
 			expectedExecuteErr: ErrDuplicateOptionName,
 			fn: fn{
 				name: "existing",
@@ -273,18 +291,48 @@ func Test_ExecuteErrors(t *testing.T) {
 			},
 		},
 		{
-			name:               "unsupported expression",
-			inputStr:           "Hello, { 12 ^private }!",
+			name: "unsupported expression",
+			args: args{
+				inputStr: "Hello, { 12 ^private }!",
+				inputMap: nil,
+			},
 			expectedExecuteErr: ErrUnsupportedExpression,
 		},
 		{
-			name:               "formatting error",
-			inputStr:           "Hello, { :error }!",
+			name: "formatting error",
+			args: args{
+				inputStr: "Hello, { :error }!",
+				inputMap: nil,
+			},
 			expectedExecuteErr: ErrFormatting,
 			fn: fn{
 				name: "error",
 				f:    func(any, map[string]any) (string, error) { return "", fmt.Errorf("error occurred") },
 			},
+		},
+		{
+			name: "unsupported declaration",
+			args: args{
+				inputStr: ".reserved { $name } {{Hello, {$name}!}}",
+				inputMap: nil,
+			},
+			expectedExecuteErr: ErrUnsupportedStatement,
+		},
+		{
+			name: "duplicate declaration",
+			args: args{
+				inputStr: ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
+				inputMap: map[string]any{"var": "22"},
+			},
+			expectedExecuteErr: ErrDuplicateDeclaration,
+		},
+		{
+			name: "duplicate declaration",
+			args: args{
+				inputStr: ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
+				inputMap: map[string]any{"ext": "22"},
+			},
+			expectedExecuteErr: ErrDuplicateDeclaration,
 		},
 	}
 
@@ -293,7 +341,7 @@ func Test_ExecuteErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New().Parse(tt.inputStr)
+			template, err := New().Parse(tt.args.inputStr)
 			if tt.expectedParseErr != nil {
 				require.ErrorIs(t, err, tt.expectedParseErr)
 				return
@@ -301,7 +349,7 @@ func Test_ExecuteErrors(t *testing.T) {
 
 			template.AddFunc(tt.fn.name, tt.fn.f)
 
-			_, err = template.Sprint(nil)
+			_, err = template.Sprint(tt.args.inputMap)
 			require.ErrorIs(t, err, tt.expectedExecuteErr)
 		})
 	}

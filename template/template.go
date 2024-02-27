@@ -20,6 +20,7 @@ var (
 	ErrUnsupportedExpression = errors.New("unsupported expression")
 	ErrFormatting            = errors.New("formatting error")
 	ErrUnsupportedStatement  = errors.New("unsupported statement")
+	ErrDuplicateDeclaration  = errors.New("duplicate declaration")
 )
 
 // Func is a function, that will be called when a function is encountered in the template.
@@ -119,11 +120,19 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 }
 
 func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
+	m := make(map[ast.Value]struct{}, len(declarations))
+
 	for _, decl := range declarations {
 		switch d := decl.(type) {
 		case ast.ReservedStatement:
-			return fmt.Errorf("%w: '%sb'", ErrUnsupportedStatement, "reserved statement")
+			return fmt.Errorf("%w: '%s'", ErrUnsupportedStatement, "reserved statement")
 		case ast.LocalDeclaration:
+			if _, ok := m[d.Variable]; ok {
+				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, "duplicate declaration")
+			}
+
+			m[d.Variable] = struct{}{}
+
 			resolved, err := e.resolveExpression(d.Expression)
 			if err != nil {
 				return fmt.Errorf("resolve expression: %w", err)
@@ -132,6 +141,12 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 			e.input[string(d.Variable)] = resolved
 
 		case ast.InputDeclaration:
+			if _, ok := m[d.Operand.(ast.Variable)]; ok {
+				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, "duplicate declaration")
+			}
+
+			m[d.Operand.(ast.Variable)] = struct{}{} //nolint: forcetypeassert
+
 			resolved, err := e.resolveExpression(ast.Expression(d))
 			if err != nil {
 				return fmt.Errorf("resolve expression: %w", err)
@@ -175,11 +190,7 @@ func (e *executer) resolvePattern(pattern ast.Pattern) error {
 			return fmt.Errorf("resolve expression: %w", err)
 		}
 	case ast.Markup:
-		if err := e.write(fmt.Sprintf("%v", patternType)); err != nil {
-			return fmt.Errorf("write markup pattern: %w", err)
-		}
-	default:
-		return fmt.Errorf("unknown pattern type: %T", patternType)
+		return errors.New("matcher not implemented")
 	}
 
 	return nil
