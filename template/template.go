@@ -141,11 +141,11 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 			e.input[string(d.Variable)] = resolved
 
 		case ast.InputDeclaration:
-			if _, ok := m[d.Operand.(ast.Variable)]; ok {
+			if _, ok := m[d.Operand]; ok {
 				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, "duplicate declaration")
 			}
 
-			m[d.Operand.(ast.Variable)] = struct{}{} //nolint: forcetypeassert
+			m[d.Operand] = struct{}{}
 
 			resolved, err := e.resolveExpression(ast.Expression(d))
 			if err != nil {

@@ -250,7 +250,6 @@ func Test_ExecuteErrors(t *testing.T) {
 		name               string
 		expectedParseErr   error
 		expectedExecuteErr error
-		inputStr           string
 		args               args
 		fn                 fn // exec function to be added before executing
 	}{
