@@ -19,6 +19,8 @@ var (
 	ErrDuplicateOptionName   = errors.New("duplicate option name")
 	ErrUnsupportedExpression = errors.New("unsupported expression")
 	ErrFormatting            = errors.New("formatting error")
+	ErrUnsupportedStatement  = errors.New("unsupported statement")
+	ErrDuplicateDeclaration  = errors.New("duplicate declaration")
 )
 
 // Func is a function, that will be called when a function is encountered in the template.
@@ -93,47 +95,124 @@ func (e *executer) execute() error {
 	case nil:
 		return nil
 	case ast.SimpleMessage:
-		return e.resolveSimpleMessage(message)
+		for _, pattern := range message {
+			if err := e.resolvePattern(pattern); err != nil {
+				return fmt.Errorf("resolve pattern: %w", err)
+			}
+		}
 	case ast.ComplexMessage:
-		return errors.New("complex message not implemented") // TODO: Implement.
+		return e.resolveComplexMessage(message)
 	}
+
+	return nil
 }
 
-func (e *executer) resolveSimpleMessage(message ast.SimpleMessage) error {
-	for _, pattern := range message {
-		switch pattern := pattern.(type) {
-		case ast.TextPattern:
-			if err := e.write(string(pattern)); err != nil {
-				return err
+func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
+	if err := e.resolveDeclarations(message.Declarations); err != nil {
+		return fmt.Errorf("resolve declarations: %w", err)
+	}
+
+	if err := e.resolveComplexBody(message.ComplexBody); err != nil {
+		return fmt.Errorf("resolve complex body: %w", err)
+	}
+
+	return nil
+}
+
+func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
+	m := make(map[ast.Value]struct{}, len(declarations))
+
+	for _, decl := range declarations {
+		switch d := decl.(type) {
+		case ast.ReservedStatement:
+			return fmt.Errorf("%w: '%s'", ErrUnsupportedStatement, "reserved statement")
+		case ast.LocalDeclaration:
+			if _, ok := m[d.Variable]; ok {
+				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, "duplicate declaration")
 			}
-		case ast.Expression:
-			if err := e.resolveExpression(pattern); err != nil {
+
+			m[d.Variable] = struct{}{}
+
+			resolved, err := e.resolveExpression(d.Expression)
+			if err != nil {
 				return fmt.Errorf("resolve expression: %w", err)
 			}
-		case ast.Markup: // TODO: Implement.
-			return fmt.Errorf("'%T' not implemented", pattern)
+
+			e.input[string(d.Variable)] = resolved
+
+		case ast.InputDeclaration:
+			if _, ok := m[d.Operand]; ok {
+				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, "duplicate declaration")
+			}
+
+			m[d.Operand] = struct{}{}
+
+			resolved, err := e.resolveExpression(ast.Expression(d))
+			if err != nil {
+				return fmt.Errorf("resolve expression: %w", err)
+			}
+
+			e.input[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // Will always be a variable.
 		}
 	}
 
 	return nil
 }
 
-func (e *executer) resolveExpression(expr ast.Expression) error {
+func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
+	switch b := body.(type) {
+	case ast.Matcher:
+		return errors.New("matcher not implemented")
+	case ast.QuotedPattern:
+		for _, p := range b {
+			if err := e.resolvePattern(p); err != nil {
+				return fmt.Errorf("resolve pattern: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (e *executer) resolvePattern(pattern ast.Pattern) error {
+	switch patternType := pattern.(type) {
+	case ast.TextPattern:
+		if err := e.write(string(patternType)); err != nil {
+			return fmt.Errorf("write text pattern: %w", err)
+		}
+	case ast.Expression:
+		resolved, err := e.resolveExpression(patternType)
+		if err != nil {
+			return fmt.Errorf("resolve expression: %w", err)
+		}
+
+		if err := e.write(resolved); err != nil {
+			return fmt.Errorf("resolve expression: %w", err)
+		}
+	case ast.Markup:
+		return errors.New("matcher not implemented")
+	}
+
+	return nil
+}
+
+func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 	value, err := e.resolveValue(expr.Operand)
 	if err != nil {
-		return fmt.Errorf("resolve value: %w", err)
+		return "", fmt.Errorf("resolve value: %w", err)
 	}
 
 	if expr.Annotation == nil {
 		// NOTE: Parser won't allow value to be nil if annotation is nil.
-		return e.write(fmt.Sprint(value)) // TODO: If value does not implement fmt.Stringer, what then ?
+		return fmt.Sprint(value), nil // TODO: If value does not implement fmt.Stringer, what then ?
 	}
 
-	if err := e.resolveAnnotation(value, expr.Annotation); err != nil {
-		return fmt.Errorf("resolve annotation: %w", err)
+	resolved, err := e.resolveAnnotation(value, expr.Annotation)
+	if err != nil {
+		return "", fmt.Errorf("resolve annotation: %w", err)
 	}
 
-	return nil
+	return resolved, nil
 }
 
 // resolveValue resolves the value of an expression's operand.
@@ -162,28 +241,28 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	}
 }
 
-func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) error {
+func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (string, error) {
 	annoFn, ok := annotation.(ast.Function)
 	if !ok {
-		return fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, annotation, annotation)
+		return "", fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, annotation, annotation)
 	}
 
 	fn, ok := e.template.funcs[annoFn.Identifier.Name]
 	if !ok {
-		return fmt.Errorf("%w '%s'", ErrUnknownFunction, annoFn.Identifier.Name)
+		return "", fmt.Errorf("%w '%s'", ErrUnknownFunction, annoFn.Identifier.Name)
 	}
 
 	opts, err := e.resolveOptions(annoFn.Options)
 	if err != nil {
-		return fmt.Errorf("resolve options: %w", err)
+		return "", fmt.Errorf("resolve options: %w", err)
 	}
 
 	result, err := fn(operand, opts)
 	if err != nil {
-		return fmt.Errorf("%w: %s", ErrFormatting, err.Error())
+		return "", fmt.Errorf("%w: %s", ErrFormatting, err.Error())
 	}
 
-	return e.write(result)
+	return result, nil
 }
 
 func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) {
