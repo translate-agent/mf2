@@ -7,9 +7,9 @@ import "fmt"
 var stringRegistryF = &Func{
 	Name:            "string",
 	Description:     "Formatting of strings as a literal and selection based on string equality",
-	FormatSignature: &Signature{Input: true},
-	MatchSignature:  &Signature{Input: true},
-	F:               stringF,
+	FormatSignature: &Signature{IsInputRequired: true},
+	MatchSignature:  &Signature{IsInputRequired: true},
+	Fn:              stringF,
 }
 
 func stringF(input any, _ map[string]any) (any, error) {

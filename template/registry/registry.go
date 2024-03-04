@@ -6,22 +6,22 @@ import (
 	"strings"
 )
 
-type Registry []Func
+type Registry map[string]Func
 
 // Func is a function that can be used in formatting and matching contexts.
 type Func struct {
 	FormatSignature *Signature                             // Signature of the function when called in formatting context
 	MatchSignature  *Signature                             // Signature of the function when called in matching context
-	F               func(any, map[string]any) (any, error) // Function itself
+	Fn              func(any, map[string]any) (any, error) // Function itself
 	Name            string
 	Description     string
 }
 
 // Signature is a signature of the function, i.e. what input and options are allowed.
 type Signature struct {
-	ValidateInput func(any) error // Only when input is true
-	Options       Options         // Possible options for the function
-	Input         bool            // If true, input is required
+	ValidateInput   func(any) error
+	Options         Options
+	IsInputRequired bool
 }
 
 // Option is a possible options for the function.
@@ -36,57 +36,48 @@ type Option struct {
 
 type Options []Option
 
+// NewRegistry returns a new registry with default functions.
 func NewRegistry() Registry {
-	return []Func{
-		*stringRegistryF,
-		*numberRegistryF,
+	return Registry{
+		"string": *stringRegistryF,
+		"number": *numberRegistryF,
 	}
 }
 
-func (r Registry) Find(name string) (Func, bool) {
-	for _, fn := range r {
-		if fn.Name == name {
-			return fn, true
-		}
+func (f *Func) Format(input any, options map[string]any) (any, error) {
+	if f.FormatSignature == nil {
+		return "", fmt.Errorf("function '%s' is not allowed to use in formatting context", f.Name)
 	}
 
-	return Func{}, false
-}
-
-func (r *Func) Format(input any, options map[string]any) (any, error) {
-	if r.FormatSignature == nil {
-		return "", fmt.Errorf("function '%s' is not allowed to use in formatting context", r.Name)
-	}
-
-	if err := r.FormatSignature.check(input, options); err != nil {
+	if err := f.FormatSignature.check(input, options); err != nil {
 		return "", fmt.Errorf("check input: %w", err)
 	}
 
-	return r.F(input, options)
+	return f.Fn(input, options)
 }
 
-func (r *Func) Match(input any, options map[string]any) (any, error) {
-	if r.MatchSignature == nil {
-		return "", fmt.Errorf("function '%s' is not allowed to use in selector context", r.Name)
+func (f *Func) Match(input any, options map[string]any) (any, error) {
+	if f.MatchSignature == nil {
+		return "", fmt.Errorf("function '%s' is not allowed to use in selector context", f.Name)
 	}
 
-	if err := r.MatchSignature.check(input, options); err != nil {
+	if err := f.MatchSignature.check(input, options); err != nil {
 		return "", fmt.Errorf("check input: %w", err)
 	}
 
-	return r.F(input, options)
+	return f.Fn(input, options)
 }
 
 func (s *Signature) check(input any, options map[string]any) error {
-	if s.Input && input == nil {
-		return errors.New("input is nil, but required")
+	if s.IsInputRequired && input == nil {
+		return errors.New("input is required, got nil")
 	}
 
-	if !s.Input && input != nil {
+	if !s.IsInputRequired && input != nil {
 		return errors.New("input is not allowed")
 	}
 
-	if s.Options == nil && len(options) > 0 {
+	if len(s.Options) == 0 && len(options) > 0 {
 		return errors.New("options are not allowed")
 	}
 
@@ -114,12 +105,12 @@ func (o Options) check(got map[string]any) error {
 				validOptions = append(validOptions, opt.Name)
 			}
 
-			return fmt.Errorf("unknown option: '%s'. Valid options: [%s]", name, strings.Join(validOptions, ", "))
+			return fmt.Errorf("expected one of options - %s, got %s", strings.Join(validOptions, ", "), name)
 		}
 
 		if opt.ValidateValue != nil {
 			if err := opt.ValidateValue(val); err != nil {
-				return fmt.Errorf("validate options value '%s': %w", name, err)
+				return fmt.Errorf("validate option value '%s': %w", name, err)
 			}
 		}
 
@@ -138,6 +129,8 @@ func (o Options) check(got map[string]any) error {
 			}
 		}
 	}
+
+	// TODO: Append option to the got map, when option is not provided, but it has a default value.
 
 	return nil
 }

@@ -13,10 +13,10 @@ import (
 var numberRegistryF = &Func{
 	Name:           "number",
 	Description:    "Locale-sensitive number formatting",
-	F:              numberF,
+	Fn:             numberF,
 	MatchSignature: nil, // Not allowed to use in matching context
 	FormatSignature: &Signature{
-		Input: true,
+		IsInputRequired: true,
 		ValidateInput: func(a any) error {
 			if _, err := castAs[float64](a); err != nil {
 				return fmt.Errorf("unsupported type: %T: %w", a, err)
@@ -40,8 +40,17 @@ Current currency &amp; funds code list
 (https://www.unicode.org/cldr/charts/latest/supplemental/detailed_territory_currency_information.html).
 There is no default value; if the style is "currency", the currency property must be provided.`,
 				ValidateValue: func(a any) error {
-					_, err := castAs[currency.Unit](a)
-					return err
+					unit, ok := a.(currency.Unit)
+					if !ok {
+						return fmt.Errorf("expected currency.Unit got %T", a)
+					}
+
+					var zeroVal currency.Unit
+					if unit == zeroVal {
+						return fmt.Errorf("currency is not set")
+					}
+
+					return nil
 				},
 			},
 			{

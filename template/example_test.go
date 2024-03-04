@@ -60,7 +60,7 @@ func ExampleTemplate_complexMessage() {
 		Name: "color",
 		FormatSignature: &registry.Signature{
 			// Mark that input/operand is required for a function
-			Input: true,
+			IsInputRequired: true,
 			// Set a validation function for the input/operand, in this
 			// scenario we want to ensure that the input is a string
 			ValidateInput: func(a any) error {
@@ -80,7 +80,7 @@ func ExampleTemplate_complexMessage() {
 			},
 		},
 		// Define the function
-		F: func(color any, options map[string]any) (any, error) {
+		Fn: func(color any, options map[string]any) (any, error) {
 			if options == nil {
 				return color, nil
 			}

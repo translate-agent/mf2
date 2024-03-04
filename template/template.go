@@ -42,7 +42,7 @@ type Template struct {
 
 // AddFunc adds a function to the template's function map.
 func (t *Template) AddFunc(f registry.Func) {
-	t.funcRegistry = append(t.funcRegistry, f)
+	t.funcRegistry[f.Name] = f
 }
 
 // Parse parses the MessageFormat2 string and returns the template.
@@ -257,7 +257,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 		return "", fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, annotation, annotation)
 	}
 
-	registryF, ok := e.template.funcRegistry.Find(annoFn.Identifier.Name)
+	registryF, ok := e.template.funcRegistry[annoFn.Identifier.Name]
 	if !ok {
 		return "", fmt.Errorf("%w '%s'", ErrUnknownFunction, annoFn.Identifier.Name)
 	}
