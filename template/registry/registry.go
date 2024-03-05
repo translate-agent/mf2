@@ -36,8 +36,8 @@ type Option struct {
 
 type Options []Option
 
-// NewRegistry returns a new registry with default functions.
-func NewRegistry() Registry {
+// New returns a new registry with default functions.
+func New() Registry {
 	return Registry{
 		"string": *stringRegistryF,
 		"number": *numberRegistryF,

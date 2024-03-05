@@ -81,7 +81,7 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 
 // New returns a new Template.
 func New() *Template {
-	return &Template{funcRegistry: registry.NewRegistry()}
+	return &Template{funcRegistry: registry.New()}
 }
 
 type executer struct {
