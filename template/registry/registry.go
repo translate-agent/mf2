@@ -87,10 +87,8 @@ func (s *Signature) check(input any, options map[string]any) error {
 		}
 	}
 
-	if len(options) > 0 {
-		if err := s.Options.check(options); err != nil {
-			return fmt.Errorf("check options: %w", err)
-		}
+	if err := s.Options.check(options); err != nil {
+		return fmt.Errorf("check options: %w", err)
 	}
 
 	return nil
