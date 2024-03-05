@@ -199,8 +199,10 @@ func (e *executer) resolvePattern(pattern ast.Pattern) error {
 		if err := e.write(resolved); err != nil {
 			return fmt.Errorf("resolve expression: %w", err)
 		}
+	//nolint:lll
+	// When formatting to a string, markup placeholders format to an empty string by default.
+	// https://github.com/unicode-org/message-format-wg/blob/main/exploration/open-close-placeholders.md#formatting-to-a-string
 	case ast.Markup:
-		return errors.New("matcher not implemented")
 	}
 
 	return nil
