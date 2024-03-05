@@ -158,7 +158,7 @@ func numberF(input any, options map[string]any) (any, error) {
 		return nil, fmt.Errorf("convert input to float64: %w", err)
 	}
 
-	if options == nil {
+	if len(options) == 0 {
 		return num, nil
 	}
 
