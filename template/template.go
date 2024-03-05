@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	ast "go.expect.digital/mf2/parse"
+	"go.expect.digital/mf2/template/registry"
 )
 
 // MessageFormat2 Errors as defined in the specification.
@@ -28,13 +29,20 @@ type Func func(operand any, options map[string]any) (string, error)
 
 // Template represents a MessageFormat2 template.
 type Template struct {
-	ast   *ast.AST
-	funcs map[string]Func
+	// TODO: locale field. Can change the output of some functions.
+	// e.g. number formatting, given example { $num :number }:
+	//  - "en-US" -> 1,234.56
+	//  - "lv-LV" -> 1234,56
+	// e.g. date formatting, given example { $date :datetime }:
+	//  - "en-US" -> 1/2/2023
+	//  - "lv-LV" -> 2.1.2023
+	ast          *ast.AST
+	funcRegistry registry.Registry
 }
 
 // AddFunc adds a function to the template's function map.
-func (t *Template) AddFunc(name string, f Func) {
-	t.funcs[name] = f
+func (t *Template) AddFunc(f registry.Func) {
+	t.funcRegistry[f.Name] = f
 }
 
 // Parse parses the MessageFormat2 string and returns the template.
@@ -72,7 +80,9 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 }
 
 // New returns a new Template.
-func New() *Template { return &Template{funcs: make(map[string]Func)} }
+func New() *Template {
+	return &Template{funcRegistry: registry.New()}
+}
 
 type executer struct {
 	template *Template
@@ -128,7 +138,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 			return fmt.Errorf("%w: '%s'", ErrUnsupportedStatement, "reserved statement")
 		case ast.LocalDeclaration:
 			if _, ok := m[d.Variable]; ok {
-				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, "duplicate declaration")
+				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, d)
 			}
 
 			m[d.Variable] = struct{}{}
@@ -142,7 +152,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 
 		case ast.InputDeclaration:
 			if _, ok := m[d.Operand]; ok {
-				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, "duplicate declaration")
+				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, d)
 			}
 
 			m[d.Operand] = struct{}{}
@@ -247,7 +257,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 		return "", fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, annotation, annotation)
 	}
 
-	fn, ok := e.template.funcs[annoFn.Identifier.Name]
+	registryF, ok := e.template.funcRegistry[annoFn.Identifier.Name]
 	if !ok {
 		return "", fmt.Errorf("%w '%s'", ErrUnknownFunction, annoFn.Identifier.Name)
 	}
@@ -257,12 +267,12 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 		return "", fmt.Errorf("resolve options: %w", err)
 	}
 
-	result, err := fn(operand, opts)
+	result, err := registryF.Format(operand, opts)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrFormatting, err.Error())
 	}
 
-	return result, nil
+	return fmt.Sprint(result), nil
 }
 
 func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) {

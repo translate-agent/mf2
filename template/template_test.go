@@ -1,18 +1,12 @@
 package template
 
 import (
-	"fmt"
-	"strings"
+	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.expect.digital/mf2/template/registry"
 )
-
-type fn struct {
-	f    Func
-	name string
-}
 
 func Test_ExecuteSimpleMessage(t *testing.T) {
 	t.Parallel()
@@ -26,7 +20,7 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 		name     string
 		args     args
 		expected string
-		funcs    []fn // exec functions to be added before executing
+		funcs    []registry.Func // format functions to be added before executing
 	}{
 		{
 			name: "empty message",
@@ -55,87 +49,28 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 		{
 			name: "functions with operand",
 			args: args{
-				inputStr: "Hello, { $firstName :upper } { $secondName :lower style=first } { $date :date }!",
+				inputStr: "Hello, { $firstName :string } your age is { $age :number style=decimal }!",
 				inputMap: map[string]any{
-					"firstName":  "John",
-					"secondName": "Doe",
-					"date":       time.Date(2021, 9, 1, 0, 0, 0, 0, time.UTC),
+					"firstName": "John",
+					"age":       23,
 				},
 			},
-			funcs: []fn{
-				{
-					name: "upper",
-					f: func(v any, _ map[string]any) (string, error) {
-						return strings.ToUpper(fmt.Sprint(v)), nil
-					},
-				},
-				{
-					name: "lower",
-					f: func(v any, opts map[string]any) (string, error) {
-						if opts == nil {
-							return strings.ToLower(fmt.Sprint(v)), nil
-						}
-
-						if style, ok := opts["style"].(string); ok {
-							switch style {
-							case "first":
-								return strings.ToLower(fmt.Sprint(v)[0:1]) + fmt.Sprint(v)[1:], nil
-							default:
-								return "", fmt.Errorf("unsupported style: %s", style)
-							}
-						}
-
-						return "", nil
-					},
-				},
-				{
-					name: "date",
-					f: func(v any, _ map[string]any) (string, error) {
-						date, ok := v.(time.Time)
-						if !ok {
-							return "", fmt.Errorf("unsupported type: %T", v)
-						}
-
-						return date.Format("2006-01-02"), nil
-					},
-				},
-			},
-			expected: "Hello, JOHN doe 2021-09-01!",
+			expected: "Hello, John your age is 23!",
 		},
 		{
 			name: "function without operand",
 			args: args{
-				inputStr: "Hello, { :randFirstName } { :randSecondName style=caps }!",
+				inputStr: "Hello, { :randName }",
 				inputMap: nil,
 			},
-			funcs: []fn{
+			funcs: []registry.Func{
 				{
-					name: "randFirstName",
-					f: func(_ any, _ map[string]any) (string, error) {
-						return "John", nil
-					},
-				},
-				{
-					name: "randSecondName",
-					f: func(_ any, opts map[string]any) (string, error) {
-						if opts == nil {
-							return "Doe", nil
-						}
-
-						if style, ok := opts["style"].(string); ok {
-							switch style {
-							case "caps":
-								return "DOE", nil
-							default:
-								return "", fmt.Errorf("unsupported style: %s", style)
-							}
-						}
-
-						return "", nil
-					},
+					Name:            "randName",
+					FormatSignature: &registry.Signature{},
+					Fn:              func(_ any, _ map[string]any) (any, error) { return "John", nil },
 				},
 			},
-			expected: "Hello, John DOE!",
+			expected: "Hello, John",
 		},
 	}
 
@@ -148,7 +83,7 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 			require.NoError(t, err)
 
 			for _, f := range tt.funcs {
-				template.AddFunc(f.name, f.f)
+				template.AddFunc(f)
 			}
 
 			actual, err := template.Sprint(tt.args.inputMap)
@@ -171,7 +106,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		name     string
 		args     args
 		expected string
-		funcs    []fn // exec functions to be added before executing
+		funcs    []registry.Func // format functions to be added before executing
 	}{
 		{
 			name: "complex message without declaration",
@@ -190,12 +125,11 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		{{Hello, {$var1} {$var2} {$var3}!}}`,
 				inputMap: map[string]any{"anotherVar": "World"},
 			},
-			funcs: []fn{
+			funcs: []registry.Func{
 				{
-					name: "randNum",
-					f: func(_ any, _ map[string]any) (string, error) {
-						return "0", nil
-					},
+					Name:            "randNum",
+					FormatSignature: &registry.Signature{},
+					Fn:              func(_ any, _ map[string]any) (any, error) { return 0, nil },
 				},
 			},
 			expected: "Hello, literalExpression World 0!",
@@ -203,18 +137,10 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		{
 			name: "input declaration",
 			args: args{
-				inputStr: ".input { $name :upper } {{Hello, {$name}!}}",
-				inputMap: map[string]any{"name": "john"},
+				inputStr: ".input { $name :string } {{Hello, {$name}!}}",
+				inputMap: map[string]any{"name": 999},
 			},
-			funcs: []fn{
-				{
-					name: "upper",
-					f: func(v any, _ map[string]any) (string, error) {
-						return strings.ToUpper(fmt.Sprint(v)), nil
-					},
-				},
-			},
-			expected: "Hello, JOHN!",
+			expected: "Hello, 999!",
 		},
 	}
 
@@ -227,7 +153,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 			require.NoError(t, err)
 
 			for _, f := range tt.funcs {
-				template.AddFunc(f.name, f.f)
+				template.AddFunc(f)
 			}
 
 			actual, err := template.Sprint(tt.args.inputMap)
@@ -251,7 +177,7 @@ func Test_ExecuteErrors(t *testing.T) {
 		expectedParseErr   error
 		expectedExecuteErr error
 		args               args
-		fn                 fn // exec function to be added before executing
+		fn                 []registry.Func // format function to be added before executing
 	}{
 		{
 			name: "syntax error",
@@ -280,14 +206,10 @@ func Test_ExecuteErrors(t *testing.T) {
 		{
 			name: "duplicate option name",
 			args: args{
-				inputStr: "Hello, { :existing style=first style=second }!",
+				inputStr: "Hello, { :number style=decimal style=percent }!",
 				inputMap: nil,
 			},
 			expectedExecuteErr: ErrDuplicateOptionName,
-			fn: fn{
-				name: "existing",
-				f:    func(any, map[string]any) (string, error) { return "", nil },
-			},
 		},
 		{
 			name: "unsupported expression",
@@ -304,9 +226,12 @@ func Test_ExecuteErrors(t *testing.T) {
 				inputMap: nil,
 			},
 			expectedExecuteErr: ErrFormatting,
-			fn: fn{
-				name: "error",
-				f:    func(any, map[string]any) (string, error) { return "", fmt.Errorf("error occurred") },
+			fn: []registry.Func{
+				{
+					Name:            "error",
+					FormatSignature: &registry.Signature{},
+					Fn:              func(any, map[string]any) (any, error) { return nil, errors.New("error") },
+				},
 			},
 		},
 		{
@@ -346,7 +271,9 @@ func Test_ExecuteErrors(t *testing.T) {
 				return
 			}
 
-			template.AddFunc(tt.fn.name, tt.fn.f)
+			for _, f := range tt.fn {
+				template.AddFunc(f)
+			}
 
 			_, err = template.Sprint(tt.args.inputMap)
 			require.ErrorIs(t, err, tt.expectedExecuteErr)
