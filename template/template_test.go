@@ -142,6 +142,14 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 			},
 			expected: "Hello, 999!",
 		},
+		{
+			name: "markup",
+			args: args{
+				inputStr: "Click {#link href=$url}here{/link} standalone {#foo/}",
+				inputMap: nil,
+			},
+			expected: "Click here standalone ",
+		},
 	}
 
 	for _, tt := range tests {
