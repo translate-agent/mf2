@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
+	"sort"
 	"strings"
 
 	ast "go.expect.digital/mf2/parse"
@@ -22,6 +24,7 @@ var (
 	ErrFormatting            = errors.New("formatting error")
 	ErrUnsupportedStatement  = errors.New("unsupported statement")
 	ErrDuplicateDeclaration  = errors.New("duplicate declaration")
+	ErrSelection             = errors.New("selection error")
 )
 
 // Func is a function, that will be called when a function is encountered in the template.
@@ -38,6 +41,11 @@ type Template struct {
 	//  - "lv-LV" -> 2.1.2023
 	ast          *ast.AST
 	funcRegistry registry.Registry
+}
+
+type Selector struct { //nolint:govet
+	Key   string
+	Value any
 }
 
 // AddFunc adds a function to the template's function map.
@@ -172,7 +180,14 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
 	switch b := body.(type) {
 	case ast.Matcher:
-		return errors.New("matcher not implemented")
+		result, err := e.resolveMatcher(b)
+		if err != nil {
+			return fmt.Errorf("resolve matcher: %w", err)
+		}
+
+		if err := e.write(result); err != nil {
+			return fmt.Errorf("write matcher result: %w", err)
+		}
 	case ast.QuotedPattern:
 		for _, p := range b {
 			if err := e.resolvePattern(p); err != nil {
@@ -295,4 +310,197 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 	}
 
 	return m, nil
+}
+
+// https://github.com/unicode-org/message-format-wg/blob/main/spec/formatting.md#pattern-selection
+func (e *executer) resolveMatcher(m ast.Matcher) (string, error) {
+	output, err := e.patternSelection(m)
+	if err != nil {
+		return "", err
+	}
+
+	return output.String(), nil
+}
+
+func (e *executer) patternSelection(m ast.Matcher) (strings.Builder, error) {
+	res, err := e.resolveSelector()
+	if err != nil {
+		return strings.Builder{}, err
+	}
+
+	pref := e.resolvePreferences(m, res)
+
+	filteredVariants := e.filterVariants(m, pref)
+
+	sortable := e.sortVariants(filteredVariants, pref)
+
+	output, err := e.selectBestVariant(sortable)
+	if err != nil {
+		return strings.Builder{}, err
+	}
+
+	return output, nil
+}
+
+func (e *executer) resolveSelector() ([]Selector, error) {
+	// Step 1: Resolve Selector Value (Modified)
+	var res []Selector
+
+	for k, v := range e.input {
+		rv := Selector{k, v}
+		if e.input[k] != "" {
+			res = append(res, rv)
+		} else {
+			return nil, fmt.Errorf("%w '%s'", ErrSelection, res)
+		}
+	}
+
+	return res, nil
+}
+
+func (e *executer) resolvePreferences(m ast.Matcher, res []Selector) [][]string {
+	// Step 2: Resolve Preferences
+	var pref [][]string //nolint:prealloc
+
+	for i := range res {
+		var keys []string
+
+		for _, variant := range m.Variants {
+			for _, vKey := range variant.Keys {
+				key := vKey
+				if key.String() != "*" {
+					keys = append(keys, key.String())
+				}
+			}
+		}
+
+		rv := res[i]
+
+		matches := matchSelectorKeys(rv, keys)
+		pref = append(pref, matches)
+	}
+
+	return pref
+}
+
+func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant {
+	// Step 3: Filter Variants
+	var filteredVariants []ast.Variant
+
+	for _, variant := range m.Variants {
+		matchesAllSelectors := true
+
+		for i, keyOrder := range pref {
+			key := variant.Keys[i]
+			if key.String() == "*" {
+				continue
+			}
+
+			ks := key.String()
+			if !slices.Contains(keyOrder, ks) {
+				matchesAllSelectors = false
+				break
+			}
+		}
+
+		if matchesAllSelectors {
+			filteredVariants = append(filteredVariants, variant)
+		}
+	}
+
+	return filteredVariants
+}
+
+func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string) []SortableVariant {
+	// Step 4: Sort Variants
+	sortable := make([]SortableVariant, 0, len(filteredVariants))
+
+	for _, variant := range filteredVariants {
+		sortable = append(sortable, SortableVariant{Score: -1, Variant: variant})
+	}
+
+	for i := len(pref) - 1; i >= 0; i-- {
+		matches := pref[i]
+
+		for tupleIndex, tuple := range sortable {
+			key := tuple.Variant.Keys[i]
+			currentScore := len(matches)
+
+			if key.String() != "*" {
+				ks := key.String()
+				if position := findPosition(ks, matches); position != -1 {
+					currentScore = position
+				}
+			}
+
+			sortable[tupleIndex].Score = currentScore
+		}
+
+		SortVariants(sortable)
+	}
+
+	return sortable
+}
+
+func (e *executer) selectBestVariant(sortable []SortableVariant) (strings.Builder, error) { //nolint:unparam
+	// Select the best variant
+	bestVariant := sortable[0].Variant
+
+	var output strings.Builder
+
+	for _, patternElement := range bestVariant.QuotedPattern {
+		if err := e.resolvePattern(patternElement); err != nil {
+			return strings.Builder{}, fmt.Errorf("resolve pattern element: %w", err)
+		}
+	}
+
+	return output, nil
+}
+
+// The SortVariants function.
+func SortVariants(sortable []SortableVariant) {
+	sort.Sort(SortableVariantSlice(sortable))
+}
+
+func matchSelectorKeys(rv Selector, keys []string) []string {
+	var matches []string
+
+	for _, key := range keys {
+		if value, ok := rv.Value.(string); ok {
+			if key == value {
+				matches = append(matches, key)
+			}
+		}
+	}
+
+	return matches
+}
+
+type SortableVariant struct {
+	Variant ast.Variant
+	Score   int
+}
+
+type SortableVariantSlice []SortableVariant
+
+func (s SortableVariantSlice) Len() int {
+	return len(s)
+}
+
+func (s SortableVariantSlice) Less(i, j int) bool {
+	return s[i].Score < s[j].Score
+}
+
+func (s SortableVariantSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func findPosition(ks string, matches []string) int {
+	for index, match := range matches {
+		if ks == match {
+			return index
+		}
+	}
+
+	return -1 // Not found
 }

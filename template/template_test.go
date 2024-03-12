@@ -150,6 +150,56 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 			},
 			expected: "Click here standalone ",
 		},
+		{
+			name: "matcher many",
+			args: args{
+				inputStr: ".match { $n } 0 {{no apples}} 1 {{{ $n } apple}} * {{{ $n } apples}}",
+				inputMap: map[string]any{"n": "9898"},
+			},
+			expected: "9898 apples",
+		},
+		{
+			name: "matcher one",
+			args: args{
+				inputStr: ".match { $n } 0 {{no apples}} 1 {{{ $n } apple}} * {{{ $n } apples}}",
+				inputMap: map[string]any{"n": "1"},
+			},
+			expected: "1 apple",
+		},
+		{
+			name: "matcher no",
+			args: args{
+				inputStr: ".match { $n } 0 {{no apples}} 1 {{{ $n } apple}} * {{{ $n } apples}}",
+				inputMap: map[string]any{"n": "0"},
+			},
+			expected: "no apples",
+		},
+		{
+			name: "Pattern Selection with string annotation",
+			args: args{
+				//nolint:dupword
+				inputStr: ".match {$foo :string} {$bar :string} bar bar {{All bar}} foo foo {{All foo}} * * {{Otherwise}}",
+				inputMap: map[string]any{"foo": "foo", "bar": "bar"},
+			},
+			expected: "Otherwise",
+		},
+		{
+			name: "Pattern Selection with Multiple Variants",
+			args: args{
+				inputStr: `.match {$foo :string} {$bar :string} * bar {{Any and bar}}
+							foo * {{Foo and any}} foo bar {{Foo and bar}} * * {{Otherwise}}`,
+				inputMap: map[string]any{"foo": "foo", "bar": "bar"},
+			},
+			expected: "Foo and bar",
+		},
+		{
+			name: "Plural Format Selection",
+			args: args{
+				inputStr: ".match {$count :number} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+				inputMap: map[string]any{"count": "1"},
+			},
+			expected: "Exact match",
+		},
 	}
 
 	for _, tt := range tests {
@@ -265,6 +315,14 @@ func Test_ExecuteErrors(t *testing.T) {
 				inputMap: map[string]any{"ext": "22"},
 			},
 			expectedExecuteErr: ErrDuplicateDeclaration,
+		},
+		{
+			name: "selection error",
+			args: args{
+				inputStr: ".match {$n} 0 {{no apples}} 1 {{apple}} * {{apples}}",
+				inputMap: map[string]any{"": ""},
+			},
+			expectedExecuteErr: ErrSelection,
 		},
 	}
 
