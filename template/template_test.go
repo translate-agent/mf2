@@ -186,8 +186,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		{
 			name: "Pattern Selection with Multiple Variants",
 			args: args{
-				inputStr: `.match {$foo :string} {$bar :string} * bar {{Any and bar}}
-							foo * {{Foo and any}} foo bar {{Foo and bar}} * * {{Otherwise}}`,
+				inputStr: ".match {$foo :string} {$bar :string} * bar {{Any and bar}}foo * {{Foo and any}} foo bar {{Foo and bar}} * * {{Otherwise}}", //nolint:lll
 				inputMap: map[string]any{"foo": "foo", "bar": "bar"},
 			},
 			expected: "Foo and bar",
