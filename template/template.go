@@ -4,9 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"slices"
 	"sort"
 	"strings"
+
+	"golang.org/x/exp/slices"
 
 	ast "go.expect.digital/mf2/parse"
 	"go.expect.digital/mf2/template/registry"
