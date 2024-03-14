@@ -17,15 +17,17 @@ import (
 //
 // https://github.com/unicode-org/message-format-wg/blob/122e64c2482b54b6eff4563120915e0f86de8e4d/spec/errors.md
 var (
-	ErrSyntax                = errors.New("syntax error")
-	ErrUnresolvedVariable    = errors.New("unresolved variable")
-	ErrUnknownFunction       = errors.New("unknown function reference")
-	ErrDuplicateOptionName   = errors.New("duplicate option name")
-	ErrUnsupportedExpression = errors.New("unsupported expression")
-	ErrFormatting            = errors.New("formatting error")
-	ErrUnsupportedStatement  = errors.New("unsupported statement")
-	ErrDuplicateDeclaration  = errors.New("duplicate declaration")
-	ErrSelection             = errors.New("selection error")
+	ErrSyntax                     = errors.New("syntax error")
+	ErrUnresolvedVariable         = errors.New("unresolved variable")
+	ErrUnknownFunction            = errors.New("unknown function reference")
+	ErrDuplicateOptionName        = errors.New("duplicate option name")
+	ErrUnsupportedAnnotation      = errors.New("unsupported annotation")
+	ErrUnsupportedExpression      = errors.New("unsupported expression")
+	ErrFormatting                 = errors.New("formatting error")
+	ErrUnsupportedStatement       = errors.New("unsupported statement")
+	ErrDuplicateDeclaration       = errors.New("duplicate declaration")
+	ErrSelectionWithoutAnnotation = errors.New("selection error")
+	ErrSelection                  = errors.New("selection error")
 )
 
 // Func is a function, that will be called when a function is encountered in the template.
@@ -320,13 +322,13 @@ func (e *executer) resolveMatcher(m ast.Matcher) (string, error) {
 		return "", err
 	}
 
-	return output.String(), nil
+	return output, nil
 }
 
-func (e *executer) patternSelection(m ast.Matcher) (strings.Builder, error) {
-	res, err := e.resolveSelector()
+func (e *executer) patternSelection(m ast.Matcher) (string, error) {
+	res, err := e.resolveSelector(m)
 	if err != nil {
-		return strings.Builder{}, err
+		return "", err
 	}
 
 	pref := e.resolvePreferences(m, res)
@@ -337,40 +339,65 @@ func (e *executer) patternSelection(m ast.Matcher) (strings.Builder, error) {
 
 	output, err := e.selectBestVariant(sortable)
 	if err != nil {
-		return strings.Builder{}, err
+		return "", err
 	}
 
 	return output, nil
 }
 
-func (e *executer) resolveSelector() ([]Selector, error) {
-	// Step 1: Resolve Selector Value (Modified)
-	var res []Selector
+func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
+	res := make([]any, 0, len(matcher.MatchStatements))
 
-	for k, v := range e.input {
-		rv := Selector{k, v}
-		if e.input[k] != "" {
-			res = append(res, rv)
-		} else {
-			return nil, fmt.Errorf("%w '%s'", ErrSelection, res)
+	for _, selectExpr := range matcher.MatchStatements {
+		var function ast.Function
+
+		switch annotation := selectExpr.Annotation.(type) {
+		case nil:
+			return nil, ErrSelectionWithoutAnnotation
+		case ast.ReservedAnnotation, ast.PrivateUseAnnotation:
+			return nil, ErrUnsupportedAnnotation
+		case ast.Function:
+			function = annotation
 		}
+
+		registryF, ok := e.template.funcRegistry[function.Identifier.Name]
+		if !ok {
+			return nil, ErrUnknownFunction
+		}
+
+		opts, err := e.resolveOptions(function.Options)
+		if err != nil {
+			return nil, fmt.Errorf("resolve options: %w", err)
+		}
+
+		input, err := e.resolveValue(selectExpr.Operand)
+		if err != nil {
+			return nil, fmt.Errorf("resolve value: %w", err)
+		}
+
+		rslt, err := registryF.Match(input, opts)
+		if err != nil {
+			return nil, fmt.Errorf("input match to options: %w", err)
+
+		}
+
+		res = append(res, rslt)
+
 	}
 
 	return res, nil
 }
-
-func (e *executer) resolvePreferences(m ast.Matcher, res []Selector) [][]string {
+func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 	// Step 2: Resolve Preferences
-	var pref [][]string //nolint:prealloc
+	pref := make([][]string, 0, len(res))
 
 	for i := range res {
 		var keys []string
 
 		for _, variant := range m.Variants {
 			for _, vKey := range variant.Keys {
-				key := vKey
-				if key.String() != "*" {
-					keys = append(keys, key.String())
+				if vKey.String() != "*" {
+					keys = append(keys, vKey.String())
 				}
 			}
 		}
@@ -443,15 +470,15 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 	return sortable
 }
 
-func (e *executer) selectBestVariant(sortable []SortableVariant) (strings.Builder, error) { //nolint:unparam
+func (e *executer) selectBestVariant(sortable []SortableVariant) (string, error) { //nolint:unparam
 	// Select the best variant
 	bestVariant := sortable[0].Variant
 
-	var output strings.Builder
+	var output string
 
 	for _, patternElement := range bestVariant.QuotedPattern {
 		if err := e.resolvePattern(patternElement); err != nil {
-			return strings.Builder{}, fmt.Errorf("resolve pattern element: %w", err)
+			return "", fmt.Errorf("resolve pattern element: %w", err)
 		}
 	}
 
@@ -460,14 +487,14 @@ func (e *executer) selectBestVariant(sortable []SortableVariant) (strings.Builde
 
 // The SortVariants function.
 func SortVariants(sortable []SortableVariant) {
-	sort.Sort(SortableVariantSlice(sortable))
+	sort.Sort(SortableVariants(sortable))
 }
 
-func matchSelectorKeys(rv Selector, keys []string) []string {
+func matchSelectorKeys(rv any, keys []string) []string {
 	var matches []string
 
 	for _, key := range keys {
-		if value, ok := rv.Value.(string); ok {
+		if value, ok := rv.(string); ok {
 			if key == value {
 				matches = append(matches, key)
 			}
@@ -482,17 +509,17 @@ type SortableVariant struct {
 	Score   int
 }
 
-type SortableVariantSlice []SortableVariant
+type SortableVariants []SortableVariant
 
-func (s SortableVariantSlice) Len() int {
+func (s SortableVariants) Len() int {
 	return len(s)
 }
 
-func (s SortableVariantSlice) Less(i, j int) bool {
+func (s SortableVariants) Less(i, j int) bool {
 	return s[i].Score < s[j].Score
 }
 
-func (s SortableVariantSlice) Swap(i, j int) {
+func (s SortableVariants) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 

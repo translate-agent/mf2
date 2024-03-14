@@ -153,7 +153,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		{
 			name: "matcher many",
 			args: args{
-				inputStr: ".match { $n } 0 {{no apples}} 1 {{{ $n } apple}} * {{{ $n } apples}}",
+				inputStr: ".match { $n :string } no {{no apples}} one {{{ $n } apple}} * {{{ $n } apples}}",
 				inputMap: map[string]any{"n": "9898"},
 			},
 			expected: "9898 apples",
@@ -161,16 +161,16 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		{
 			name: "matcher one",
 			args: args{
-				inputStr: ".match { $n } 0 {{no apples}} 1 {{{ $n } apple}} * {{{ $n } apples}}",
-				inputMap: map[string]any{"n": "1"},
+				inputStr: ".match { $n :string} no {{no apples}} one {{{ $n } apple}} * {{{ $n } apples}}",
+				inputMap: map[string]any{"n": "one"},
 			},
-			expected: "1 apple",
+			expected: "one apple",
 		},
 		{
 			name: "matcher no",
 			args: args{
-				inputStr: ".match { $n } 0 {{no apples}} 1 {{{ $n } apple}} * {{{ $n } apples}}",
-				inputMap: map[string]any{"n": "0"},
+				inputStr: ".match { $n :string} no {{no apples}} one {{{ $n } apple}} * {{{ $n } apples}}",
+				inputMap: map[string]any{"n": "no"},
 			},
 			expected: "no apples",
 		},
@@ -194,7 +194,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		{
 			name: "Plural Format Selection",
 			args: args{
-				inputStr: ".match {$count :number} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+				inputStr: ".match {$count :string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
 				inputMap: map[string]any{"count": "1"},
 			},
 			expected: "Exact match",
@@ -316,12 +316,44 @@ func Test_ExecuteErrors(t *testing.T) {
 			expectedExecuteErr: ErrDuplicateDeclaration,
 		},
 		{
-			name: "selection error",
+			name: "Selection Error No Annotation",
 			args: args{
 				inputStr: ".match {$n} 0 {{no apples}} 1 {{apple}} * {{apples}}",
-				inputMap: map[string]any{"": ""},
+				inputMap: map[string]any{"n": "1"},
 			},
-			expectedExecuteErr: ErrSelection,
+			expectedExecuteErr: ErrSelectionWithoutAnnotation,
+		},
+		{
+			name: "Selection with Reversed Annotation",
+			args: args{
+				inputStr: ".match {$count ^string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+				inputMap: map[string]any{"count": "1"},
+			},
+			expectedExecuteErr: ErrUnsupportedAnnotation,
+		},
+		{
+			name: "Selection With Private Annotation",
+			args: args{
+				inputStr: ".match {$count !string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+				inputMap: map[string]any{"count": "1"},
+			},
+			expectedExecuteErr: ErrUnsupportedAnnotation,
+		},
+		{
+			name: "Plural Format Selection",
+			args: args{
+				inputStr: ".match {$count :dsa} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+				inputMap: map[string]any{"sda": "1"},
+			},
+			expectedExecuteErr: ErrUnknownFunction,
+		},
+		{
+			name: "Plural Format Selection",
+			args: args{
+				inputStr: ".match {$count :string param=1 param=2} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+				inputMap: map[string]any{"sda": "1"},
+			},
+			expectedExecuteErr: ErrDuplicateOptionName,
 		},
 	}
 
