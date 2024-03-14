@@ -378,15 +378,14 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 		rslt, err := registryF.Match(input, opts)
 		if err != nil {
 			return nil, fmt.Errorf("input match to options: %w", err)
-
 		}
 
 		res = append(res, rslt)
-
 	}
 
 	return res, nil
 }
+
 func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 	// Step 2: Resolve Preferences
 	pref := make([][]string, 0, len(res))
