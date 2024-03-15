@@ -17,17 +17,16 @@ import (
 //
 // https://github.com/unicode-org/message-format-wg/blob/122e64c2482b54b6eff4563120915e0f86de8e4d/spec/errors.md
 var (
-	ErrSyntax                     = errors.New("syntax error")
-	ErrUnresolvedVariable         = errors.New("unresolved variable")
-	ErrUnknownFunction            = errors.New("unknown function reference")
-	ErrDuplicateOptionName        = errors.New("duplicate option name")
-	ErrUnsupportedAnnotation      = errors.New("unsupported annotation")
-	ErrUnsupportedExpression      = errors.New("unsupported expression")
-	ErrFormatting                 = errors.New("formatting error")
-	ErrUnsupportedStatement       = errors.New("unsupported statement")
-	ErrDuplicateDeclaration       = errors.New("duplicate declaration")
-	ErrSelectionWithoutAnnotation = errors.New("selection error")
-	ErrSelection                  = errors.New("selection error")
+	ErrSyntax                    = errors.New("syntax error")
+	ErrUnresolvedVariable        = errors.New("unresolved variable")
+	ErrUnknownFunction           = errors.New("unknown function reference")
+	ErrDuplicateOptionName       = errors.New("duplicate option name")
+	ErrUnsupportedExpression     = errors.New("unsupported expression")
+	ErrFormatting                = errors.New("formatting error")
+	ErrUnsupportedStatement      = errors.New("unsupported statement")
+	ErrDuplicateDeclaration      = errors.New("duplicate declaration")
+	ErrMissingSelectorAnnotation = errors.New("missing selector annotation")
+	ErrSelection                 = errors.New("selection error")
 )
 
 // Func is a function, that will be called when a function is encountered in the template.
@@ -44,11 +43,6 @@ type Template struct {
 	//  - "lv-LV" -> 2.1.2023
 	ast          *ast.AST
 	funcRegistry registry.Registry
-}
-
-type Selector struct { //nolint:govet
-	Key   string
-	Value any
 }
 
 // AddFunc adds a function to the template's function map.
@@ -183,7 +177,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
 	switch b := body.(type) {
 	case ast.Matcher:
-		result, err := e.resolveMatcher(b)
+		result, err := e.patternSelection(b)
 		if err != nil {
 			return fmt.Errorf("resolve matcher: %w", err)
 		}
@@ -315,16 +309,6 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 	return m, nil
 }
 
-// https://github.com/unicode-org/message-format-wg/blob/main/spec/formatting.md#pattern-selection
-func (e *executer) resolveMatcher(m ast.Matcher) (string, error) {
-	output, err := e.patternSelection(m)
-	if err != nil {
-		return "", err
-	}
-
-	return output, nil
-}
-
 func (e *executer) patternSelection(m ast.Matcher) (string, error) {
 	res, err := e.resolveSelector(m)
 	if err != nil {
@@ -353,16 +337,16 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		switch annotation := selectExpr.Annotation.(type) {
 		case nil:
-			return nil, ErrSelectionWithoutAnnotation
+			return nil, ErrMissingSelectorAnnotation
 		case ast.ReservedAnnotation, ast.PrivateUseAnnotation:
-			return nil, ErrUnsupportedAnnotation
+			return nil, ErrUnsupportedExpression
 		case ast.Function:
 			function = annotation
 		}
 
 		registryF, ok := e.template.funcRegistry[function.Identifier.Name]
 		if !ok {
-			return nil, ErrUnknownFunction
+			return nil, fmt.Errorf("%w '%s'", ErrUnknownFunction, function.Identifier.Name)
 		}
 
 		opts, err := e.resolveOptions(function.Options)
@@ -377,7 +361,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		rslt, err := registryF.Match(input, opts)
 		if err != nil {
-			return nil, fmt.Errorf("input match to options: %w", err)
+			return nil, fmt.Errorf("%w: %s", ErrSelection, err.Error())
 		}
 
 		res = append(res, rslt)
@@ -396,7 +380,16 @@ func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 		for _, variant := range m.Variants {
 			for _, vKey := range variant.Keys {
 				if vKey.String() != "*" {
-					keys = append(keys, vKey.String())
+					switch key := vKey.(type) {
+					case ast.CatchAllKey:
+						continue
+					case ast.NameLiteral:
+						keys = append(keys, string(key))
+					case ast.QuotedLiteral:
+						keys = append(keys, string(key))
+					case ast.NumberLiteral:
+						keys = append(keys, fmt.Sprint(key))
+					}
 				}
 			}
 		}
@@ -423,7 +416,19 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 				continue
 			}
 
-			ks := key.String()
+			var ks string
+
+			switch key := key.(type) {
+			case ast.CatchAllKey:
+				continue
+			case ast.NameLiteral:
+				ks = string(key)
+			case ast.QuotedLiteral:
+				ks = string(key)
+			case ast.NumberLiteral:
+				ks = fmt.Sprint(key)
+			}
+
 			if !slices.Contains(keyOrder, ks) {
 				matchesAllSelectors = false
 				break
@@ -454,7 +459,19 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 			currentScore := len(matches)
 
 			if key.String() != "*" {
-				ks := key.String()
+				var ks string
+
+				switch key := key.(type) {
+				case ast.CatchAllKey:
+					continue
+				case ast.NameLiteral:
+					ks = string(key)
+				case ast.QuotedLiteral:
+					ks = string(key)
+				case ast.NumberLiteral:
+					ks = fmt.Sprint(key)
+				}
+
 				if position := findPosition(ks, matches); position != -1 {
 					currentScore = position
 				}
@@ -463,7 +480,7 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 			sortable[tupleIndex].Score = currentScore
 		}
 
-		SortVariants(sortable)
+		sort.Sort(SortableVariants(sortable))
 	}
 
 	return sortable
@@ -482,11 +499,6 @@ func (e *executer) selectBestVariant(sortable []SortableVariant) (string, error)
 	}
 
 	return output, nil
-}
-
-// The SortVariants function.
-func SortVariants(sortable []SortableVariant) {
-	sort.Sort(SortableVariants(sortable))
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {

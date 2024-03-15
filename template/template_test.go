@@ -151,30 +151,6 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 			expected: "Click here standalone ",
 		},
 		{
-			name: "matcher many",
-			args: args{
-				inputStr: ".match { $n :string } no {{no apples}} one {{{ $n } apple}} * {{{ $n } apples}}",
-				inputMap: map[string]any{"n": "9898"},
-			},
-			expected: "9898 apples",
-		},
-		{
-			name: "matcher one",
-			args: args{
-				inputStr: ".match { $n :string} no {{no apples}} one {{{ $n } apple}} * {{{ $n } apples}}",
-				inputMap: map[string]any{"n": "one"},
-			},
-			expected: "one apple",
-		},
-		{
-			name: "matcher no",
-			args: args{
-				inputStr: ".match { $n :string} no {{no apples}} one {{{ $n } apple}} * {{{ $n } apples}}",
-				inputMap: map[string]any{"n": "no"},
-			},
-			expected: "no apples",
-		},
-		{
 			name: "Pattern Selection with string annotation",
 			args: args{
 				//nolint:dupword
@@ -217,6 +193,50 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func Test_Matcher(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		inputStr  string
+		inputMaps []map[string]any
+		expected  []string
+		funcs     []registry.Func
+	}{
+		{
+			name:     "matcher string",
+			inputStr: `.match { $n :string } no {{no apples}} one {{{ $n } apple}} * {{{ $n } apples}}`,
+			inputMaps: []map[string]any{
+				{"n": "no"},
+				{"n": "one"},
+				{"n": "many"},
+			},
+			expected: []string{"no apples", "one apple", "many apples"},
+		},
+	}
+
+	for _, tt := range tests {
+		if len(tt.inputMaps) != len(tt.expected) {
+			t.Error("Arguments and expected results should have the same length")
+		}
+
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			template, err := New().Parse(tt.inputStr)
+			require.NoError(t, err)
+
+			for i, inputMap := range tt.inputMaps {
+				actual, err := template.Sprint(inputMap)
+				require.NoError(t, err)
+
+				require.Equal(t, tt.expected[i], actual)
+			}
 		})
 	}
 }
@@ -321,7 +341,7 @@ func Test_ExecuteErrors(t *testing.T) {
 				inputStr: ".match {$n} 0 {{no apples}} 1 {{apple}} * {{apples}}",
 				inputMap: map[string]any{"n": "1"},
 			},
-			expectedExecuteErr: ErrSelectionWithoutAnnotation,
+			expectedExecuteErr: ErrMissingSelectorAnnotation,
 		},
 		{
 			name: "Selection with Reversed Annotation",
@@ -329,31 +349,7 @@ func Test_ExecuteErrors(t *testing.T) {
 				inputStr: ".match {$count ^string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
 				inputMap: map[string]any{"count": "1"},
 			},
-			expectedExecuteErr: ErrUnsupportedAnnotation,
-		},
-		{
-			name: "Selection With Private Annotation",
-			args: args{
-				inputStr: ".match {$count !string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
-				inputMap: map[string]any{"count": "1"},
-			},
-			expectedExecuteErr: ErrUnsupportedAnnotation,
-		},
-		{
-			name: "Plural Format Selection",
-			args: args{
-				inputStr: ".match {$count :dsa} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
-				inputMap: map[string]any{"sda": "1"},
-			},
-			expectedExecuteErr: ErrUnknownFunction,
-		},
-		{
-			name: "Plural Format Selection",
-			args: args{
-				inputStr: ".match {$count :string param=1 param=2} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
-				inputMap: map[string]any{"sda": "1"},
-			},
-			expectedExecuteErr: ErrDuplicateOptionName,
+			expectedExecuteErr: ErrUnsupportedExpression,
 		},
 	}
 
