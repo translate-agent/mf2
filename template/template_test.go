@@ -150,31 +150,6 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 			},
 			expected: "Click here standalone ",
 		},
-		{
-			name: "Pattern Selection with string annotation",
-			args: args{
-				//nolint:dupword
-				inputStr: ".match {$foo :string} {$bar :string} bar bar {{All bar}} foo foo {{All foo}} * * {{Otherwise}}",
-				inputMap: map[string]any{"foo": "foo", "bar": "bar"},
-			},
-			expected: "Otherwise",
-		},
-		{
-			name: "Pattern Selection with Multiple Variants",
-			args: args{
-				inputStr: ".match {$foo :string} {$bar :string} * bar {{Any and bar}}foo * {{Foo and any}} foo bar {{Foo and bar}} * * {{Otherwise}}", //nolint:lll
-				inputMap: map[string]any{"foo": "foo", "bar": "bar"},
-			},
-			expected: "Foo and bar",
-		},
-		{
-			name: "Plural Format Selection",
-			args: args{
-				inputStr: ".match {$count :string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
-				inputMap: map[string]any{"count": "1"},
-			},
-			expected: "Exact match",
-		},
 	}
 
 	for _, tt := range tests {
@@ -216,6 +191,27 @@ func Test_Matcher(t *testing.T) {
 				{"n": "many"},
 			},
 			expected: []string{"no apples", "one apple", "many apples"},
+		},
+		{
+			name: "Pattern Selection with string annotation",
+			//nolint:dupword
+			inputStr: ".match {$foo :string} {$bar :string} bar bar {{All bar}} foo foo {{All foo}} * * {{Otherwise}}",
+			inputMaps: []map[string]any{
+				{"foo": "foo", "bar": "bar"},
+			},
+			expected: []string{"Otherwise"},
+		},
+		{
+			name:      "Pattern Selection with Multiple Variants",
+			inputStr:  ".match {$foo :string} {$bar :string} * bar {{Any and bar}}foo * {{Foo and any}} foo bar {{Foo and bar}} * * {{Otherwise}}", //nolint:lll
+			inputMaps: []map[string]any{{"foo": "foo", "bar": "bar"}},
+			expected:  []string{"Foo and bar"},
+		},
+		{
+			name:      "Plural Format Selection",
+			inputStr:  ".match {$count :string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+			inputMaps: []map[string]any{{"count": "1"}},
+			expected:  []string{"Exact match"},
 		},
 	}
 

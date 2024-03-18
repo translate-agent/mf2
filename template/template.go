@@ -177,13 +177,8 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
 	switch b := body.(type) {
 	case ast.Matcher:
-		result, err := e.patternSelection(b)
-		if err != nil {
+		if err := e.resolveMatcher(b); err != nil {
 			return fmt.Errorf("resolve matcher: %w", err)
-		}
-
-		if err := e.write(result); err != nil {
-			return fmt.Errorf("write matcher result: %w", err)
 		}
 	case ast.QuotedPattern:
 		for _, p := range b {
@@ -309,10 +304,10 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 	return m, nil
 }
 
-func (e *executer) patternSelection(m ast.Matcher) (string, error) {
+func (e *executer) resolveMatcher(m ast.Matcher) error {
 	res, err := e.resolveSelector(m)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("resolve selector: %w", err)
 	}
 
 	pref := e.resolvePreferences(m, res)
@@ -321,12 +316,12 @@ func (e *executer) patternSelection(m ast.Matcher) (string, error) {
 
 	sortable := e.sortVariants(filteredVariants, pref)
 
-	output, err := e.selectBestVariant(sortable)
+	err = e.selectBestVariant(sortable)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return output, nil
+	return nil
 }
 
 func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
@@ -379,17 +374,15 @@ func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 
 		for _, variant := range m.Variants {
 			for _, vKey := range variant.Keys {
-				if vKey.String() != "*" {
-					switch key := vKey.(type) {
-					case ast.CatchAllKey:
-						continue
-					case ast.NameLiteral:
-						keys = append(keys, string(key))
-					case ast.QuotedLiteral:
-						keys = append(keys, string(key))
-					case ast.NumberLiteral:
-						keys = append(keys, fmt.Sprint(key))
-					}
+				switch key := vKey.(type) {
+				case ast.CatchAllKey:
+					continue
+				case ast.NameLiteral:
+					keys = append(keys, string(key))
+				case ast.QuotedLiteral:
+					keys = append(keys, string(key))
+				case ast.NumberLiteral:
+					keys = append(keys, fmt.Sprint(key))
 				}
 			}
 		}
@@ -412,9 +405,6 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 
 		for i, keyOrder := range pref {
 			key := variant.Keys[i]
-			if key.String() == "*" {
-				continue
-			}
 
 			var ks string
 
@@ -458,24 +448,21 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 			key := tuple.Variant.Keys[i]
 			currentScore := len(matches)
 
-			if key.String() != "*" {
-				var ks string
+			var ks string
 
-				switch key := key.(type) {
-				case ast.CatchAllKey:
-					continue
-				case ast.NameLiteral:
-					ks = string(key)
-				case ast.QuotedLiteral:
-					ks = string(key)
-				case ast.NumberLiteral:
-					ks = fmt.Sprint(key)
-				}
-
-				if position := findPosition(ks, matches); position != -1 {
-					currentScore = position
-				}
+			switch key := key.(type) {
+			case ast.CatchAllKey:
+				sortable[tupleIndex].Score = currentScore
+				continue
+			case ast.NameLiteral:
+				ks = string(key)
+			case ast.QuotedLiteral:
+				ks = string(key)
+			case ast.NumberLiteral:
+				ks = fmt.Sprint(key)
 			}
+
+			currentScore = slices.Index(matches, ks)
 
 			sortable[tupleIndex].Score = currentScore
 		}
@@ -486,19 +473,17 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 	return sortable
 }
 
-func (e *executer) selectBestVariant(sortable []SortableVariant) (string, error) { //nolint:unparam
+func (e *executer) selectBestVariant(sortable []SortableVariant) error {
 	// Select the best variant
 	bestVariant := sortable[0].Variant
 
-	var output string
-
 	for _, patternElement := range bestVariant.QuotedPattern {
 		if err := e.resolvePattern(patternElement); err != nil {
-			return "", fmt.Errorf("resolve pattern element: %w", err)
+			return fmt.Errorf("resolve pattern element: %w", err)
 		}
 	}
 
-	return output, nil
+	return nil
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {
@@ -532,14 +517,4 @@ func (s SortableVariants) Less(i, j int) bool {
 
 func (s SortableVariants) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
-}
-
-func findPosition(ks string, matches []string) int {
-	for index, match := range matches {
-		if ks == match {
-			return index
-		}
-	}
-
-	return -1 // Not found
 }
