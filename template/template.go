@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
+
+	"golang.org/x/exp/slices"
 
 	ast "go.expect.digital/mf2/parse"
 	"go.expect.digital/mf2/template/registry"
@@ -14,14 +17,16 @@ import (
 //
 // https://github.com/unicode-org/message-format-wg/blob/122e64c2482b54b6eff4563120915e0f86de8e4d/spec/errors.md
 var (
-	ErrSyntax                = errors.New("syntax error")
-	ErrUnresolvedVariable    = errors.New("unresolved variable")
-	ErrUnknownFunction       = errors.New("unknown function reference")
-	ErrDuplicateOptionName   = errors.New("duplicate option name")
-	ErrUnsupportedExpression = errors.New("unsupported expression")
-	ErrFormatting            = errors.New("formatting error")
-	ErrUnsupportedStatement  = errors.New("unsupported statement")
-	ErrDuplicateDeclaration  = errors.New("duplicate declaration")
+	ErrSyntax                    = errors.New("syntax error")
+	ErrUnresolvedVariable        = errors.New("unresolved variable")
+	ErrUnknownFunction           = errors.New("unknown function reference")
+	ErrDuplicateOptionName       = errors.New("duplicate option name")
+	ErrUnsupportedExpression     = errors.New("unsupported expression")
+	ErrFormatting                = errors.New("formatting error")
+	ErrUnsupportedStatement      = errors.New("unsupported statement")
+	ErrDuplicateDeclaration      = errors.New("duplicate declaration")
+	ErrMissingSelectorAnnotation = errors.New("missing selector annotation")
+	ErrSelection                 = errors.New("selection error")
 )
 
 // Func is a function, that will be called when a function is encountered in the template.
@@ -172,7 +177,9 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
 	switch b := body.(type) {
 	case ast.Matcher:
-		return errors.New("matcher not implemented")
+		if err := e.resolveMatcher(b); err != nil {
+			return fmt.Errorf("resolve matcher: %w", err)
+		}
 	case ast.QuotedPattern:
 		for _, p := range b {
 			if err := e.resolvePattern(p); err != nil {
@@ -295,4 +302,216 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 	}
 
 	return m, nil
+}
+
+func (e *executer) resolveMatcher(m ast.Matcher) error {
+	res, err := e.resolveSelector(m)
+	if err != nil {
+		return fmt.Errorf("resolve selector: %w", err)
+	}
+
+	pref := e.resolvePreferences(m, res)
+
+	filteredVariants := e.filterVariants(m, pref)
+
+	sortable := e.sortVariants(filteredVariants, pref)
+
+	err = e.selectBestVariant(sortable)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
+	res := make([]any, 0, len(matcher.MatchStatements))
+
+	for _, selectExpr := range matcher.MatchStatements {
+		var function ast.Function
+
+		switch annotation := selectExpr.Annotation.(type) {
+		case nil:
+			return nil, ErrMissingSelectorAnnotation
+		case ast.ReservedAnnotation, ast.PrivateUseAnnotation:
+			return nil, ErrUnsupportedExpression
+		case ast.Function:
+			function = annotation
+		}
+
+		registryF, ok := e.template.funcRegistry[function.Identifier.Name]
+		if !ok {
+			return nil, fmt.Errorf("%w '%s'", ErrUnknownFunction, function.Identifier.Name)
+		}
+
+		opts, err := e.resolveOptions(function.Options)
+		if err != nil {
+			return nil, fmt.Errorf("resolve options: %w", err)
+		}
+
+		input, err := e.resolveValue(selectExpr.Operand)
+		if err != nil {
+			return nil, fmt.Errorf("resolve value: %w", err)
+		}
+
+		rslt, err := registryF.Match(input, opts)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", ErrSelection, err.Error())
+		}
+
+		res = append(res, rslt)
+	}
+
+	return res, nil
+}
+
+func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
+	// Step 2: Resolve Preferences
+	pref := make([][]string, 0, len(res))
+
+	for i := range res {
+		var keys []string
+
+		for _, variant := range m.Variants {
+			for _, vKey := range variant.Keys {
+				switch key := vKey.(type) {
+				case ast.CatchAllKey:
+					continue
+				case ast.NameLiteral, ast.QuotedLiteral:
+					keys = append(keys, key.String())
+				case ast.NumberLiteral:
+					keys = append(keys, fmt.Sprint(key))
+				}
+			}
+		}
+
+		rv := res[i]
+
+		matches := matchSelectorKeys(rv, keys)
+		pref = append(pref, matches)
+	}
+
+	return pref
+}
+
+func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant {
+	// Step 3: Filter Variants
+	var filteredVariants []ast.Variant
+
+	for _, variant := range m.Variants {
+		matchesAllSelectors := true
+
+		for i, keyOrder := range pref {
+			key := variant.Keys[i]
+
+			var ks string
+
+			switch key := key.(type) {
+			case ast.CatchAllKey:
+				continue
+			case ast.NameLiteral, ast.QuotedLiteral:
+				ks = key.String()
+			case ast.NumberLiteral:
+				ks = fmt.Sprint(key)
+			}
+
+			if !slices.Contains(keyOrder, ks) {
+				matchesAllSelectors = false
+				break
+			}
+		}
+
+		if matchesAllSelectors {
+			filteredVariants = append(filteredVariants, variant)
+		}
+	}
+
+	return filteredVariants
+}
+
+func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string) []SortableVariant {
+	// Step 4: Sort Variants
+	sortable := make([]SortableVariant, 0, len(filteredVariants))
+
+	for _, variant := range filteredVariants {
+		sortable = append(sortable, SortableVariant{Score: -1, Variant: variant})
+	}
+
+	for i := len(pref) - 1; i >= 0; i-- {
+		matches := pref[i]
+
+		for tupleIndex, tuple := range sortable {
+			key := tuple.Variant.Keys[i]
+			currentScore := len(matches)
+
+			var ks string
+
+			switch key := key.(type) {
+			case ast.CatchAllKey:
+				sortable[tupleIndex].Score = currentScore
+				continue
+			case ast.NameLiteral, ast.QuotedLiteral:
+				ks = key.String()
+			case ast.NumberLiteral:
+				ks = fmt.Sprint(key)
+			}
+
+			currentScore = slices.Index(matches, ks)
+
+			sortable[tupleIndex].Score = currentScore
+		}
+
+		sort.Sort(SortableVariants(sortable))
+	}
+
+	return sortable
+}
+
+func (e *executer) selectBestVariant(sortable []SortableVariant) error {
+	// Select the best variant
+	bestVariant := sortable[0].Variant
+
+	for _, patternElement := range bestVariant.QuotedPattern {
+		if err := e.resolvePattern(patternElement); err != nil {
+			return fmt.Errorf("resolve pattern element: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func matchSelectorKeys(rv any, keys []string) []string {
+	value, ok := rv.(string)
+	if !ok {
+		return nil
+	}
+
+	var matches []string
+
+	for _, key := range keys {
+		if key == value {
+			matches = append(matches, key)
+		}
+	}
+
+	return matches
+}
+
+type SortableVariant struct {
+	Variant ast.Variant
+	Score   int
+}
+
+type SortableVariants []SortableVariant
+
+func (s SortableVariants) Len() int {
+	return len(s)
+}
+
+func (s SortableVariants) Less(i, j int) bool {
+	return s[i].Score < s[j].Score
+}
+
+func (s SortableVariants) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }
