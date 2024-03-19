@@ -377,10 +377,8 @@ func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 				switch key := vKey.(type) {
 				case ast.CatchAllKey:
 					continue
-				case ast.NameLiteral:
-					keys = append(keys, string(key))
-				case ast.QuotedLiteral:
-					keys = append(keys, string(key))
+				case ast.NameLiteral, ast.QuotedLiteral:
+					keys = append(keys, key.String())
 				case ast.NumberLiteral:
 					keys = append(keys, fmt.Sprint(key))
 				}
@@ -411,10 +409,8 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 			switch key := key.(type) {
 			case ast.CatchAllKey:
 				continue
-			case ast.NameLiteral:
-				ks = string(key)
-			case ast.QuotedLiteral:
-				ks = string(key)
+			case ast.NameLiteral, ast.QuotedLiteral:
+				ks = key.String()
 			case ast.NumberLiteral:
 				ks = fmt.Sprint(key)
 			}
@@ -454,10 +450,8 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 			case ast.CatchAllKey:
 				sortable[tupleIndex].Score = currentScore
 				continue
-			case ast.NameLiteral:
-				ks = string(key)
-			case ast.QuotedLiteral:
-				ks = string(key)
+			case ast.NameLiteral, ast.QuotedLiteral:
+				ks = key.String()
 			case ast.NumberLiteral:
 				ks = fmt.Sprint(key)
 			}
@@ -487,13 +481,16 @@ func (e *executer) selectBestVariant(sortable []SortableVariant) error {
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {
+	value, ok := rv.(string)
+	if !ok {
+		return nil
+	}
+
 	var matches []string
 
 	for _, key := range keys {
-		if value, ok := rv.(string); ok {
-			if key == value {
-				matches = append(matches, key)
-			}
+		if key == value {
+			matches = append(matches, key)
 		}
 	}
 
