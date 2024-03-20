@@ -46,7 +46,7 @@ func Test_Datetime(t *testing.T) {
 		{
 			name:     "timeZone",
 			input:    testDate,
-			options:  map[string]any{"timeStyle": "long", "dateStyle": "medium", "timeZone": "Local"},
+			options:  map[string]any{"timeStyle": "long", "dateStyle": "medium", "timeZone": "EET"},
 			expected: "02 Jan 2021 05:04:05",
 		},
 		// negative tests
