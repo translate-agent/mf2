@@ -42,6 +42,8 @@ func TestWgSyntaxErrors(t *testing.T) {
 	require.NoError(t, json.Unmarshal(wgSyntaxErrors, &inputs))
 
 	for _, input := range inputs {
+		input := input
+
 		t.Run(input, func(t *testing.T) {
 			t.Parallel()
 
@@ -63,6 +65,8 @@ func TestWgCore(t *testing.T) {
 	require.NoError(t, json.Unmarshal(wgCore, &tests))
 
 	for _, test := range tests {
+		test := test
+
 		t.Run(test.Input, func(t *testing.T) {
 			t.Parallel()
 
@@ -76,15 +80,20 @@ var wgFunctions []byte
 
 func TestWgFunctions(t *testing.T) {
 	t.Skip() // TODO(jhorsts): tests fail, fix in smaller PRs.
+	t.Parallel()
 
 	var tests map[string][]WgTest
 
 	err := json.Unmarshal(wgFunctions, &tests)
 	require.NoError(t, err)
 
-	for funcName, tests := range tests {
+	for funcName, funcTests := range tests {
+		funcTests := funcTests
+
 		t.Run(funcName, func(t *testing.T) {
-			for _, test := range tests {
+			for _, test := range funcTests {
+				test := test
+
 				t.Run(test.Input, func(t *testing.T) {
 					t.Parallel()
 
