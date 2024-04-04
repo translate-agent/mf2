@@ -230,6 +230,7 @@ func Test_Matcher(t *testing.T) {
 			for i, inputMap := range tt.inputs {
 				i := i
 				inputMap := inputMap
+
 				t.Run(tt.expected[i], func(t *testing.T) {
 					t.Parallel()
 

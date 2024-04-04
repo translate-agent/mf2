@@ -125,7 +125,7 @@ func lex(input string) *lexer { return &lexer{input: input, line: 1} }
 
 // lexer is a lexical analyzer for MessageFormat2.
 //
-// See https://github.com/unicode-org/message-format-wg/blob/122e64c2482b54b6eff4563120915e0f86de8e4d/spec/message.abnf
+// See https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/message.abnf
 type lexer struct {
 	input      string
 	item, prev item // prev non-whitespace
@@ -570,6 +570,13 @@ func lexIdentifier(l *lexer) stateFn {
 	}
 }
 
+// ABNF:
+//
+//	reserved-body      = reserved-body-part *([s] reserved-body-part)
+//	reserved-body-part = reserved-char / reserved-escape / quoted
+//	reserved-char      = content-char / "."
+//	reserved-escape    = backslash ( backslash / "{" / "|" / "}" )
+//	quoted             = "|" *(quoted-char / quoted-escape) "|"
 func lexReservedBody(l *lexer) stateFn {
 	var s string
 
@@ -584,7 +591,6 @@ func lexReservedBody(l *lexer) stateFn {
 			}
 
 			return l.emitItem(mk(itemReservedText, s))
-
 		case isWhitespace(v):
 			l.backup()
 
@@ -593,11 +599,9 @@ func lexReservedBody(l *lexer) stateFn {
 			}
 
 			return l.emitItem(mk(itemReservedText, s))
-
 		case v == '|':
 			l.backup()
 			return lexLiteral(l)
-
 		case v == '\\': // Reserved escape
 			v = l.next()
 
@@ -606,7 +610,6 @@ func lexReservedBody(l *lexer) stateFn {
 			}
 
 			s += string(v)
-
 		case isReserved(v):
 			s += string(v)
 		}
@@ -663,12 +666,16 @@ func isName(v rune) bool {
 
 // isQuoted returns true if r is quoted character.
 //
+// ABNF:
+//
 // quoted-char = content-char / s / "." / "@" / "{" / "}".
 func isQuoted(r rune) bool {
 	return isContent(r) || isWhitespace(r) || r == '.' || r == '@' || r == '{' || r == '}'
 }
 
 // isWhitespace returns true if r is whitespace character.
+//
+// ABNF:
 //
 // s = 1*( SP / HTAB / CR / LF / %x3000 ).
 func isWhitespace(r rune) bool {
@@ -682,6 +689,8 @@ func isWhitespace(r rune) bool {
 
 // isReservedStart returns true if r is the first reserved annotation character.
 //
+// ABNF:
+//
 //	reserved-annotation-start = "!" / "%" / "*" / "+" / "<" / ">" / "?" / "~"
 func isReservedStart(r rune) bool {
 	switch r {
@@ -693,6 +702,8 @@ func isReservedStart(r rune) bool {
 }
 
 // isReserved returns true if r is reserved character.
+//
+// ABNF:
 //
 //	reserved-char = content-char / ".".
 func isReserved(r rune) bool {
@@ -710,12 +721,16 @@ func isReservedEscape(r rune) bool {
 
 // isSimpleStart returns true if r is simple start character.
 //
+// ABNF:
+//
 //	simple-start-char = content-char / s / "@" / "|"
 func isSimpleStart(r rune) bool {
 	return isContent(r) || isWhitespace(r) || r == '@' || r == '|'
 }
 
 // isText returns true if r is text character.
+//
+// ABNF:
 //
 //	text-char = content-char / s / "." / "@" / "|"
 func isText(r rune) bool {
@@ -738,23 +753,27 @@ func isPrivateStart(r rune) bool {
 
 // isContent returns true if r is content character.
 //
-//	content-char      = %x00-08        ; omit HTAB (%x09) and LF (%x0A)
-//	                  / %x0B-0C        ; omit CR (%x0D)
-//	                  / %x0E-19        ; omit SP (%x20)
-//	                  / %x21-2D        ; omit . (%x2E)
-//	                  / %x2F-3F        ; omit @ (%x40)
-//	                  / %x41-5B        ; omit \ (%x5C)
-//	                  / %x5D-7A        ; omit { | } (%x7B-7D)
-//	                  / %x7E-D7FF      ; omit surrogates
-//	                  / %xE000-10FFFF
+// ABNF:
+//
+//	content-char = %x01-08       ; omit NULL (%x00), HTAB (%x09) and LF (%x0A)
+//	               %x0B-0C       ; omit CR (%x0D)
+//	               %x0E-1F       ; omit SP (%x20)
+//	               %x21-2D       ; omit . (%x2E)
+//	               %x2F-3F       ; omit @ (%x40)
+//	               %x41-5B       ; omit \ (%x5C)
+//	               %x5D-7A       ; omit { | } (%x7B-7D)
+//	               %x7E-2FFF     ; omit IDEOGRAPHIC SPACE (%x3000)
+//	               %x3001-D7FF   ; omit surrogates
+//	               %xE000-10FFFF
 func isContent(r rune) bool {
-	return 0x00 <= r && r <= 0x08 || // omit HTAB (%x09) and LF (%x0A)
+	return 0x01 <= r && r <= 0x08 || // omit NULL (%x00), HTAB (%x09) and LF (%x0A)
 		0x0B <= r && r <= 0x0C || // omit CR (%x0D)
-		0x0E <= r && r <= 0x19 || // omit SP (%x20)
+		0x0E <= r && r <= 0x1F || // omit SP (%x20)
 		0x21 <= r && r <= 0x2D || // omit . (%x2E)
 		0x2F <= r && r <= 0x3F || // omit @ (%x40)
 		0x41 <= r && r <= 0x5B || // omit \ (%x5C)
 		0x5D <= r && r <= 0x7A || // omit { | } (%x7B-7D)
-		0x7E <= r && r <= 0xD7FF || // omit surrogates
+		0x7E <= r && r <= 0x2FFF || // omit IDEOGRAPHIC SPACE (%x3000)
+		0x3001 <= 3 && r <= 0xD7FF || // omit surrogates
 		0xE000 <= r && r <= 0x10FFFF
 }
