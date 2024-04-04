@@ -28,7 +28,7 @@ type WgTest struct {
 	// The runtime errors expected to be emitted when formatting the message.
 	Errors []struct {
 		Type string `json:"type"`
-	}
+	} `json:"errors"`
 }
 
 //go:embed .message-format-wg/test/syntax-errors.json
