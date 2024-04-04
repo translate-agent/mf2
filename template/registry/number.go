@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -8,7 +9,7 @@ import (
 	"golang.org/x/text/currency"
 )
 
-// https://github.com/unicode-org/message-format-wg/blob/122e64c2482b54b6eff4563120915e0f86de8e4d/spec/registry.xml#L147
+// https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L147
 
 var numberRegistryF = &Func{
 	Name:           "number",
@@ -47,7 +48,7 @@ There is no default value; if the style is "currency", the currency property mus
 
 					var zeroVal currency.Unit
 					if unit == zeroVal {
-						return fmt.Errorf("currency is not set")
+						return errors.New("currency is not set")
 					}
 
 					return nil
@@ -233,7 +234,7 @@ func isPositiveInteger(v any) error {
 	}
 
 	if val < 0 {
-		return fmt.Errorf("value must be at least 0")
+		return errors.New("value must be at least 0")
 	}
 
 	return nil

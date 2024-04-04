@@ -15,7 +15,7 @@ import (
 
 // MessageFormat2 Errors as defined in the specification.
 //
-// https://github.com/unicode-org/message-format-wg/blob/122e64c2482b54b6eff4563120915e0f86de8e4d/spec/errors.md
+// https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/errors.md
 var (
 	ErrSyntax                    = errors.New("syntax error")
 	ErrUnresolvedVariable        = errors.New("unresolved variable")

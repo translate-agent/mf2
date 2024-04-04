@@ -2,6 +2,7 @@ package mf2
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -116,20 +117,20 @@ func (b *Builder) MustBuild() string {
 func (b *Builder) validate() error {
 	if len(b.variants) > 0 {
 		if len(b.pattern) > 0 {
-			return fmt.Errorf("complex message MUST have single complex body")
+			return errors.New("complex message MUST have single complex body")
 		}
 
 		if len(b.selectors) == 0 {
-			return fmt.Errorf("matcher MUST have at least one selector")
+			return errors.New("matcher MUST have at least one selector")
 		}
 
 		if !hasCatchAllVariant(b.variants) {
-			return fmt.Errorf("matcher MUST have at least one variant with all catch-all keys")
+			return errors.New("matcher MUST have at least one variant with all catch-all keys")
 		}
 	}
 
 	if len(b.selectors) > 0 && len(b.variants) == 0 {
-		return fmt.Errorf("matcher MUST have at least one variant")
+		return errors.New("matcher MUST have at least one variant")
 	}
 
 	return nil
@@ -283,7 +284,7 @@ func (b *Builder) Match(selector *Expression, selectors ...*Expression) *Builder
 	}
 
 	if len(b.pattern) > 0 {
-		b.err = fmt.Errorf("complex message cannot be added after simple message")
+		b.err = errors.New("complex message cannot be added after simple message")
 		return b
 	}
 
@@ -299,7 +300,7 @@ func (b *Builder) Keys(key any, keys ...any) *Builder {
 	}
 
 	if len(keys)+1 != len(b.selectors) {
-		b.err = fmt.Errorf("number of keys in each variant MUST match the number of selectors in the matcher")
+		b.err = errors.New("number of keys in each variant MUST match the number of selectors in the matcher")
 		return b
 	}
 

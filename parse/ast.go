@@ -219,7 +219,7 @@ func (e Expression) String() string {
 	}
 
 	if len(e.Attributes) > 0 {
-		s += fmt.Sprintf(" %s", sliceToString(e.Attributes, " "))
+		s += " " + sliceToString(e.Attributes, " ")
 	}
 
 	return fmt.Sprintf("{%s}", s)

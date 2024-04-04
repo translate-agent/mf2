@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// https://github.com/unicode-org/message-format-wg/blob/122e64c2482b54b6eff4563120915e0f86de8e4d/spec/registry.xml#L13
+// https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L13
 
 var datetimeRegistryF = &Func{
 	Name:           "datetime",
