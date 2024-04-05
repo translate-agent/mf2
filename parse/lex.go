@@ -178,7 +178,7 @@ func (l *lexer) backup() {
 func (l *lexer) nextItem() item {
 	l.emitItem(mk(itemEOF, ""))
 
-	state := lexPattern(true)
+	state := lexPattern
 
 	// Sorted by children first - expression can be inside pattern but pattern
 	// cannot be inside expression. And so on.
@@ -186,7 +186,7 @@ func (l *lexer) nextItem() item {
 	case l.isExpression:
 		state = lexExpr
 	case l.isPattern:
-		state = lexPattern(false)
+		state = lexPattern
 	case l.isComplexMessage:
 		state = lexComplexMessage
 	}
@@ -218,60 +218,67 @@ func (l *lexer) emitErrorf(s string, args ...any) stateFn {
 type stateFn func(*lexer) stateFn
 
 // lexPattern is the state function for lexing patterns.
-// When singleMessage is true it will lex single message.
-// Otherwise, it lexes pattern.
-func lexPattern(singleMessage bool) func(*lexer) stateFn {
-	return func(l *lexer) stateFn {
-		var s string
+func lexPattern(l *lexer) stateFn {
+	var s string
 
-		for {
-			r := l.next()
+	for {
+		r := l.next()
 
-			// cases sorted based on the frequency of rune occurrence
-			switch {
+		// cases sorted based on the frequency of rune occurrence
+		switch {
+		default:
+			l.backup()
+			l.isPattern = false
+
+			return l.emitItem(mk(itemText, s))
+		case r == '\\':
+			switch next := l.next(); next {
 			default:
+				return l.emitErrorf("unexpected escaped char in pattern: %s", string(next))
+			case '\\', '{', '}': // text-escape = backslash ( backslash / "{" / "}" )
+				s += string(next)
+			}
+		case r == '{':
+			if l.peek() == '{' { // complex message without declarations
 				l.backup()
-				l.isPattern = false
+				return lexComplexMessage(l)
+			}
+
+			l.backup()
+
+			if len(s) > 0 {
+				l.isExpression = true
 
 				return l.emitItem(mk(itemText, s))
-			case singleMessage && len(s) == 0 && isSimpleStart(r),
-				singleMessage && len(s) >= 1 && isText(r),
-				!singleMessage && isText(r):
-				s += string(r)
-			case r == '\\':
-				switch next := l.next(); next {
-				default:
-					return l.emitErrorf("unexpected escaped char in pattern: %s", string(next))
-				case '\\', '{', '}': // text-escape = backslash ( backslash / "{" / "}" )
-					s += string(next)
-				}
-			case r == '{':
-				if l.peek() == '{' { // complex message without declarations
-					l.backup()
-
-					return lexComplexMessage(l)
-				}
-
-				l.backup()
-
-				if len(s) > 0 {
-					l.isExpression = true
-
-					return l.emitItem(mk(itemText, s))
-				}
-
-				return lexExpr(l)
-			case len(s) == 0 && r == '.':
-				l.backup()
-
-				return lexComplexMessage(l)
-			case r == eof:
-				if len(s) > 0 {
-					return l.emitItem(mk(itemText, s))
-				}
-
-				return nil
 			}
+
+			return lexExpr(l)
+		case !l.isComplexMessage && len(s) == 0 && r == '.':
+			l.backup()
+
+			return lexComplexMessage(l)
+		case r == '}':
+			if l.peek() != '}' { // pattern end in complex message?
+				return l.emitErrorf("unescaped } in pattern")
+			}
+
+			l.backup()
+			l.isPattern = false
+
+			if len(s) > 0 {
+				return l.emitItem(mk(itemText, s))
+			}
+
+			return lexComplexMessage(l)
+		case !l.isComplexMessage && len(s) == 0 && isSimpleStart(r),
+			isText(r) && (l.isComplexMessage || len(s) >= 1):
+			s += string(r)
+		case r == eof:
+			if len(s) > 0 {
+				return l.emitItem(mk(itemText, s))
+			}
+
+			return nil
 		}
 	}
 }
@@ -335,6 +342,8 @@ func lexComplexMessage(l *lexer) stateFn {
 
 				return l.emitItem(mk(itemQuotedPatternClose, "}}"))
 			}
+
+			return l.emitErrorf("unexpected } in complex message")
 		case r == '*':
 			return l.emitItem(mk(itemCatchAllKey, "*"))
 		case isDigit(r),

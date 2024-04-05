@@ -28,6 +28,13 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
+			name:  "unescaped }",
+			input: `}`,
+			expected: []item{
+				mk(itemError, "unescaped } in pattern"),
+			},
+		},
+		{
 			name:  "function",
 			input: "{:rand seed=1 log:level=$log lag:k=v o = $k @attr1=val1 @attr2}",
 			expected: []item{
@@ -405,6 +412,15 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
+			name:  "complex message with unexpected }",
+			input: "{{}}}",
+			expected: []item{
+				mk(itemQuotedPatternOpen, "{{"),
+				mk(itemQuotedPatternClose, "}}"),
+				mk(itemError, "unexpected } in complex message"),
+			},
+		},
+		{
 			name:  "complex message without declaration",
 			input: "{{Hello, {|literal|} World!}}",
 			expected: []item{
@@ -529,8 +545,8 @@ func logItem(t *testing.T, expected item, l lexer) func() {
 			return " "
 		}
 
-		t.Logf("c%s p%s e%s %-60s e%s(%s) a%s(%s)\n",
-			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression),
+		t.Logf("c%s p%s e%s f%s r%s %-30s e%s(%s) a%s(%s)\n",
+			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody),
 			"'"+l.input[l.pos:]+"'", "'"+expected.val+"'", expected.typ, "'"+l.item.val+"'", l.item.typ)
 	}
 }
