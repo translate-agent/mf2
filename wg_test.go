@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.expect.digital/mf2/parse"
 	"go.expect.digital/mf2/template"
 	"golang.org/x/text/language"
 )
@@ -48,8 +47,13 @@ func TestWgSyntaxErrors(t *testing.T) {
 		t.Run(input, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := parse.Parse(input)
-			assert.Error(t, err)
+			templ, err := template.New().Parse(input)
+			if err != nil { // test passes, syntax error
+				return
+			}
+
+			_, err = templ.Sprint(nil)
+			require.Error(t, err)
 		})
 	}
 }
