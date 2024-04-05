@@ -121,7 +121,13 @@ func mk(typ itemType, val string) item {
 }
 
 // lex creates a new lexer for the given input string.
-func lex(input string) *lexer { return &lexer{input: input, line: 1} }
+func lex(input string) *lexer {
+	return &lexer{
+		input:            input,
+		line:             1,
+		isComplexMessage: strings.HasPrefix(input, ".") || strings.HasPrefix(input, "{{"),
+	}
+}
 
 // lexer is a lexical analyzer for MessageFormat2.
 //
@@ -286,8 +292,6 @@ func lexComplexMessage(l *lexer) stateFn {
 			return l.emitErrorf("unknown character in complex message: %s", string(r))
 
 		case r == '.':
-			l.isComplexMessage = true
-
 			switch {
 			default: // reserved keyword
 				l.backup()
@@ -319,7 +323,6 @@ func lexComplexMessage(l *lexer) stateFn {
 		case r == '{':
 			if l.peek() == '{' {
 				l.next()
-				l.isComplexMessage = true // complex message without declarations
 				l.isPattern = true
 
 				return l.emitItem(mk(itemQuotedPatternOpen, "{{"))
