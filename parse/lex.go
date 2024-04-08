@@ -14,7 +14,8 @@ const eof = -1
 type itemType int
 
 const (
-	itemError itemType = iota
+	itemUnknown itemType = iota
+	itemError
 	itemEOF
 	itemVariable
 	itemFunction
@@ -45,6 +46,8 @@ const (
 // String returns a string representation of the item type.
 func (t itemType) String() string {
 	switch t {
+	case itemUnknown:
+		return "unknown"
 	case itemCatchAllKey:
 		return "catch all key"
 	case itemEOF:
@@ -99,7 +102,7 @@ func (t itemType) String() string {
 		return "reserved text"
 	}
 
-	return "unknown"
+	return "<invalid type>"
 }
 
 // Keywords.
@@ -113,6 +116,10 @@ const (
 type item struct {
 	val string
 	typ itemType
+}
+
+func (i item) String() string {
+	return fmt.Sprintf(`%s "%s"`, i.typ, i.val)
 }
 
 // mk creates a new item with the given type and value.
@@ -549,7 +556,7 @@ func lexIdentifier(l *lexer) stateFn {
 			l.backup()
 
 			return l.emitItem(mk(typ, s))
-		case typ == itemError: // zero value for itemType
+		case typ == itemUnknown:
 			switch r {
 			default:
 				typ = itemOption
