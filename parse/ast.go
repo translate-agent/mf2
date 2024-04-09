@@ -19,11 +19,9 @@ Example:
 
 	ast := AST{
 		Message: SimpleMessage{
-			Patterns: []Pattern{
-				TextPattern("Hello, "),
-				Expression{Operand: Variable("variable")}
-				TextPattern(" World!"),
-			},
+			Text("Hello, "),
+			Expression{Operand: Variable("variable")}
+			Text(" World!"),
 		},
 	}
 
@@ -44,11 +42,9 @@ Example:
 	// Hello, { $ } World! // MF2 formatted message
 	ast := AST{
 		Message: SimpleMessage{
-			Patterns: []Pattern{
-				TextPattern("Hello, "),
-				Expression{Operand: Variable("")},
-				TextPattern(" World!"),
-			},
+			Text("Hello, "),
+			Expression{Operand: Variable("")},
+			Text(" World!"),
 		},
 	},
 
@@ -70,8 +66,7 @@ func (a AST) validate() error {
 //
 // Here we define the Nodes that can have multiple types.
 // For example Message could be either a SimpleMessage or a ComplexMessage.
-// Pattern could be either a TextPattern, Expression or a Markup.
-// etc.
+// Pattern could be either a Text, Expression or a Markup.
 
 // Node is the interface implemented by all AST nodes.
 type Node interface {
@@ -87,9 +82,9 @@ type Message interface {
 	message()
 }
 
-type Pattern interface {
+type PatternPart interface {
 	Node
-	pattern()
+	patternPart()
 }
 
 type Literal interface {
@@ -135,59 +130,58 @@ type ReservedBody interface {
 //
 // --------------------------------Message------------------------------------
 
-type SimpleMessage []Pattern
+type SimpleMessage []PatternPart
 
-type ComplexMessage struct {
-	ComplexBody  ComplexBody   // Matcher or QuotedPattern
-	Declarations []Declaration // Optional: InputDeclaration, LocalDeclaration or ReservedStatement
-}
+func (m SimpleMessage) String() string { return sliceToString(m, "") }
 
-func (sm SimpleMessage) String() string { return sliceToString(sm, "") }
-func (cm ComplexMessage) String() string {
-	if len(cm.Declarations) == 0 {
-		return fmt.Sprint(cm.ComplexBody)
-	}
+func (m SimpleMessage) node()    {}
+func (m SimpleMessage) message() {}
 
-	return fmt.Sprintf("%s\n%s", sliceToString(cm.Declarations, "\n"), cm.ComplexBody)
-}
-
-func (sm SimpleMessage) validate() error {
-	if err := validateSlice(sm); err != nil {
+func (m SimpleMessage) validate() error {
+	if err := validateSlice(m); err != nil {
 		return fmt.Errorf("simpleMessage.%w", err)
 	}
 
 	return nil
 }
 
-func (cm ComplexMessage) validate() error {
-	if cm.ComplexBody == nil {
+type ComplexMessage struct {
+	ComplexBody  ComplexBody   // Matcher or QuotedPattern
+	Declarations []Declaration // Optional: InputDeclaration, LocalDeclaration or ReservedStatement
+}
+
+func (m ComplexMessage) String() string {
+	if len(m.Declarations) == 0 {
+		return fmt.Sprint(m.ComplexBody)
+	}
+
+	return fmt.Sprintf("%s\n%s", sliceToString(m.Declarations, "\n"), m.ComplexBody)
+}
+
+func (m ComplexMessage) node()    {}
+func (m ComplexMessage) message() {}
+
+func (m ComplexMessage) validate() error {
+	if m.ComplexBody == nil {
 		return errors.New("complexMessage: complexBody is required")
 	}
 
-	if err := cm.ComplexBody.validate(); err != nil {
+	if err := m.ComplexBody.validate(); err != nil {
 		return fmt.Errorf("complexMessage.%w", err)
 	}
 
-	if err := validateSlice(cm.Declarations); err != nil {
+	if err := validateSlice(m.Declarations); err != nil {
 		return fmt.Errorf("complexMessage.%w", err)
 	}
 
 	return nil
 }
 
-func (sm SimpleMessage) message()  {}
-func (cm ComplexMessage) message() {}
+// -----------------------------------Text-------------------------------------
 
-func (sm SimpleMessage) node()  {}
-func (cm ComplexMessage) node() {}
+type Text string
 
-// ---------------------------------Pattern------------------------------------
-
-type TextPattern string
-
-func (TextPattern) node()    {}
-func (TextPattern) pattern() {}
-func (tp TextPattern) String() string {
+func (t Text) String() string {
 	// text-escape = backslash ( backslash / "{" / "}" )
 	r := strings.NewReplacer(
 		`\`, `\\`,
@@ -195,9 +189,13 @@ func (tp TextPattern) String() string {
 		`}`, `\}`,
 	)
 
-	return r.Replace(string(tp))
+	return r.Replace(string(t))
 }
-func (tp TextPattern) validate() error { return nil }
+
+func (Text) node()        {}
+func (Text) patternPart() {}
+
+func (t Text) validate() error { return nil }
 
 // --------------------------------Expression----------------------------------
 
@@ -225,6 +223,9 @@ func (e Expression) String() string {
 	return fmt.Sprintf("{%s}", s)
 }
 
+func (Expression) node()        {}
+func (Expression) patternPart() {}
+
 func (e Expression) validate() error {
 	if e.Operand == nil && e.Annotation == nil {
 		return errors.New("expression: at least one of operand or annotation is required")
@@ -249,73 +250,70 @@ func (e Expression) validate() error {
 	return nil
 }
 
-func (Expression) node()    {}
-func (Expression) pattern() {}
-
 // ---------------------------------Literal------------------------------------
 
 type QuotedLiteral string
 
-type NameLiteral string
-
-type NumberLiteral float64
-
-func (ql QuotedLiteral) String() string {
+func (l QuotedLiteral) String() string {
 	// quoted-escape = backslash ( backslash / "|" )
 	r := strings.NewReplacer(
 		`\`, `\\`,
 		`|`, `\|`,
 	)
 
-	return fmt.Sprintf("|%s|", r.Replace(string(ql)))
+	return fmt.Sprintf("|%s|", r.Replace(string(l)))
 }
-func (nl NameLiteral) String() string   { return string(nl) }
-func (nl NumberLiteral) String() string { return fmt.Sprint(float64(nl)) }
 
-func (ql QuotedLiteral) validate() error {
-	if isZeroValue(ql) {
+func (QuotedLiteral) node()         {}
+func (QuotedLiteral) literal()      {}
+func (QuotedLiteral) value()        {}
+func (QuotedLiteral) variantKey()   {}
+func (QuotedLiteral) reservedBody() {}
+
+func (l QuotedLiteral) validate() error {
+	if isZeroValue(l) {
 		return errors.New("quotedLiteral: literal is empty")
 	}
 
 	return nil
 }
 
-func (nl NameLiteral) validate() error {
-	if isZeroValue(nl) {
+type NameLiteral string
+
+func (l NameLiteral) String() string { return string(l) }
+
+func (NameLiteral) node()       {}
+func (NameLiteral) literal()    {}
+func (NameLiteral) value()      {}
+func (NameLiteral) variantKey() {}
+
+func (l NameLiteral) validate() error {
+	if isZeroValue(l) {
 		return errors.New("nameLiteral: literal is empty")
 	}
 
 	return nil
 }
 
-func (nl NumberLiteral) validate() error {
+type NumberLiteral float64
+
+func (l NumberLiteral) String() string { return fmt.Sprint(float64(l)) }
+
+func (NumberLiteral) node()       {}
+func (NumberLiteral) literal()    {}
+func (NumberLiteral) value()      {}
+func (NumberLiteral) variantKey() {}
+
+func (l NumberLiteral) validate() error {
 	switch {
-	case math.IsInf(float64(nl), 0):
+	case math.IsInf(float64(l), 0):
 		return errors.New("numberLiteral: literal is infinite")
-	case math.IsNaN(float64(nl)):
+	case math.IsNaN(float64(l)):
 		return errors.New("numberLiteral: literal is NaN")
 	default:
 		return nil
 	}
 }
-
-func (QuotedLiteral) node() {}
-func (NameLiteral) node()   {}
-func (NumberLiteral) node() {}
-
-func (QuotedLiteral) literal() {}
-func (NameLiteral) literal()   {}
-func (NumberLiteral) literal() {}
-
-func (QuotedLiteral) value() {}
-func (NameLiteral) value()   {}
-func (NumberLiteral) value() {}
-
-func (QuotedLiteral) variantKey() {}
-func (NameLiteral) variantKey()   {}
-func (NumberLiteral) variantKey() {}
-
-func (QuotedLiteral) reservedBody() {}
 
 // --------------------------------Annotation----------------------------------
 
@@ -323,13 +321,6 @@ type Function struct {
 	Identifier Identifier
 	Options    []Option // Optional
 }
-
-type PrivateUseAnnotation struct {
-	ReservedBody []ReservedBody // QuotedLiteral or ReservedText
-	Start        rune
-}
-
-type ReservedAnnotation PrivateUseAnnotation
 
 func (f Function) String() string {
 	if len(f.Options) == 0 {
@@ -339,11 +330,8 @@ func (f Function) String() string {
 	return fmt.Sprintf(":%s %s", f.Identifier, sliceToString(f.Options, " "))
 }
 
-func (p PrivateUseAnnotation) String() string {
-	return fmt.Sprintf("%c%s", p.Start, sliceToString(p.ReservedBody, ""))
-}
-
-func (p ReservedAnnotation) String() string { return PrivateUseAnnotation(p).String() }
+func (Function) node()       {}
+func (Function) annotation() {}
 
 func (f Function) validate() error {
 	if err := f.Identifier.validate(); err != nil {
@@ -356,6 +344,18 @@ func (f Function) validate() error {
 
 	return nil
 }
+
+type PrivateUseAnnotation struct {
+	ReservedBody []ReservedBody // QuotedLiteral or ReservedText
+	Start        rune
+}
+
+func (p PrivateUseAnnotation) String() string {
+	return fmt.Sprintf("%c%s", p.Start, sliceToString(p.ReservedBody, ""))
+}
+
+func (PrivateUseAnnotation) node()       {}
+func (PrivateUseAnnotation) annotation() {}
 
 func (p PrivateUseAnnotation) validate() error {
 	if !isPrivateStart(p.Start) {
@@ -371,6 +371,13 @@ func (p PrivateUseAnnotation) validate() error {
 	return nil
 }
 
+type ReservedAnnotation PrivateUseAnnotation
+
+func (p ReservedAnnotation) String() string { return PrivateUseAnnotation(p).String() }
+
+func (ReservedAnnotation) node()       {}
+func (ReservedAnnotation) annotation() {}
+
 func (p ReservedAnnotation) validate() error {
 	if !isReservedStart(p.Start) {
 		return fmt.Errorf("reservedAnnotation: start must be a reserved start char, got '%c'", p.Start)
@@ -385,21 +392,53 @@ func (p ReservedAnnotation) validate() error {
 	return nil
 }
 
-func (Function) node()             {}
-func (PrivateUseAnnotation) node() {}
-func (ReservedAnnotation) node()   {}
-
-func (Function) annotation()             {}
-func (PrivateUseAnnotation) annotation() {}
-func (ReservedAnnotation) annotation()   {}
-
 // --------------------------------Declaration---------------------------------
 
 type InputDeclaration Expression // Only VariableExpression, i.e. operand is type Variable.
 
+func (d InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, Expression(d)) }
+
+func (InputDeclaration) node()        {}
+func (InputDeclaration) declaration() {}
+
+func (d InputDeclaration) validate() error {
+	if d.Operand == nil {
+		return errors.New("inputDeclaration: expression operand is required")
+	}
+
+	if _, ok := d.Operand.(Variable); !ok {
+		return fmt.Errorf("inputDeclaration: expression operand must be a variable, got '%T'", d.Operand)
+	}
+
+	if err := Expression(d).validate(); err != nil {
+		return fmt.Errorf("inputDeclaration.%w", err)
+	}
+
+	return nil
+}
+
 type LocalDeclaration struct {
 	Variable   Variable
 	Expression Expression
+}
+
+func (d LocalDeclaration) String() string {
+	return fmt.Sprintf("%s %s = %s", local, d.Variable, d.Expression)
+}
+
+func (LocalDeclaration) node()        {}
+func (LocalDeclaration) declaration() {}
+
+func (d LocalDeclaration) validate() error {
+	if err := d.Expression.validate(); err != nil {
+		return fmt.Errorf("localDeclaration.%w", err)
+	}
+
+	if err := d.Expression.validate(); err != nil {
+		return fmt.Errorf("localDeclaration.%w", err)
+	}
+
+	return nil
 }
 
 type ReservedStatement struct {
@@ -408,100 +447,76 @@ type ReservedStatement struct {
 	Expressions  []Expression   // At least one
 }
 
-func (id InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, Expression(id)) }
-func (ld LocalDeclaration) String() string {
-	return fmt.Sprintf("%s %s = %s", local, ld.Variable, ld.Expression)
+func (s ReservedStatement) String() string {
+	if len(s.ReservedBody) > 0 {
+		return fmt.Sprintf(".%s %s %s", s.Keyword, sliceToString(s.ReservedBody, " "), sliceToString(s.Expressions, " "))
+	}
+
+	return fmt.Sprintf(".%s %s", s.Keyword, sliceToString(s.Expressions, " "))
 }
 
-func (rs ReservedStatement) String() string {
-	if len(rs.ReservedBody) > 0 {
-		return fmt.Sprintf(".%s %s %s", rs.Keyword, sliceToString(rs.ReservedBody, " "), sliceToString(rs.Expressions, " "))
-	}
+func (ReservedStatement) node()        {}
+func (ReservedStatement) declaration() {}
 
-	return fmt.Sprintf(".%s %s", rs.Keyword, sliceToString(rs.Expressions, " "))
-}
-
-func (id InputDeclaration) validate() error {
-	if id.Operand == nil {
-		return errors.New("inputDeclaration: expression operand is required")
-	}
-
-	if _, ok := id.Operand.(Variable); !ok {
-		return fmt.Errorf("inputDeclaration: expression operand must be a variable, got '%T'", id.Operand)
-	}
-
-	if err := Expression(id).validate(); err != nil {
-		return fmt.Errorf("inputDeclaration.%w", err)
-	}
-
-	return nil
-}
-
-func (ld LocalDeclaration) validate() error {
-	if err := ld.Expression.validate(); err != nil {
-		return fmt.Errorf("localDeclaration.%w", err)
-	}
-
-	if err := ld.Expression.validate(); err != nil {
-		return fmt.Errorf("localDeclaration.%w", err)
-	}
-
-	return nil
-}
-
-func (rs ReservedStatement) validate() error {
-	if isZeroValue(rs.Keyword) {
+func (s ReservedStatement) validate() error {
+	if isZeroValue(s.Keyword) {
 		return errors.New("reservedStatement: keyword is empty")
 	}
 
-	switch k := rs.Keyword; k {
+	switch k := s.Keyword; k {
 	case keywordMatch, keywordLocal, keywordInput:
 		return fmt.Errorf("reservedStatement: keyword '%s' is not allowed", k)
 	}
 
-	if len(rs.Expressions) == 0 {
+	if len(s.Expressions) == 0 {
 		return errors.New("reservedStatement: at least one expression is required")
 	}
 
-	if err := validateSlice(rs.ReservedBody); err != nil {
+	if err := validateSlice(s.ReservedBody); err != nil {
 		return fmt.Errorf("reservedStatement.%w", err)
 	}
 
-	if err := validateSlice(rs.Expressions); err != nil {
+	if err := validateSlice(s.Expressions); err != nil {
 		return fmt.Errorf("reservedStatement.%w", err)
 	}
 
 	return nil
 }
-
-func (InputDeclaration) node()  {}
-func (LocalDeclaration) node()  {}
-func (ReservedStatement) node() {}
-
-func (InputDeclaration) declaration()  {}
-func (LocalDeclaration) declaration()  {}
-func (ReservedStatement) declaration() {}
 
 // --------------------------------VariantKey----------------------------------
 
 // CatchAllKey is a special key, that matches any value.
 type CatchAllKey struct{}
 
-func (ck CatchAllKey) String() string  { return catchAllSymbol }
-func (ck CatchAllKey) validate() error { return nil }
-func (CatchAllKey) node()              {}
-func (CatchAllKey) variantKey()        {}
+func (k CatchAllKey) String() string { return catchAllSymbol }
+
+func (CatchAllKey) node()       {}
+func (CatchAllKey) variantKey() {}
+
+func (k CatchAllKey) validate() error { return nil }
 
 // ---------------------------------ComplexBody--------------------------------------
 
-type QuotedPattern []Pattern
+type QuotedPattern []PatternPart
+
+func (p QuotedPattern) String() string { return fmt.Sprintf("{{%s}}", sliceToString(p, "")) }
+
+func (QuotedPattern) node()        {}
+func (QuotedPattern) complexBody() {}
+
+func (p QuotedPattern) validate() error {
+	if err := validateSlice(p); err != nil {
+		return fmt.Errorf("quotedPattern.%w", err)
+	}
+
+	return nil
+}
 
 type Matcher struct {
 	MatchStatements []Expression // At least one
 	Variants        []Variant    // At least one
 }
 
-func (qp QuotedPattern) String() string { return fmt.Sprintf("{{%s}}", sliceToString(qp, "")) }
 func (m Matcher) String() string {
 	matchStr := sliceToString(m.MatchStatements, " ")
 	variantsStr := sliceToString(m.Variants, "\n")
@@ -509,13 +524,8 @@ func (m Matcher) String() string {
 	return fmt.Sprintf("%s %s\n%s", match, matchStr, variantsStr)
 }
 
-func (qp QuotedPattern) validate() error {
-	if err := validateSlice(qp); err != nil {
-		return fmt.Errorf("quotedPattern.%w", err)
-	}
-
-	return nil
-}
+func (Matcher) node()        {}
+func (Matcher) complexBody() {}
 
 func (m Matcher) validate() error {
 	if len(m.MatchStatements) == 0 {
@@ -537,19 +547,15 @@ func (m Matcher) validate() error {
 	return nil
 }
 
-func (QuotedPattern) node() {}
-func (Matcher) node()       {}
-
-func (QuotedPattern) complexBody() {}
-func (Matcher) complexBody()       {}
-
 // ---------------------------------Node---------------------------------
 
 type Variable string
 
-func (Variable) node()            {}
 func (v Variable) String() string { return fmt.Sprintf("%c%s", variablePrefix, string(v)) }
-func (Variable) value()           {}
+
+func (Variable) node()  {}
+func (Variable) value() {}
+
 func (v Variable) validate() error {
 	if isZeroValue(v) {
 		return errors.New("variable: name is empty")
@@ -560,25 +566,25 @@ func (v Variable) validate() error {
 
 type ReservedText string
 
-func (rt ReservedText) String() string {
+func (t ReservedText) String() string {
 	return strings.NewReplacer(
 		`\`, `\\`,
 		`{`, `\{`,
 		`}`, `\}`,
 		`|`, `\|`,
-	).Replace(string(rt))
+	).Replace(string(t))
 }
 
-func (rt ReservedText) validate() error {
-	if isZeroValue(string(rt)) {
+func (ReservedText) node()         {}
+func (ReservedText) reservedBody() {}
+
+func (t ReservedText) validate() error {
+	if isZeroValue(string(t)) {
 		return errors.New("reservedText: text is empty")
 	}
 
 	return nil
 }
-
-func (ReservedText) node()         {}
-func (ReservedText) reservedBody() {}
 
 type Identifier struct {
 	Node
@@ -638,6 +644,7 @@ type Option struct {
 }
 
 func (o Option) String() string { return fmt.Sprintf("%s = %s", o.Identifier, o.Value) }
+
 func (o Option) validate() error {
 	if err := o.Identifier.validate(); err != nil {
 		return fmt.Errorf("option.%w", err)
@@ -664,7 +671,7 @@ const (
 )
 
 type Markup struct {
-	Pattern
+	PatternPart
 
 	Identifier Identifier
 	Options    []Option    // Optional. Options for Identifier, only allowed when markup-open.

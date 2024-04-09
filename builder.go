@@ -511,17 +511,17 @@ type FuncOption struct {
 	key     string
 }
 
-func (fo *FuncOption) sprint(spacing string) string {
+func (o *FuncOption) sprint(spacing string) string {
 	var optVal string
 
-	switch v := fo.operand.(type) {
+	switch v := o.operand.(type) {
 	case variable:
 		optVal = "$" + string(v)
 	case literal:
 		optVal = printLiteral(v)
 	}
 
-	return fmt.Sprintf("%s%s%s=%s%s", spacing, fo.key, spacing, spacing, optVal)
+	return fmt.Sprintf("%s%s%s=%s%s", spacing, o.key, spacing, spacing, optVal)
 }
 
 func VarOption(name, varName string) FuncOption {
