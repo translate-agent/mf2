@@ -68,7 +68,7 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 		return errors.New("AST is nil")
 	}
 
-	executer := &executer{template: t, wr: w, variables: make(map[string]any, len(input))}
+	executer := &executer{template: t, w: w, variables: make(map[string]any, len(input))}
 
 	for k, v := range input {
 		executer.variables[k] = v
@@ -95,12 +95,12 @@ func New() *Template {
 
 type executer struct {
 	template  *Template
-	wr        io.Writer
+	w         io.Writer
 	variables map[string]any
 }
 
 func (e *executer) write(s string) error {
-	if _, err := e.wr.Write([]byte(s)); err != nil {
+	if _, err := e.w.Write([]byte(s)); err != nil {
 		return fmt.Errorf("write: %w", err)
 	}
 
