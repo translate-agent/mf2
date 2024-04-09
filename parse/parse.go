@@ -741,6 +741,8 @@ func (p *parser) parseAttribute() (Attribute, error) {
 
 func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
 	switch itm := p.current(); itm.typ {
+	default:
+		return nil, unexpectedErr(itm, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
 	case itemNumberLiteral:
 		var num float64
 		if err := json.Unmarshal([]byte(itm.val), &num); err != nil {
@@ -752,9 +754,6 @@ func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
 		return QuotedLiteral(p.current().val), nil
 	case itemUnquotedLiteral:
 		return NameLiteral(p.current().val), nil
-	// bad tokens
-	default:
-		return nil, unexpectedErr(itm, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
 	}
 }
 
