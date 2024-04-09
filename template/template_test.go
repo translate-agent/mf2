@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.expect.digital/mf2/template/registry"
 )
@@ -213,6 +214,7 @@ func Test_ExecuteErrors(t *testing.T) {
 
 	type expected struct {
 		parseErr, execErr error
+		text              string
 	}
 
 	tests := []struct {
@@ -229,27 +231,27 @@ func Test_ExecuteErrors(t *testing.T) {
 		{
 			name:     "unresolved variable",
 			text:     "Hello, { $name }!",
-			expected: expected{execErr: ErrUnresolvedVariable},
+			expected: expected{execErr: ErrUnresolvedVariable, text: "Hello, {$name}!"},
 		},
-		{
+		{ // TODO(jhorsts): incomplete test (issue #60)
 			name:     "unknown function",
 			text:     "Hello, { :f }!",
-			expected: expected{execErr: ErrUnknownFunction},
+			expected: expected{execErr: ErrUnknownFunction, text: "Hello, !"},
 		},
-		{
+		{ // TODO(jhorsts): incomplete test (issue #60)
 			name:     "duplicate option name",
 			text:     "Hello, { :number style=decimal style=percent }!",
-			expected: expected{execErr: ErrDuplicateOptionName},
+			expected: expected{execErr: ErrDuplicateOptionName, text: "Hello, !"},
 		},
-		{
+		{ // TODO(jhorsts): incomplete test (issue #60)
 			name:     "unsupported expression",
 			text:     "Hello, { 12 ^private }!",
-			expected: expected{execErr: ErrUnsupportedExpression},
+			expected: expected{execErr: ErrUnsupportedExpression, text: "Hello, !"},
 		},
-		{
+		{ // TODO(jhorsts): incomplete test (issue #60)
 			name:     "formatting error",
 			text:     "Hello, { :error }!",
-			expected: expected{execErr: ErrFormatting},
+			expected: expected{execErr: ErrFormatting, text: "Hello, !"},
 			fn: []registry.Func{
 				{
 					Name:            "error",
@@ -260,8 +262,8 @@ func Test_ExecuteErrors(t *testing.T) {
 		},
 		{
 			name:     "unsupported declaration",
-			text:     ".reserved { $name } {{Hello, {$name}!}}",
-			expected: expected{execErr: ErrUnsupportedStatement},
+			text:     ".reserved { name } {{Hello!}}",
+			expected: expected{execErr: ErrUnsupportedStatement, text: "Hello!"},
 		},
 		{
 			name:     "duplicate declaration",
@@ -304,8 +306,9 @@ func Test_ExecuteErrors(t *testing.T) {
 				template.AddFunc(f)
 			}
 
-			_, err = template.Sprint(tt.input)
+			text, err := template.Sprint(tt.input)
 			require.ErrorIs(t, err, tt.expected.execErr)
+			assert.Equal(t, tt.expected.text, text)
 		})
 	}
 }

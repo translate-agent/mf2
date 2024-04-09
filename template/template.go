@@ -82,7 +82,7 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 	sb := new(strings.Builder)
 
 	if err := t.Execute(sb, input); err != nil {
-		return "", fmt.Errorf("execute: %w", err)
+		return sb.String(), fmt.Errorf("execute: %w", err)
 	}
 
 	return sb.String(), nil
@@ -125,15 +125,27 @@ func (e *executer) execute() error {
 }
 
 func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
-	if err := e.resolveDeclarations(message.Declarations); err != nil {
+	var resolutionErr error
+
+	err := e.resolveDeclarations(message.Declarations)
+
+	switch {
+	case errors.Is(err, ErrUnsupportedStatement), errors.Is(err, ErrUnresolvedVariable):
+		resolutionErr = fmt.Errorf("resolve declarations: %w", err)
+	case err != nil:
 		return fmt.Errorf("resolve declarations: %w", err)
 	}
 
-	if err := e.resolveComplexBody(message.ComplexBody); err != nil {
+	err = e.resolveComplexBody(message.ComplexBody)
+
+	switch {
+	case errors.Is(err, ErrUnresolvedVariable):
+		resolutionErr = fmt.Errorf("resolve complex body: %w", err)
+	case err != nil:
 		return fmt.Errorf("resolve complex body: %w", err)
 	}
 
-	return nil
+	return resolutionErr
 }
 
 func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
@@ -191,6 +203,8 @@ func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
 }
 
 func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
+	var resolutionErr error
+
 	for _, part := range pattern {
 		switch v := part.(type) {
 		case ast.Text:
@@ -200,7 +214,7 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 		case ast.Expression:
 			resolved, err := e.resolveExpression(v)
 			if err != nil {
-				return fmt.Errorf("resolve expression: %w", err)
+				resolutionErr = fmt.Errorf("resolve expression: %w", err)
 			}
 
 			if err := e.write(resolved); err != nil {
@@ -213,13 +227,13 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 		}
 	}
 
-	return nil
+	return resolutionErr
 }
 
 func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 	value, err := e.resolveValue(expr.Operand)
 	if err != nil {
-		return "", fmt.Errorf("resolve value: %w", err)
+		return fmt.Sprint(value), fmt.Errorf("resolve value: %w", err)
 	}
 
 	if expr.Annotation == nil {
@@ -254,7 +268,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.Variable:
 		val, ok := e.variables[string(v)]
 		if !ok {
-			return nil, fmt.Errorf("%w '%s'", ErrUnresolvedVariable, v)
+			return fmt.Sprintf("{%s}", v), fmt.Errorf("%w '%s'", ErrUnresolvedVariable, v)
 		}
 
 		return val, nil
