@@ -193,34 +193,26 @@ func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
 }
 
 func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
-	for _, v := range pattern {
-		if err := e.resolvePatternPart(v); err != nil {
-			return fmt.Errorf("resolve pattern part: %w", err)
-		}
-	}
+	for _, part := range pattern {
+		switch v := part.(type) {
+		case ast.Text:
+			if err := e.write(string(v)); err != nil {
+				return fmt.Errorf("write text: %w", err)
+			}
+		case ast.Expression:
+			resolved, err := e.resolveExpression(v)
+			if err != nil {
+				return fmt.Errorf("resolve expression: %w", err)
+			}
 
-	return nil
-}
-
-func (e *executer) resolvePatternPart(part ast.PatternPart) error {
-	switch v := part.(type) {
-	case ast.Text:
-		if err := e.write(string(v)); err != nil {
-			return fmt.Errorf("write text: %w", err)
+			if err := e.write(resolved); err != nil {
+				return fmt.Errorf("write expression: %w", err)
+			}
+		//nolint:lll
+		// When formatting to a string, markup placeholders format to an empty string by default.
+		// https://github.com/unicode-org/message-format-wg/blob/main/exploration/open-close-placeholders.md#formatting-to-a-string
+		case ast.Markup:
 		}
-	case ast.Expression:
-		resolved, err := e.resolveExpression(v)
-		if err != nil {
-			return fmt.Errorf("resolve expression: %w", err)
-		}
-
-		if err := e.write(resolved); err != nil {
-			return fmt.Errorf("resolve expression: %w", err)
-		}
-	//nolint:lll
-	// When formatting to a string, markup placeholders format to an empty string by default.
-	// https://github.com/unicode-org/message-format-wg/blob/main/exploration/open-close-placeholders.md#formatting-to-a-string
-	case ast.Markup:
 	}
 
 	return nil
