@@ -82,13 +82,12 @@ func (p *parser) isComplexMessage() bool {
 
 /*
 Parse parses the input string and returns an AST tree of MessageFormat2.
-Empty input string returns a SimpleMessage with no patterns.
 
 Examples:
 
 	mf2.Parse("Hello World!")
 	// result
-	AST{Message: SimpleMessage{TextPattern("Hello World!")}}
+	AST{Message: SimpleMessage{Text("Hello World!")}}
 
 	// -----------------------------------------------------------
 
@@ -96,7 +95,7 @@ Examples:
 	// result
 	AST{
 		Message: SimpleMessage{
-			TextPattern("Hello "),
+			Text("Hello "),
 			Expression{Operand: Variable("name")},
 		},
 	}
@@ -113,13 +112,13 @@ Examples:
 					{
 						Keys: []VariantKey{NumberLiteral(1)},
 						QuotedPattern: QuotedPattern{
-							TextPattern("Hello world"),
+							Text("Hello world"),
 						},
 					},
 					{
 						Keys: []VariantKey{CatchAllKey{}},
 						QuotedPattern: QuotedPattern{
-							TextPattern("Hello worlds"),
+							Text("Hello worlds"),
 						},
 					},
 				},
@@ -158,12 +157,12 @@ func Parse(input string) (AST, error) {
 // ------------------------------Message------------------------------
 
 func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
-	patterns, err := p.parsePatterns()
+	pattern, err := p.parsePattern()
 	if err != nil {
-		return SimpleMessage{}, fmt.Errorf("parse patterns: %w", err)
+		return SimpleMessage{}, fmt.Errorf("parse pattern: %w", err)
 	}
 
-	return SimpleMessage(patterns), nil
+	return SimpleMessage(pattern), nil
 }
 
 func (p *parser) parseComplexMessage() (ComplexMessage, error) {
@@ -209,21 +208,21 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 
 			message.ComplexBody = matcher
 		case itemQuotedPatternOpen:
-			patterns, err := p.parsePatterns()
+			pattern, err := p.parsePattern()
 			if err != nil {
-				return ComplexMessage{}, fmt.Errorf("parse patterns: %w", err)
+				return ComplexMessage{}, fmt.Errorf("parse pattern: %w", err)
 			}
 
-			message.ComplexBody = QuotedPattern(patterns)
+			message.ComplexBody = QuotedPattern(pattern)
 		}
 	}
 }
 
 // ------------------------------Pattern------------------------------
 
-// parsePatterns parses a slice of patterns.
-func (p *parser) parsePatterns() ([]Pattern, error) {
-	var pattern []Pattern
+// parsePattern parses a slice of pattern parts.
+func (p *parser) parsePattern() ([]PatternPart, error) {
+	var pattern []PatternPart
 
 	// Loop until the end, or closing pattern quote, if parsing complex message.
 	for itm := p.next(); itm.typ != itemEOF && itm.typ != itemQuotedPatternClose; itm = p.next() {
@@ -233,7 +232,7 @@ func (p *parser) parsePatterns() ([]Pattern, error) {
 		case itemWhitespace:
 			continue
 		case itemText:
-			pattern = append(pattern, TextPattern(itm.val))
+			pattern = append(pattern, Text(itm.val))
 		case itemExpressionOpen:
 			// HACK: Find if it's a markup or expression, if it's markup, let the markup case handle it.
 			if typ := p.peekNonWS().typ; typ == itemMarkupOpen || typ == itemMarkupClose {
@@ -612,12 +611,12 @@ func (p *parser) parseMatcher() (Matcher, error) {
 				return Matcher{}, fmt.Errorf("parse variant keys: %w", err)
 			}
 
-			patterns, err := p.parsePatterns()
+			pattern, err := p.parsePattern()
 			if err != nil {
-				return Matcher{}, fmt.Errorf("parse patterns: %w", err)
+				return Matcher{}, fmt.Errorf("parse pattern: %w", err)
 			}
 
-			matcher.Variants = append(matcher.Variants, Variant{Keys: keys, QuotedPattern: QuotedPattern(patterns)})
+			matcher.Variants = append(matcher.Variants, Variant{Keys: keys, QuotedPattern: QuotedPattern(pattern)})
 		// bad tokens
 		default:
 			return Matcher{},

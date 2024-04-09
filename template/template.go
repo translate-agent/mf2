@@ -116,10 +116,8 @@ func (e *executer) execute() error {
 	case nil:
 		return nil
 	case ast.SimpleMessage:
-		for _, pattern := range message {
-			if err := e.resolvePattern(pattern); err != nil {
-				return fmt.Errorf("resolve pattern: %w", err)
-			}
+		if err := e.resolvePattern(message); err != nil {
+			return fmt.Errorf("resolve pattern: %w", err)
 		}
 	case ast.ComplexMessage:
 		return e.resolveComplexMessage(message)
@@ -186,35 +184,35 @@ func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
 			return fmt.Errorf("resolve matcher: %w", err)
 		}
 	case ast.QuotedPattern:
-		for _, p := range b {
-			if err := e.resolvePattern(p); err != nil {
-				return fmt.Errorf("resolve pattern: %w", err)
-			}
+		if err := e.resolvePattern(b); err != nil {
+			return fmt.Errorf("resolve pattern: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func (e *executer) resolvePattern(pattern ast.Pattern) error {
-	switch patternType := pattern.(type) {
-	case ast.TextPattern:
-		if err := e.write(string(patternType)); err != nil {
-			return fmt.Errorf("write text pattern: %w", err)
-		}
-	case ast.Expression:
-		resolved, err := e.resolveExpression(patternType)
-		if err != nil {
-			return fmt.Errorf("resolve expression: %w", err)
-		}
+func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
+	for _, part := range pattern {
+		switch v := part.(type) {
+		case ast.Text:
+			if err := e.write(string(v)); err != nil {
+				return fmt.Errorf("write text: %w", err)
+			}
+		case ast.Expression:
+			resolved, err := e.resolveExpression(v)
+			if err != nil {
+				return fmt.Errorf("resolve expression: %w", err)
+			}
 
-		if err := e.write(resolved); err != nil {
-			return fmt.Errorf("resolve expression: %w", err)
+			if err := e.write(resolved); err != nil {
+				return fmt.Errorf("write expression: %w", err)
+			}
+		//nolint:lll
+		// When formatting to a string, markup placeholders format to an empty string by default.
+		// https://github.com/unicode-org/message-format-wg/blob/main/exploration/open-close-placeholders.md#formatting-to-a-string
+		case ast.Markup:
 		}
-	//nolint:lll
-	// When formatting to a string, markup placeholders format to an empty string by default.
-	// https://github.com/unicode-org/message-format-wg/blob/main/exploration/open-close-placeholders.md#formatting-to-a-string
-	case ast.Markup:
 	}
 
 	return nil
@@ -474,12 +472,8 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 
 func (e *executer) selectBestVariant(sortable []SortableVariant) error {
 	// Select the best variant
-	bestVariant := sortable[0].Variant
-
-	for _, patternElement := range bestVariant.QuotedPattern {
-		if err := e.resolvePattern(patternElement); err != nil {
-			return fmt.Errorf("resolve pattern element: %w", err)
-		}
+	if err := e.resolvePattern(sortable[0].Variant.QuotedPattern); err != nil {
+		return fmt.Errorf("resolve pattern: %w", err)
 	}
 
 	return nil

@@ -19,23 +19,23 @@ func TestParseSimpleMessage(t *testing.T) {
 			name:  "text only",
 			input: "Hello, World!",
 			expected: SimpleMessage{
-				TextPattern("Hello, World!"),
+				Text("Hello, World!"),
 			},
 		},
 		{
 			name:  "text only with escaped chars",
 			input: "Hello, \\{World!\\}",
 			expected: SimpleMessage{
-				TextPattern("Hello, {World!}"),
+				Text("Hello, {World!}"),
 			},
 		},
 		{
 			name:  "variable expression in the middle",
 			input: "Hello, { $variable } World!",
 			expected: SimpleMessage{
-				TextPattern("Hello, "),
+				Text("Hello, "),
 				Expression{Operand: Variable("variable")},
-				TextPattern(" World!"),
+				Text(" World!"),
 			},
 		},
 		{
@@ -43,14 +43,14 @@ func TestParseSimpleMessage(t *testing.T) {
 			input: "{ $variable } Hello, World!",
 			expected: SimpleMessage{
 				Expression{Operand: Variable("variable")},
-				TextPattern(" Hello, World!"),
+				Text(" Hello, World!"),
 			},
 		},
 		{
 			name:  "variable expression at the end",
 			input: "Hello, World! { $variable }",
 			expected: SimpleMessage{
-				TextPattern("Hello, World! "),
+				Text("Hello, World! "),
 				Expression{Operand: Variable("variable")},
 			},
 		},
@@ -58,7 +58,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			name:  "variable expression with annotation",
 			input: "Hello, { $variable :function }  World!",
 			expected: SimpleMessage{
-				TextPattern("Hello, "),
+				Text("Hello, "),
 				Expression{
 					Operand: Variable("variable"),
 					Annotation: Function{
@@ -68,14 +68,14 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 					},
 				},
-				TextPattern("  World!"),
+				Text("  World!"),
 			},
 		},
 		{
 			name:  "variable expression with annotation options and attributes",
 			input: "Hello, { $variable :function option1 = -3.14 ns:option2 = |value2| option3 = $variable2 @attr1 = attr1} World!", //nolint:lll
 			expected: SimpleMessage{
-				TextPattern("Hello, "),
+				Text("Hello, "),
 				Expression{
 					Operand: Variable("variable"),
 					Annotation: Function{
@@ -114,41 +114,41 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 					},
 				},
-				TextPattern(" World!"),
+				Text(" World!"),
 			},
 		},
 		{
 			name:  "quoted literal expression",
 			input: "Hello, { |literal| }  World!",
 			expected: SimpleMessage{
-				TextPattern("Hello, "),
+				Text("Hello, "),
 				Expression{Operand: QuotedLiteral("literal")},
-				TextPattern("  World!"),
+				Text("  World!"),
 			},
 		},
 		{
 			name:  "unquoted scientific notation number literal expression",
 			input: "Hello, { 1e3 }  World!",
 			expected: SimpleMessage{
-				TextPattern("Hello, "),
+				Text("Hello, "),
 				Expression{Operand: NumberLiteral(1e3)},
-				TextPattern("  World!"),
+				Text("  World!"),
 			},
 		},
 		{
 			name:  "unquoted name literal expression",
 			input: "Hello, { name } World!",
 			expected: SimpleMessage{
-				TextPattern("Hello, "),
+				Text("Hello, "),
 				Expression{Operand: NameLiteral("name")},
-				TextPattern(" World!"),
+				Text(" World!"),
 			},
 		},
 		{
 			name:  "quoted name literal expression with annotation",
 			input: "Hello, { |name| :function } World!",
 			expected: SimpleMessage{
-				TextPattern("Hello, "),
+				Text("Hello, "),
 				Expression{
 					Operand: QuotedLiteral("name"),
 					Annotation: Function{
@@ -158,14 +158,14 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 					},
 				},
-				TextPattern(" World!"),
+				Text(" World!"),
 			},
 		},
 		{
 			name:  "quoted name literal expression with annotation and options",
 			input: "Hello, { |name| :function ns1:option1 = -1 ns2:option2 = 1 option3 = |value3| } World!",
 			expected: SimpleMessage{
-				TextPattern("Hello, "),
+				Text("Hello, "),
 				Expression{
 					Operand: QuotedLiteral("name"),
 					Annotation: Function{
@@ -198,14 +198,14 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 					},
 				},
-				TextPattern(" World!"),
+				Text(" World!"),
 			},
 		},
 		{
 			name:  "function expression",
 			input: "Hello { :function } World!",
 			expected: SimpleMessage{
-				TextPattern("Hello "),
+				Text("Hello "),
 				Expression{
 					Annotation: Function{
 						Identifier: Identifier{
@@ -214,14 +214,14 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 					},
 				},
-				TextPattern(" World!"),
+				Text(" World!"),
 			},
 		},
 		{
 			name:  "function expression with options and namespace",
 			input: "Hello { :namespace:function namespace:option999 = 999 } World!",
 			expected: SimpleMessage{
-				TextPattern("Hello "),
+				Text("Hello "),
 				Expression{
 					Annotation: Function{
 						Identifier: Identifier{
@@ -239,14 +239,14 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 					},
 				},
-				TextPattern(" World!"),
+				Text(" World!"),
 			},
 		},
 		{
 			name:  "private use and reserved annotation",
 			input: `Hello { $hey ^private }{ !|reserved| \|hey\| \{ @v @k=2 @l:l=$s} World!`,
 			expected: SimpleMessage{
-				TextPattern("Hello "),
+				Text("Hello "),
 				Expression{
 					Operand: Variable("hey"),
 					Annotation: PrivateUseAnnotation{
@@ -279,7 +279,7 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 					},
 				},
-				TextPattern(" World!"),
+				Text(" World!"),
 			},
 		},
 		{
@@ -287,7 +287,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			input: `It is a {#button opt1=val1 @attr1=val1 } button { /button } this is a { #br /} something else, {#ns:tag1}{#tag2}text{ #img /}{/tag2}{/ns:tag1}`, //nolint:lll
 			expected: SimpleMessage{
 				// 1. Open-Close markup
-				TextPattern("It is a "),
+				Text("It is a "),
 				Markup{
 					Typ: Open,
 					Identifier: Identifier{
@@ -309,16 +309,16 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 					},
 				},
-				TextPattern(" button "),
+				Text(" button "),
 				Markup{Typ: Close, Identifier: Identifier{Name: "button"}},
 				// 2. Self-close markup
-				TextPattern(" this is a "),
+				Text(" this is a "),
 				Markup{Typ: SelfClose, Identifier: Identifier{Name: "br"}},
-				TextPattern(" something else, "),
+				Text(" something else, "),
 				// 3. Nested markup
 				Markup{Typ: Open, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
 				Markup{Typ: Open, Identifier: Identifier{Name: "tag2"}},
-				TextPattern("text"),
+				Text("text"),
 				Markup{Typ: SelfClose, Identifier: Identifier{Name: "img"}},
 				Markup{Typ: Close, Identifier: Identifier{Name: "tag2"}},
 				Markup{Typ: Close, Identifier: Identifier{Namespace: "ns", Name: "tag1"}},
@@ -368,9 +368,9 @@ func TestParseComplexMessage(t *testing.T) {
 			expected: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: QuotedPattern{
-					TextPattern("Hello, "),
+					Text("Hello, "),
 					Expression{Operand: QuotedLiteral("literal")},
-					TextPattern(" World!"),
+					Text(" World!"),
 				},
 			},
 		},
@@ -388,7 +388,7 @@ func TestParseComplexMessage(t *testing.T) {
 .reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
 {{Text}}`,
 			expected: ComplexMessage{
-				ComplexBody: QuotedPattern{TextPattern("Text")},
+				ComplexBody: QuotedPattern{Text("Text")},
 				Declarations: []Declaration{
 					// .input{$input :number @a}
 					InputDeclaration{
@@ -518,17 +518,17 @@ func TestParseComplexMessage(t *testing.T) {
 						{
 							Keys: []VariantKey{NumberLiteral(1)},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello "),
+								Text("Hello "),
 								Expression{Operand: Variable("variable")},
-								TextPattern(" world"),
+								Text(" world"),
 							},
 						},
 						{
 							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello "),
+								Text("Hello "),
 								Expression{Operand: Variable("variable")},
-								TextPattern(" worlds"),
+								Text(" worlds"),
 							},
 						},
 					},
@@ -555,17 +555,17 @@ func TestParseComplexMessage(t *testing.T) {
 						{
 							Keys: []VariantKey{NumberLiteral(1)},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello "),
+								Text("Hello "),
 								Expression{Operand: Variable("variable")},
-								TextPattern(" world"),
+								Text(" world"),
 							},
 						},
 						{
 							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello "),
+								Text("Hello "),
 								Expression{Operand: Variable("variable")},
-								TextPattern(" worlds"),
+								Text(" worlds"),
 							},
 						},
 					},
@@ -592,17 +592,17 @@ func TestParseComplexMessage(t *testing.T) {
 						{
 							Keys: []VariantKey{NumberLiteral(1)},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello "),
+								Text("Hello "),
 								Expression{Operand: Variable("variable")},
-								TextPattern(" world"),
+								Text(" world"),
 							},
 						},
 						{
 							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello "),
+								Text("Hello "),
 								Expression{Operand: Variable("variable")},
-								TextPattern(" worlds"),
+								Text(" worlds"),
 							},
 						},
 					},
@@ -643,23 +643,23 @@ male {{Hello sir!}}
 						{
 							Keys: []VariantKey{NameLiteral("male")},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello sir!"),
+								Text("Hello sir!"),
 							},
 						},
 						{
 							Keys: []VariantKey{QuotedLiteral("female")},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello madam!"),
+								Text("Hello madam!"),
 							},
 						},
 						{
 							Keys: []VariantKey{CatchAllKey{}},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello "),
+								Text("Hello "),
 								Expression{Operand: Variable("var1")},
-								TextPattern(" or "),
+								Text(" or "),
 								Expression{Operand: Variable("var2")},
-								TextPattern("!"),
+								Text("!"),
 							},
 						},
 					},
@@ -688,7 +688,7 @@ no no {{Hello!}}`,
 								NameLiteral("yes"),
 							},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello beautiful world!"),
+								Text("Hello beautiful world!"),
 							},
 						},
 						{
@@ -697,7 +697,7 @@ no no {{Hello!}}`,
 								NameLiteral("no"),
 							},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello beautiful!"),
+								Text("Hello beautiful!"),
 							},
 						},
 						{
@@ -706,7 +706,7 @@ no no {{Hello!}}`,
 								NameLiteral("yes"),
 							},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello world!"),
+								Text("Hello world!"),
 							},
 						},
 						{
@@ -715,7 +715,7 @@ no no {{Hello!}}`,
 								NameLiteral("no"),
 							},
 							QuotedPattern: QuotedPattern{
-								TextPattern("Hello!"),
+								Text("Hello!"),
 							},
 						},
 					},
@@ -765,7 +765,7 @@ func TestValidate(t *testing.T) {
 			name: "Variable expression empty variable name",
 			ast: AST{
 				Message: SimpleMessage{
-					TextPattern("Hello, "),
+					Text("Hello, "),
 					Expression{Operand: Variable("")},
 				},
 			},
@@ -776,7 +776,7 @@ func TestValidate(t *testing.T) {
 			name: "Variable expression with annotation empty function name",
 			ast: AST{
 				Message: SimpleMessage{
-					TextPattern("Hello, "),
+					Text("Hello, "),
 					Expression{
 						Operand: Variable("variable"),
 						Annotation: Function{
@@ -795,9 +795,9 @@ func TestValidate(t *testing.T) {
 			name: "Empty annotation expression",
 			ast: AST{
 				Message: SimpleMessage{
-					TextPattern("Hello, "),
+					Text("Hello, "),
 					Expression{},
-					TextPattern(" World!"),
+					Text(" World!"),
 				},
 			},
 			errorPath: "simpleMessage.expression",
@@ -811,7 +811,7 @@ func TestValidate(t *testing.T) {
 						InputDeclaration{Operand: Variable("")},
 					},
 					ComplexBody: QuotedPattern{
-						TextPattern("Hello, World!"),
+						Text("Hello, World!"),
 					},
 				},
 			},
@@ -829,7 +829,7 @@ func TestValidate(t *testing.T) {
 						},
 					},
 					ComplexBody: QuotedPattern{
-						TextPattern("Hello, World!"),
+						Text("Hello, World!"),
 					},
 				},
 			},
@@ -847,7 +847,7 @@ func TestValidate(t *testing.T) {
 							{
 								Keys: []VariantKey{NumberLiteral(1)},
 								QuotedPattern: QuotedPattern{
-									TextPattern("Hello, World!"),
+									Text("Hello, World!"),
 								},
 							},
 						},
@@ -884,7 +884,7 @@ func TestValidate(t *testing.T) {
 						Variants: []Variant{
 							{
 								Keys:          []VariantKey{},
-								QuotedPattern: QuotedPattern{TextPattern("Hello world")},
+								QuotedPattern: QuotedPattern{Text("Hello world")},
 							},
 						},
 					},
