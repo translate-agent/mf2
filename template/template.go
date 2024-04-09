@@ -68,7 +68,13 @@ func (t *Template) Execute(wr io.Writer, input map[string]any) error {
 		return errors.New("AST is nil")
 	}
 
-	executer := &executer{template: t, wr: wr, input: input}
+	variables := make(map[string]any, len(input))
+
+	for k, v := range input {
+		variables[k] = v
+	}
+
+	executer := &executer{template: t, wr: wr, variables: input}
 
 	return executer.execute()
 }
@@ -90,9 +96,9 @@ func New() *Template {
 }
 
 type executer struct {
-	template *Template
-	wr       io.Writer
-	input    map[string]any
+	template  *Template
+	wr        io.Writer
+	variables map[string]any
 }
 
 func (e *executer) write(s string) error {
@@ -153,8 +159,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 				return fmt.Errorf("resolve expression: %w", err)
 			}
 
-			e.input[string(d.Variable)] = resolved
-
+			e.variables[string(d.Variable)] = resolved
 		case ast.InputDeclaration:
 			if _, ok := m[d.Operand]; ok {
 				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, d)
@@ -167,7 +172,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 				return fmt.Errorf("resolve expression: %w", err)
 			}
 
-			e.input[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // Will always be a variable.
+			e.variables[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // Will always be a variable.
 		}
 	}
 
@@ -251,7 +256,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.NumberLiteral:
 		return float64(v), nil
 	case ast.Variable:
-		val, ok := e.input[string(v)]
+		val, ok := e.variables[string(v)]
 		if !ok {
 			return nil, fmt.Errorf("%w '%s'", ErrUnresolvedVariable, v)
 		}
