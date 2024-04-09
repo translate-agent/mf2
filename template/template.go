@@ -63,18 +63,16 @@ func (t *Template) Parse(input string) (*Template, error) {
 }
 
 // Execute writes the result of the template to the given writer.
-func (t *Template) Execute(wr io.Writer, input map[string]any) error {
+func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	if t.ast == nil {
 		return errors.New("AST is nil")
 	}
 
-	variables := make(map[string]any, len(input))
+	executer := &executer{template: t, wr: w, variables: make(map[string]any, len(input))}
 
 	for k, v := range input {
-		variables[k] = v
+		executer.variables[k] = v
 	}
-
-	executer := &executer{template: t, wr: wr, variables: input}
 
 	return executer.execute()
 }
