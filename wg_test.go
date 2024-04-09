@@ -13,7 +13,7 @@ import (
 
 type WgTest struct {
 	// The MF2 message to be tested.
-	Input string `json:"src"`
+	Src string `json:"src"`
 	// The locale to use for formatting. Defaults to 'en-US'.
 	Locale *language.Tag `json:"local"`
 	// Parameters to pass in to the formatter for resolving external variables.
@@ -71,7 +71,7 @@ func TestWgCore(t *testing.T) {
 	for _, test := range tests {
 		test := test
 
-		t.Run(test.Input, func(t *testing.T) {
+		t.Run(test.Src, func(t *testing.T) {
 			t.Parallel()
 
 			assertWgTest(t, test)
@@ -98,7 +98,7 @@ func TestWgFunctions(t *testing.T) {
 			for _, test := range funcTests {
 				test := test
 
-				t.Run(test.Input, func(t *testing.T) {
+				t.Run(test.Src, func(t *testing.T) {
 					t.Parallel()
 
 					assertWgTest(t, test)
@@ -112,7 +112,7 @@ func TestWgFunctions(t *testing.T) {
 func assertWgTest(t *testing.T, test WgTest) {
 	t.Helper()
 
-	templ, err := template.New().Parse(test.Input)
+	templ, err := template.New().Parse(test.Src)
 	require.NoError(t, err)
 
 	actual, err := templ.Sprint(test.Params)

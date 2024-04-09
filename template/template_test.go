@@ -11,58 +11,38 @@ import (
 func Test_ExecuteSimpleMessage(t *testing.T) {
 	t.Parallel()
 
-	type args struct {
-		input map[string]any
-		text  string
-	}
-
 	tests := []struct {
-		name     string
-		args     args
-		expected string
-		funcs    []registry.Func // format functions to be added before executing
+		name, text string
+		input      map[string]any
+		expected   string
+		funcs      []registry.Func // format functions to be added before executing
 	}{
 		{
 			name: "empty message",
-			args: args{
-				text:  "",
-				input: nil,
-			},
-			expected: "",
 		},
 		{
-			name: "plain message",
-			args: args{
-				text:  "Hello, World!",
-				input: nil,
-			},
+			name:     "plain message",
+			text:     "Hello, World!",
 			expected: "Hello, World!",
 		},
 		{
-			name: "variables and literals",
-			args: args{
-				text:  "Hello, { $name } { unquoted } { |quoted| } { 42 }!",
-				input: map[string]any{"name": "World"},
-			},
+			name:     "variables and literals",
+			text:     "Hello, { $name } { unquoted } { |quoted| } { 42 }!",
+			input:    map[string]any{"name": "World"},
 			expected: "Hello, World unquoted quoted 42!",
 		},
 		{
 			name: "functions with operand",
-			args: args{
-				text: "Hello, { $firstName :string } your age is { $age :number style=decimal }!",
-				input: map[string]any{
-					"firstName": "John",
-					"age":       23,
-				},
+			text: "Hello, { $firstName :string } your age is { $age :number style=decimal }!",
+			input: map[string]any{
+				"firstName": "John",
+				"age":       23,
 			},
 			expected: "Hello, John your age is 23!",
 		},
 		{
 			name: "function without operand",
-			args: args{
-				text:  "Hello, { :randName }",
-				input: nil,
-			},
+			text: "Hello, { :randName }",
 			funcs: []registry.Func{
 				{
 					Name:            "randName",
@@ -79,14 +59,14 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New().Parse(tt.args.text)
+			template, err := New().Parse(tt.text)
 			require.NoError(t, err)
 
 			for _, f := range tt.funcs {
 				template.AddFunc(f)
 			}
 
-			actual, err := template.Sprint(tt.args.input)
+			actual, err := template.Sprint(tt.input)
 			require.NoError(t, err)
 
 			require.Equal(t, tt.expected, actual)
@@ -97,34 +77,24 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 func Test_ExecuteComplexMessage(t *testing.T) {
 	t.Parallel()
 
-	type args struct {
-		inputs map[string]any
-		text   string
-	}
-
 	tests := []struct {
-		name     string
-		args     args
-		expected string
-		funcs    []registry.Func // format functions to be added before executing
+		name, text string
+		inputs     map[string]any
+		expected   string
+		funcs      []registry.Func // format functions to be added before executing
 	}{
 		{
-			name: "complex message without declaration",
-			args: args{
-				text:   "{{Hello, {|literal|} World!}}",
-				inputs: nil,
-			},
+			name:     "complex message without declaration",
+			text:     "{{Hello, {|literal|} World!}}",
 			expected: "Hello, literal World!",
 		},
 		{
 			name: "local declarations",
-			args: args{
-				text: `.local $var1 = { literalExpression }
+			text: `.local $var1 = { literalExpression }
 		.local $var2 = { $anotherVar }
 		.local $var3 = { :randNum }
 		{{Hello, {$var1} {$var2} {$var3}!}}`,
-				inputs: map[string]any{"anotherVar": "World"},
-			},
+			inputs: map[string]any{"anotherVar": "World"},
 			funcs: []registry.Func{
 				{
 					Name:            "randNum",
@@ -135,19 +105,14 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 			expected: "Hello, literalExpression World 0!",
 		},
 		{
-			name: "input declaration",
-			args: args{
-				text:   ".input { $name :string } {{Hello, {$name}!}}",
-				inputs: map[string]any{"name": 999},
-			},
+			name:     "input declaration",
+			text:     ".input { $name :string } {{Hello, {$name}!}}",
+			inputs:   map[string]any{"name": 999},
 			expected: "Hello, 999!",
 		},
 		{
-			name: "markup",
-			args: args{
-				text:   "Click {#link href=$url}here{/link} standalone {#foo/}",
-				inputs: nil,
-			},
+			name:     "markup",
+			text:     "Click {#link href=$url}here{/link} standalone {#foo/}",
 			expected: "Click here standalone ",
 		},
 	}
@@ -157,14 +122,14 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New().Parse(tt.args.text)
+			template, err := New().Parse(tt.text)
 			require.NoError(t, err)
 
 			for _, f := range tt.funcs {
 				template.AddFunc(f)
 			}
 
-			actual, err := template.Sprint(tt.args.inputs)
+			actual, err := template.Sprint(tt.inputs)
 			require.NoError(t, err)
 
 			require.Equal(t, tt.expected, actual)
@@ -228,8 +193,7 @@ func Test_Matcher(t *testing.T) {
 			require.NoError(t, err)
 
 			for i, inputMap := range tt.inputs {
-				i := i
-				inputMap := inputMap
+				i, inputMap := i, inputMap
 
 				t.Run(tt.expected[i], func(t *testing.T) {
 					t.Parallel()
@@ -247,65 +211,45 @@ func Test_Matcher(t *testing.T) {
 func Test_ExecuteErrors(t *testing.T) {
 	t.Parallel()
 
-	type args struct {
-		input map[string]any
-		text  string
+	type expected struct {
+		parseErr, execErr error
 	}
 
 	tests := []struct {
-		name               string
-		expectedParseErr   error
-		expectedExecuteErr error
-		args               args
-		fn                 []registry.Func // format function to be added before executing
+		name, text string
+		input      map[string]any
+		expected   expected
+		fn         []registry.Func // format function to be added before executing
 	}{
 		{
-			name: "syntax error",
-			args: args{
-				text:  "Hello { $name",
-				input: nil,
-			},
-			expectedParseErr: ErrSyntax,
+			name:     "syntax error",
+			text:     "Hello { $name",
+			expected: expected{parseErr: ErrSyntax},
 		},
 		{
-			name: "unresolved variable",
-			args: args{
-				text:  "Hello, { $name }!",
-				input: nil,
-			},
-			expectedExecuteErr: ErrUnresolvedVariable,
+			name:     "unresolved variable",
+			text:     "Hello, { $name }!",
+			expected: expected{execErr: ErrUnresolvedVariable},
 		},
 		{
-			name: "unknown function",
-			args: args{
-				text:  "Hello, { :f }!",
-				input: nil,
-			},
-			expectedExecuteErr: ErrUnknownFunction,
+			name:     "unknown function",
+			text:     "Hello, { :f }!",
+			expected: expected{execErr: ErrUnknownFunction},
 		},
 		{
-			name: "duplicate option name",
-			args: args{
-				text:  "Hello, { :number style=decimal style=percent }!",
-				input: nil,
-			},
-			expectedExecuteErr: ErrDuplicateOptionName,
+			name:     "duplicate option name",
+			text:     "Hello, { :number style=decimal style=percent }!",
+			expected: expected{execErr: ErrDuplicateOptionName},
 		},
 		{
-			name: "unsupported expression",
-			args: args{
-				text:  "Hello, { 12 ^private }!",
-				input: nil,
-			},
-			expectedExecuteErr: ErrUnsupportedExpression,
+			name:     "unsupported expression",
+			text:     "Hello, { 12 ^private }!",
+			expected: expected{execErr: ErrUnsupportedExpression},
 		},
 		{
-			name: "formatting error",
-			args: args{
-				text:  "Hello, { :error }!",
-				input: nil,
-			},
-			expectedExecuteErr: ErrFormatting,
+			name:     "formatting error",
+			text:     "Hello, { :error }!",
+			expected: expected{execErr: ErrFormatting},
 			fn: []registry.Func{
 				{
 					Name:            "error",
@@ -315,44 +259,33 @@ func Test_ExecuteErrors(t *testing.T) {
 			},
 		},
 		{
-			name: "unsupported declaration",
-			args: args{
-				text:  ".reserved { $name } {{Hello, {$name}!}}",
-				input: nil,
-			},
-			expectedExecuteErr: ErrUnsupportedStatement,
+			name:     "unsupported declaration",
+			text:     ".reserved { $name } {{Hello, {$name}!}}",
+			expected: expected{execErr: ErrUnsupportedStatement},
 		},
 		{
-			name: "duplicate declaration",
-			args: args{
-				text:  ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
-				input: map[string]any{"var": "22"},
-			},
-			expectedExecuteErr: ErrDuplicateDeclaration,
+			name:     "duplicate declaration",
+			text:     ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
+			input:    map[string]any{"var": "22"},
+			expected: expected{execErr: ErrDuplicateDeclaration},
 		},
 		{
-			name: "duplicate declaration",
-			args: args{
-				text:  ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
-				input: map[string]any{"ext": "22"},
-			},
-			expectedExecuteErr: ErrDuplicateDeclaration,
+			name:     "duplicate declaration",
+			text:     ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
+			input:    map[string]any{"ext": "22"},
+			expected: expected{execErr: ErrDuplicateDeclaration},
 		},
 		{
-			name: "Selection Error No Annotation",
-			args: args{
-				text:  ".match {$n} 0 {{no apples}} 1 {{apple}} * {{apples}}",
-				input: map[string]any{"n": "1"},
-			},
-			expectedExecuteErr: ErrMissingSelectorAnnotation,
+			name:     "Selection Error No Annotation",
+			text:     ".match {$n} 0 {{no apples}} 1 {{apple}} * {{apples}}",
+			input:    map[string]any{"n": "1"},
+			expected: expected{execErr: ErrMissingSelectorAnnotation},
 		},
 		{
-			name: "Selection with Reversed Annotation",
-			args: args{
-				text:  ".match {$count ^string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
-				input: map[string]any{"count": "1"},
-			},
-			expectedExecuteErr: ErrUnsupportedExpression,
+			name:     "Selection with Reversed Annotation",
+			text:     ".match {$count ^string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+			input:    map[string]any{"count": "1"},
+			expected: expected{execErr: ErrUnsupportedExpression},
 		},
 	}
 
@@ -361,9 +294,9 @@ func Test_ExecuteErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New().Parse(tt.args.text)
-			if tt.expectedParseErr != nil {
-				require.ErrorIs(t, err, tt.expectedParseErr)
+			template, err := New().Parse(tt.text)
+			if tt.expected.parseErr != nil {
+				require.ErrorIs(t, err, tt.expected.parseErr)
 				return
 			}
 
@@ -371,8 +304,8 @@ func Test_ExecuteErrors(t *testing.T) {
 				template.AddFunc(f)
 			}
 
-			_, err = template.Sprint(tt.args.input)
-			require.ErrorIs(t, err, tt.expectedExecuteErr)
+			_, err = template.Sprint(tt.input)
+			require.ErrorIs(t, err, tt.expected.execErr)
 		})
 	}
 }
