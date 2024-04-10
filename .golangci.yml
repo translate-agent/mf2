@@ -64,6 +64,7 @@ linters-settings:
       - generic
       - stdlib
       - (or|er)$
+      - Literal # false reporting in parseLiteral() by nolintlint
   predeclared:
     ignore: ""
   exhaustive:

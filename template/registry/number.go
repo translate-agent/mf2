@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strconv"
 
 	"golang.org/x/text/currency"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+	"golang.org/x/text/number"
 )
 
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L147
@@ -14,7 +16,7 @@ import (
 var numberRegistryF = &Func{
 	Name:           "number",
 	Description:    "Locale-sensitive number formatting",
-	Fn:             numberF,
+	Func:           numberF,
 	MatchSignature: nil, // Not allowed to use in matching context
 	FormatSignature: &Signature{
 		IsInputRequired: true,
@@ -153,7 +155,7 @@ the default for percent formatting is the larger of minimumFractionDigits and 0.
 }
 
 // TODO: supports only style and signDisplay options.
-func numberF(input any, options map[string]any) (any, error) {
+func numberF(input any, options map[string]any, locale language.Tag) (any, error) {
 	num, err := castAs[float64](input)
 	if err != nil {
 		return nil, fmt.Errorf("convert input to float64: %w", err)
@@ -179,9 +181,11 @@ func numberF(input any, options map[string]any) (any, error) {
 		style = "decimal"
 	}
 
+	p := message.NewPrinter(locale)
+
 	switch style {
 	case "decimal":
-		result = strconv.FormatFloat(num, 'f', -1, 64)
+		result = p.Sprint(number.Decimal(num))
 	case "percent":
 		result = fmt.Sprintf("%.2f%%", num*100) //nolint:gomnd
 	default:

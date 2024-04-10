@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/language"
 )
 
 var testDate = time.Date(2021, 1, 2, 3, 4, 5, 6, time.UTC)
@@ -69,7 +70,7 @@ func Test_Datetime(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := datetimeRegistryF.Format(tt.input, tt.options)
+			actual, err := datetimeRegistryF.Format(tt.input, tt.options, language.AmericanEnglish)
 
 			if tt.expectedErr {
 				require.Error(t, err)

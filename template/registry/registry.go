@@ -4,17 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"golang.org/x/text/language"
 )
 
 type Registry map[string]Func
 
 // Func is a function that can be used in formatting and matching contexts.
 type Func struct {
-	FormatSignature *Signature                             // Signature of the function when called in formatting context
-	MatchSignature  *Signature                             // Signature of the function when called in matching context
-	Fn              func(any, map[string]any) (any, error) // Function itself
-	Name            string
-	Description     string
+	FormatSignature, MatchSignature *Signature // Function signature when called in formatting or matching context
+	Func                            func(any, map[string]any, language.Tag) (any, error)
+	Name                            string
+	Description                     string
 }
 
 // Signature is a signature of the function, i.e. what input and options are allowed.
@@ -45,7 +46,7 @@ func New() Registry {
 	}
 }
 
-func (f *Func) Format(input any, options map[string]any) (any, error) {
+func (f *Func) Format(input any, options map[string]any, locale language.Tag) (any, error) {
 	if f.FormatSignature == nil {
 		return "", fmt.Errorf("function '%s' is not allowed to use in formatting context", f.Name)
 	}
@@ -54,10 +55,10 @@ func (f *Func) Format(input any, options map[string]any) (any, error) {
 		return "", fmt.Errorf("check input: %w", err)
 	}
 
-	return f.Fn(input, options)
+	return f.Func(input, options, locale)
 }
 
-func (f *Func) Match(input any, options map[string]any) (any, error) {
+func (f *Func) Match(input any, options map[string]any, locale language.Tag) (any, error) {
 	if f.MatchSignature == nil {
 		return "", fmt.Errorf("function '%s' is not allowed to use in selector context", f.Name)
 	}
@@ -66,7 +67,7 @@ func (f *Func) Match(input any, options map[string]any) (any, error) {
 		return "", fmt.Errorf("check input: %w", err)
 	}
 
-	return f.Fn(input, options)
+	return f.Func(input, options, locale)
 }
 
 func (s *Signature) check(input any, options map[string]any) error {

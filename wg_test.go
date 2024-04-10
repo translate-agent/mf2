@@ -15,7 +15,7 @@ type WgTest struct {
 	// The MF2 message to be tested.
 	Src string `json:"src"`
 	// The locale to use for formatting. Defaults to 'en-US'.
-	Locale *language.Tag `json:"local"`
+	Locale *language.Tag `json:"locale"`
 	// Parameters to pass in to the formatter for resolving external variables.
 	Params map[string]any `json:"params"`
 	// The expected result of formatting the message to a string.
@@ -112,7 +112,12 @@ func TestWgFunctions(t *testing.T) {
 func assertWgTest(t *testing.T, test WgTest) {
 	t.Helper()
 
-	templ, err := template.New().Parse(test.Src)
+	var options []template.Option
+	if test.Locale != nil {
+		options = append(options, template.WithLocale(*test.Locale))
+	}
+
+	templ, err := template.New(options...).Parse(test.Src)
 	require.NoError(t, err)
 
 	actual, err := templ.Sprint(test.Params)

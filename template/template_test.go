@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.expect.digital/mf2/template/registry"
+	"golang.org/x/text/language"
 )
 
 func Test_ExecuteSimpleMessage(t *testing.T) {
@@ -48,7 +49,7 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 				{
 					Name:            "randName",
 					FormatSignature: &registry.Signature{},
-					Fn:              func(_ any, _ map[string]any) (any, error) { return "John", nil },
+					Func:            func(any, map[string]any, language.Tag) (any, error) { return "John", nil },
 				},
 			},
 			expected: "Hello, John",
@@ -60,12 +61,8 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New().Parse(tt.text)
+			template, err := New(WithFuncs(tt.funcs)).Parse(tt.text)
 			require.NoError(t, err)
-
-			for _, f := range tt.funcs {
-				template.AddFunc(f)
-			}
 
 			actual, err := template.Sprint(tt.input)
 			require.NoError(t, err)
@@ -100,7 +97,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 				{
 					Name:            "randNum",
 					FormatSignature: &registry.Signature{},
-					Fn:              func(_ any, _ map[string]any) (any, error) { return 0, nil },
+					Func:            func(any, map[string]any, language.Tag) (any, error) { return 0, nil },
 				},
 			},
 			expected: "Hello, literalExpression World 0!",
@@ -123,12 +120,8 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New().Parse(tt.text)
+			template, err := New(WithFuncs(tt.funcs)).Parse(tt.text)
 			require.NoError(t, err)
-
-			for _, f := range tt.funcs {
-				template.AddFunc(f)
-			}
 
 			actual, err := template.Sprint(tt.inputs)
 			require.NoError(t, err)
@@ -221,7 +214,7 @@ func Test_ExecuteErrors(t *testing.T) {
 		name, text string
 		input      map[string]any
 		expected   expected
-		fn         []registry.Func // format function to be added before executing
+		funcs      []registry.Func // format function to be added before executing
 	}{
 		{
 			name:     "syntax error",
@@ -252,11 +245,11 @@ func Test_ExecuteErrors(t *testing.T) {
 			name:     "formatting error",
 			text:     "Hello, { :error }!",
 			expected: expected{execErr: ErrFormatting, text: "Hello, !"},
-			fn: []registry.Func{
+			funcs: []registry.Func{
 				{
 					Name:            "error",
 					FormatSignature: &registry.Signature{},
-					Fn:              func(any, map[string]any) (any, error) { return nil, errors.New("error") },
+					Func:            func(any, map[string]any, language.Tag) (any, error) { return nil, errors.New("error") },
 				},
 			},
 		},
@@ -296,14 +289,10 @@ func Test_ExecuteErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New().Parse(tt.text)
+			template, err := New(WithFuncs(tt.funcs)).Parse(tt.text)
 			if tt.expected.parseErr != nil {
 				require.ErrorIs(t, err, tt.expected.parseErr)
 				return
-			}
-
-			for _, f := range tt.fn {
-				template.AddFunc(f)
 			}
 
 			text, err := template.Sprint(tt.input)

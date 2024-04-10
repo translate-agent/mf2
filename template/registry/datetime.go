@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"golang.org/x/text/language"
 )
 
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L13
@@ -11,7 +13,7 @@ import (
 var datetimeRegistryF = &Func{
 	Name:           "datetime",
 	Description:    "Locale-sensitive date and time formatting",
-	Fn:             datetimeF,
+	Func:           datetimeF,
 	MatchSignature: nil, // Not allowed to use in matching context
 	FormatSignature: &Signature{
 		IsInputRequired: true,
@@ -125,7 +127,7 @@ such as "Asia/Shanghai", "Asia/Kolkata", "America/New_York".`,
 	},
 }
 
-func datetimeF(a any, options map[string]any) (any, error) {
+func datetimeF(a any, options map[string]any, locale language.Tag) (any, error) {
 	if len(options) == 0 {
 		return fmt.Sprint(a), nil
 	}

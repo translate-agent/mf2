@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"golang.org/x/exp/slices"
+	"golang.org/x/text/language"
 
 	ast "go.expect.digital/mf2/parse"
 	"go.expect.digital/mf2/template/registry"
@@ -43,11 +44,46 @@ type Template struct {
 	//  - "lv-LV" -> 2.1.2023
 	ast          *ast.AST
 	funcRegistry registry.Registry
+	locale       language.Tag
 }
 
-// AddFunc adds a function to the template's function map.
-func (t *Template) AddFunc(f registry.Func) {
-	t.funcRegistry[f.Name] = f
+// New returns a new Template.
+func New(options ...Option) *Template {
+	t := &Template{
+		funcRegistry: registry.New(),
+		locale:       language.AmericanEnglish,
+	}
+
+	for _, o := range options {
+		o(t)
+	}
+
+	return t
+}
+
+// Option is a template option.
+type Option func(t *Template)
+
+// WithFunc adds a single function to function registry.
+func WithFunc(f registry.Func) Option {
+	return func(t *Template) {
+		t.funcRegistry[f.Name] = f
+	}
+}
+
+// WithFuncs adds functions to function registry.
+func WithFuncs(funcs []registry.Func) Option {
+	return func(t *Template) {
+		for _, v := range funcs {
+			t.funcRegistry[v.Name] = v
+		}
+	}
+}
+
+func WithLocale(locale language.Tag) Option {
+	return func(t *Template) {
+		t.locale = locale
+	}
 }
 
 // Parse parses the MessageFormat2 string and returns the template.
@@ -86,11 +122,6 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 	}
 
 	return sb.String(), nil
-}
-
-// New returns a new Template.
-func New() *Template {
-	return &Template{funcRegistry: registry.New()}
 }
 
 type executer struct {
@@ -291,7 +322,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 		return "", fmt.Errorf("resolve options: %w", err)
 	}
 
-	result, err := registryF.Format(operand, opts)
+	result, err := registryF.Format(operand, opts, e.template.locale)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrFormatting, err.Error())
 	}
@@ -369,7 +400,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			return nil, fmt.Errorf("resolve value: %w", err)
 		}
 
-		rslt, err := registryF.Match(input, opts)
+		rslt, err := registryF.Match(input, opts, e.template.locale)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrSelection, err.Error())
 		}
