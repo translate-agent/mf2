@@ -184,8 +184,6 @@ func Test_Matcher(t *testing.T) {
 			require.NoError(t, err)
 
 			for i, inputMap := range test.inputs {
-				i, inputMap := i, inputMap
-
 				t.Run(test.expected[i], func(t *testing.T) {
 					t.Parallel()
 
