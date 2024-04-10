@@ -59,7 +59,7 @@ func TestWgSyntaxErrors(t *testing.T) {
 var wgCore []byte
 
 func TestWgCore(t *testing.T) {
-	t.Skip() // TODO(jhorsts): tests fail, fix in smaller PRs. Issue #60
+	// t.Skip() // TODO(jhorsts): tests fail, fix in smaller PRs. Issue #60
 	t.Parallel()
 
 	var tests []WgTest
@@ -126,6 +126,8 @@ func assertWgTest(t *testing.T, test WgTest) {
 			require.ErrorIs(t, err, template.ErrUnresolvedVariable)
 		case "unsupported-statement":
 			require.ErrorIs(t, err, template.ErrUnsupportedStatement)
+		case "unsupported-annotation":
+			require.ErrorIs(t, err, template.ErrUnsupportedExpression)
 		}
 	}
 
