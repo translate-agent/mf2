@@ -285,10 +285,6 @@ func (p *parser) parseMarkup() (Markup, error) {
 			}
 
 		case itemOption:
-			if markup.Typ == Close {
-				return Markup{}, fmt.Errorf("close markup cannot have options: '%s'", itm.val)
-			}
-			// Markup with options
 			option, err := p.parseOption()
 			if err != nil {
 				return Markup{}, fmt.Errorf("parse option: %w", err)

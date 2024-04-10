@@ -454,8 +454,10 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
-			name:  "markup",
-			input: `{#button}Submit{/button}{#img alt=|Cancel| @hello=world @goodbye /}{ #nest1}{#nest2}text{#nest3/}{/nest2}{/nest1}`, //nolint: lll
+			name: "markup",
+			input: `{#button}Submit{/button}
+{#img alt=|Cancel| @hello=world @goodbye /}
+{ #nest1}{#nest2}text{#nest3/}{/nest2}{/nest1 a=b}`,
 			expected: []item{
 				// 1. simple open-close
 				mk(itemExpressionOpen, "{"),
@@ -465,6 +467,8 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemMarkupClose, "button"),
 				mk(itemExpressionClose, "}"),
+				mk(itemText, "\n"),
+
 				// 2. self-closing + options + attributes
 				mk(itemExpressionOpen, "{"),
 				mk(itemMarkupOpen, "img"),
@@ -481,6 +485,8 @@ func Test_lex(t *testing.T) {
 				mk(itemWhitespace, " "),
 				mk(itemMarkupClose, ""),
 				mk(itemExpressionClose, "}"),
+				mk(itemText, "\n"),
+
 				// 3. nested
 				mk(itemExpressionOpen, "{"),
 				mk(itemWhitespace, " "),
@@ -499,6 +505,10 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionClose, "}"),
 				mk(itemExpressionOpen, "{"),
 				mk(itemMarkupClose, "nest1"),
+				mk(itemWhitespace, " "),
+				mk(itemOption, "a"),
+				mk(itemOperator, "="),
+				mk(itemUnquotedLiteral, "b"),
 				mk(itemExpressionClose, "}"),
 				//
 				mk(itemEOF, ""),
