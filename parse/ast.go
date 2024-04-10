@@ -270,13 +270,7 @@ func (QuotedLiteral) value()        {}
 func (QuotedLiteral) variantKey()   {}
 func (QuotedLiteral) reservedBody() {}
 
-func (l QuotedLiteral) validate() error {
-	if isZeroValue(l) {
-		return errors.New("quotedLiteral: literal is empty")
-	}
-
-	return nil
-}
+func (l QuotedLiteral) validate() error { return nil }
 
 type NameLiteral string
 
