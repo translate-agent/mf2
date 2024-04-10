@@ -8,15 +8,15 @@ import (
 
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L259
 
-var stringRegistryF = &Func{
+var stringRegistryFunc = &Func{
 	Name:            "string",
 	Description:     "Formatting of strings as a literal and selection based on string equality",
 	FormatSignature: &Signature{IsInputRequired: true},
 	MatchSignature:  &Signature{IsInputRequired: true},
-	Func:            stringF,
+	Func:            stringFunc,
 }
 
-func stringF(input any, _ map[string]any, locale language.Tag) (any, error) {
+func stringFunc(input any, _ map[string]any, locale language.Tag) (any, error) {
 	switch v := input.(type) {
 	case fmt.Stringer:
 		return v.String(), nil

@@ -52,7 +52,7 @@ func Test_String(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := stringRegistryF.Format(tt.input, tt.options, language.AmericanEnglish)
+			actual, err := stringRegistryFunc.Format(tt.input, tt.options, language.AmericanEnglish)
 
 			if tt.expectedErr {
 				require.Error(t, err)

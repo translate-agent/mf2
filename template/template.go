@@ -267,11 +267,6 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 		return fmt.Sprint(value), fmt.Errorf("resolve value: %w", err)
 	}
 
-	if expr.Annotation == nil {
-		// NOTE: Parser won't allow value to be nil if annotation is nil.
-		return fmt.Sprint(value), nil // TODO: If value does not implement fmt.Stringer, what then ?
-	}
-
 	resolved, err := e.resolveAnnotation(value, expr.Annotation)
 	if err != nil {
 		return "", fmt.Errorf("resolve annotation: %w", err)
@@ -307,22 +302,39 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 }
 
 func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (string, error) {
-	annoFn, ok := annotation.(ast.Function)
+	var (
+		funcName string
+		options  map[string]any
+	)
+
+	switch v := annotation.(type) {
+	default:
+		return "", fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, v, v)
+	case ast.Function:
+		var err error
+
+		funcName = v.Identifier.Name
+
+		if options, err = e.resolveOptions(v.Options); err != nil {
+			return "", fmt.Errorf("resolve options: %w", err)
+		}
+	case nil:
+		switch operand.(type) {
+		default: // TODO(jhorsts): how is unknown type formatted?
+			return fmt.Sprint(operand), nil
+		case string:
+			funcName = "string"
+		case float64:
+			funcName = "number"
+		}
+	}
+
+	f, ok := e.template.funcRegistry[funcName] // TODO(jhorsts): lookup by namespace and name
 	if !ok {
-		return "", fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, annotation, annotation)
+		return "", fmt.Errorf("%w '%s'", ErrUnknownFunction, funcName)
 	}
 
-	registryF, ok := e.template.funcRegistry[annoFn.Identifier.Name]
-	if !ok {
-		return "", fmt.Errorf("%w '%s'", ErrUnknownFunction, annoFn.Identifier.Name)
-	}
-
-	opts, err := e.resolveOptions(annoFn.Options)
-	if err != nil {
-		return "", fmt.Errorf("resolve options: %w", err)
-	}
-
-	result, err := registryF.Format(operand, opts, e.template.locale)
+	result, err := f.Format(operand, options, e.template.locale)
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrFormatting, err.Error())
 	}
@@ -385,7 +397,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			function = annotation
 		}
 
-		registryF, ok := e.template.funcRegistry[function.Identifier.Name]
+		f, ok := e.template.funcRegistry[function.Identifier.Name]
 		if !ok {
 			return nil, fmt.Errorf("%w '%s'", ErrUnknownFunction, function.Identifier.Name)
 		}
@@ -400,7 +412,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			return nil, fmt.Errorf("resolve value: %w", err)
 		}
 
-		rslt, err := registryF.Match(input, opts, e.template.locale)
+		rslt, err := f.Match(input, opts, e.template.locale)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", ErrSelection, err.Error())
 		}

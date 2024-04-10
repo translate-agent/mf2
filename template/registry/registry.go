@@ -40,9 +40,9 @@ type Options []Option
 // New returns a new registry with default functions.
 func New() Registry {
 	return Registry{
-		"string":   *stringRegistryF,
-		"number":   *numberRegistryF,
-		"datetime": *datetimeRegistryF,
+		"string":   *stringRegistryFunc,
+		"number":   *numberRegistryFunc,
+		"datetime": *datetimeRegistryFunc,
 	}
 }
 
