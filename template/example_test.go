@@ -75,7 +75,7 @@ func ExampleTemplate_complexMessage() {
 			},
 		},
 		// Define the function
-		Fn: func(color any, options map[string]any, locale language.Tag) (any, error) {
+		Func: func(color any, options map[string]any, locale language.Tag) (any, error) {
 			if options == nil {
 				return color, nil
 			}

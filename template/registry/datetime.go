@@ -13,7 +13,7 @@ import (
 var datetimeRegistryF = &Func{
 	Name:           "datetime",
 	Description:    "Locale-sensitive date and time formatting",
-	Fn:             datetimeF,
+	Func:           datetimeF,
 	MatchSignature: nil, // Not allowed to use in matching context
 	FormatSignature: &Signature{
 		IsInputRequired: true,

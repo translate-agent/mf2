@@ -12,11 +12,10 @@ type Registry map[string]Func
 
 // Func is a function that can be used in formatting and matching contexts.
 type Func struct {
-	FormatSignature *Signature                                           // Signature of the function when called in formatting context
-	MatchSignature  *Signature                                           // Signature of the function when called in matching context
-	Fn              func(any, map[string]any, language.Tag) (any, error) // Function itself
-	Name            string
-	Description     string
+	FormatSignature, MatchSignature *Signature // Function signature when called in formatting or matching context
+	Func                            func(any, map[string]any, language.Tag) (any, error)
+	Name                            string
+	Description                     string
 }
 
 // Signature is a signature of the function, i.e. what input and options are allowed.
@@ -56,7 +55,7 @@ func (f *Func) Format(input any, options map[string]any, locale language.Tag) (a
 		return "", fmt.Errorf("check input: %w", err)
 	}
 
-	return f.Fn(input, options, locale)
+	return f.Func(input, options, locale)
 }
 
 func (f *Func) Match(input any, options map[string]any, locale language.Tag) (any, error) {
@@ -68,7 +67,7 @@ func (f *Func) Match(input any, options map[string]any, locale language.Tag) (an
 		return "", fmt.Errorf("check input: %w", err)
 	}
 
-	return f.Fn(input, options, locale)
+	return f.Func(input, options, locale)
 }
 
 func (s *Signature) check(input any, options map[string]any) error {

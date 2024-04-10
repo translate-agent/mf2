@@ -49,7 +49,7 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 				{
 					Name:            "randName",
 					FormatSignature: &registry.Signature{},
-					Fn:              func(any, map[string]any, language.Tag) (any, error) { return "John", nil },
+					Func:            func(any, map[string]any, language.Tag) (any, error) { return "John", nil },
 				},
 			},
 			expected: "Hello, John",
@@ -97,7 +97,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 				{
 					Name:            "randNum",
 					FormatSignature: &registry.Signature{},
-					Fn:              func(any, map[string]any, language.Tag) (any, error) { return 0, nil },
+					Func:            func(any, map[string]any, language.Tag) (any, error) { return 0, nil },
 				},
 			},
 			expected: "Hello, literalExpression World 0!",
@@ -249,7 +249,7 @@ func Test_ExecuteErrors(t *testing.T) {
 				{
 					Name:            "error",
 					FormatSignature: &registry.Signature{},
-					Fn:              func(any, map[string]any, language.Tag) (any, error) { return nil, errors.New("error") },
+					Func:            func(any, map[string]any, language.Tag) (any, error) { return nil, errors.New("error") },
 				},
 			},
 		},

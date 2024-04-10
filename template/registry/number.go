@@ -16,7 +16,7 @@ import (
 var numberRegistryF = &Func{
 	Name:           "number",
 	Description:    "Locale-sensitive number formatting",
-	Fn:             numberF,
+	Func:           numberF,
 	MatchSignature: nil, // Not allowed to use in matching context
 	FormatSignature: &Signature{
 		IsInputRequired: true,
