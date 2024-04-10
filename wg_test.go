@@ -126,6 +126,8 @@ func assertWgTest(t *testing.T, test WgTest) {
 			require.ErrorIs(t, err, template.ErrUnresolvedVariable)
 		case "unsupported-statement":
 			require.ErrorIs(t, err, template.ErrUnsupportedStatement)
+		case "unsupported-annotation":
+			require.ErrorIs(t, err, template.ErrUnsupportedExpression)
 		}
 	}
 

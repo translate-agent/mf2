@@ -221,22 +221,22 @@ func Test_ExecuteErrors(t *testing.T) {
 			text:     "Hello, { $name }!",
 			expected: expected{execErr: ErrUnresolvedVariable, text: "Hello, {$name}!"},
 		},
-		{ // TODO(jhorsts): incomplete test (issue #60)
+		{
 			name:     "unknown function",
 			text:     "Hello, { :f }!",
 			expected: expected{execErr: ErrUnknownFunction, text: "Hello, !"},
 		},
-		{ // TODO(jhorsts): incomplete test (issue #60)
+		{
 			name:     "duplicate option name",
 			text:     "Hello, { :number style=decimal style=percent }!",
 			expected: expected{execErr: ErrDuplicateOptionName, text: "Hello, !"},
 		},
-		{ // TODO(jhorsts): incomplete test (issue #60)
+		{
 			name:     "unsupported expression",
 			text:     "Hello, { 12 ^private }!",
-			expected: expected{execErr: ErrUnsupportedExpression, text: "Hello, !"},
+			expected: expected{execErr: ErrUnsupportedExpression, text: "Hello, 12!"},
 		},
-		{ // TODO(jhorsts): incomplete test (issue #60)
+		{
 			name:     "formatting error",
 			text:     "Hello, { :error }!",
 			expected: expected{execErr: ErrFormatting, text: "Hello, !"},
