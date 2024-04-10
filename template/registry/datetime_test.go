@@ -70,7 +70,7 @@ func Test_Datetime(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := datetimeRegistryF.Format(tt.input, tt.options, language.AmericanEnglish)
+			actual, err := datetimeRegistryFunc.Format(tt.input, tt.options, language.AmericanEnglish)
 
 			if tt.expectedErr {
 				require.Error(t, err)

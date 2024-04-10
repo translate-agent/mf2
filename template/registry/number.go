@@ -13,10 +13,10 @@ import (
 
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L147
 
-var numberRegistryF = &Func{
+var numberRegistryFunc = &Func{
 	Name:           "number",
 	Description:    "Locale-sensitive number formatting",
-	Func:           numberF,
+	Func:           numberFunc,
 	MatchSignature: nil, // Not allowed to use in matching context
 	FormatSignature: &Signature{
 		IsInputRequired: true,
@@ -155,14 +155,10 @@ the default for percent formatting is the larger of minimumFractionDigits and 0.
 }
 
 // TODO: supports only style and signDisplay options.
-func numberF(input any, options map[string]any, locale language.Tag) (any, error) {
+func numberFunc(input any, options map[string]any, locale language.Tag) (any, error) {
 	num, err := castAs[float64](input)
 	if err != nil {
 		return nil, fmt.Errorf("convert input to float64: %w", err)
-	}
-
-	if len(options) == 0 {
-		return num, nil
 	}
 
 	for optName := range options {
@@ -174,11 +170,13 @@ func numberF(input any, options map[string]any, locale language.Tag) (any, error
 		}
 	}
 
-	var result string
+	var (
+		result string
+		style  any = "decimal"
+	)
 
-	style, ok := options["style"]
-	if !ok {
-		style = "decimal"
+	if s, ok := options["style"]; ok {
+		style = s
 	}
 
 	p := message.NewPrinter(locale)
