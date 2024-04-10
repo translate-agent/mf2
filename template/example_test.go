@@ -6,6 +6,7 @@ import (
 
 	"go.expect.digital/mf2/template"
 	"go.expect.digital/mf2/template/registry"
+	"golang.org/x/text/language"
 )
 
 func ExampleTemplate_plainText() {
@@ -49,12 +50,6 @@ func ExampleTemplate_complexMessage() {
 .input { $color :color style=RGB}
 {{John is { $age } years old and his favorite color is { $color }.}}`
 
-	// Parse template.
-	t, err := template.New().Parse(input)
-	if err != nil {
-		panic(err)
-	}
-
 	// Define new function color
 	colorF := registry.Func{
 		Name: "color",
@@ -80,7 +75,7 @@ func ExampleTemplate_complexMessage() {
 			},
 		},
 		// Define the function
-		Fn: func(color any, options map[string]any) (any, error) {
+		Fn: func(color any, options map[string]any, locale language.Tag) (any, error) {
 			if options == nil {
 				return color, nil
 			}
@@ -112,7 +107,11 @@ func ExampleTemplate_complexMessage() {
 		},
 	}
 
-	t.AddFunc(colorF)
+	// Parse template.
+	t, err := template.New(template.WithFunc(colorF)).Parse(input)
+	if err != nil {
+		panic(err)
+	}
 
 	// Execute the template.
 	if err = t.Execute(os.Stdout, map[string]any{"color": "red"}); err != nil {

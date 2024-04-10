@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/language"
 )
 
 func Test_Number(t *testing.T) {
@@ -55,7 +56,7 @@ func Test_Number(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := numberRegistryF.Format(tt.input, tt.options)
+			actual, err := numberRegistryF.Format(tt.input, tt.options, language.AmericanEnglish)
 
 			if tt.expectedErr {
 				require.Error(t, err)

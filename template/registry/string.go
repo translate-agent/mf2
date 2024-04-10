@@ -1,6 +1,10 @@
 package registry
 
-import "fmt"
+import (
+	"fmt"
+
+	"golang.org/x/text/language"
+)
 
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L259
 
@@ -12,7 +16,7 @@ var stringRegistryF = &Func{
 	Fn:              stringF,
 }
 
-func stringF(input any, _ map[string]any) (any, error) {
+func stringF(input any, _ map[string]any, locale language.Tag) (any, error) {
 	switch v := input.(type) {
 	case fmt.Stringer:
 		return v.String(), nil
