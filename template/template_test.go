@@ -56,18 +56,17 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New(WithFuncs(tt.funcs)).Parse(tt.text)
+			template, err := New(WithFuncs(test.funcs)).Parse(test.text)
 			require.NoError(t, err)
 
-			actual, err := template.Sprint(tt.input)
+			actual, err := template.Sprint(test.input)
 			require.NoError(t, err)
 
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, test.expected, actual)
 		})
 	}
 }
@@ -115,18 +114,17 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New(WithFuncs(tt.funcs)).Parse(tt.text)
+			template, err := New(WithFuncs(test.funcs)).Parse(test.text)
 			require.NoError(t, err)
 
-			actual, err := template.Sprint(tt.inputs)
+			actual, err := template.Sprint(test.inputs)
 			require.NoError(t, err)
 
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, test.expected, actual)
 		})
 	}
 }
@@ -174,28 +172,25 @@ func Test_Matcher(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		if len(tt.inputs) != len(tt.expected) {
+	for _, test := range tests {
+		if len(test.inputs) != len(test.expected) {
 			t.Error("Arguments and expected results should have the same length")
 		}
 
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New().Parse(tt.text)
+			template, err := New().Parse(test.text)
 			require.NoError(t, err)
 
-			for i, inputMap := range tt.inputs {
-				i, inputMap := i, inputMap
-
-				t.Run(tt.expected[i], func(t *testing.T) {
+			for i, inputMap := range test.inputs {
+				t.Run(test.expected[i], func(t *testing.T) {
 					t.Parallel()
 
 					actual, err := template.Sprint(inputMap)
 
 					require.NoError(t, err)
-					require.Equal(t, tt.expected[i], actual)
+					require.Equal(t, test.expected[i], actual)
 				})
 			}
 		})
@@ -284,20 +279,19 @@ func Test_ExecuteErrors(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			template, err := New(WithFuncs(tt.funcs)).Parse(tt.text)
-			if tt.expected.parseErr != nil {
-				require.ErrorIs(t, err, tt.expected.parseErr)
+			template, err := New(WithFuncs(test.funcs)).Parse(test.text)
+			if test.expected.parseErr != nil {
+				require.ErrorIs(t, err, test.expected.parseErr)
 				return
 			}
 
-			text, err := template.Sprint(tt.input)
-			require.ErrorIs(t, err, tt.expected.execErr)
-			assert.Equal(t, tt.expected.text, text)
+			text, err := template.Sprint(test.input)
+			require.ErrorIs(t, err, test.expected.execErr)
+			assert.Equal(t, test.expected.text, text)
 		})
 	}
 }

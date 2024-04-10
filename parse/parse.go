@@ -54,7 +54,7 @@ func (p *parser) current() item {
 
 func (p *parser) collect() error {
 	// sanity check, avoid infinite loop
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		itm := p.lexer.nextItem()
 		if itm.typ == itemError {
 			return fmt.Errorf("got error token: %s", itm.val)

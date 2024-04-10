@@ -50,15 +50,13 @@ func Test_Number(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := numberRegistryFunc.Format(tt.input, tt.options, language.AmericanEnglish)
+			actual, err := numberRegistryFunc.Format(test.input, test.options, language.AmericanEnglish)
 
-			if tt.expectedErr {
+			if test.expectedErr {
 				require.Error(t, err)
 				require.Empty(t, actual)
 
@@ -66,7 +64,7 @@ func Test_Number(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.expected, actual)
+			require.Equal(t, test.expected, actual)
 		})
 	}
 }

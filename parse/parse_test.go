@@ -326,29 +326,28 @@ func TestParseSimpleMessage(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := Parse(tt.input)
+			actual, err := Parse(test.input)
 			require.NoError(t, err)
 
 			// Check that AST message is equal to expected one.
-			require.Equal(t, tt.expected, actual.Message)
+			require.Equal(t, test.expected, actual.Message)
 
 			// Check that AST message converted back to string is equal to input.
 
 			// Edge case: scientific notation number is converted to normal notation, hence comparison is bound to fail.
 			// I.E. input string has 1e3, output string has 1000.
-			if tt.name == "unquoted scientific notation number literal expression" {
+			if test.name == "unquoted scientific notation number literal expression" {
 				return
 			}
 
 			// If strings already match, we're done.
 			// Otherwise check both sanitized strings.
-			if actualStr := actual.String(); actualStr != tt.input {
-				requireEqualMF2String(t, tt.input, actualStr)
+			if actualStr := actual.String(); actualStr != test.input {
+				requireEqualMF2String(t, test.input, actualStr)
 			}
 		})
 	}
@@ -724,23 +723,22 @@ no no {{Hello!}}`,
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := Parse(tt.input)
+			actual, err := Parse(test.input)
 			require.NoError(t, err)
 
 			// Check that AST message is equal to expected one.
-			require.Equal(t, tt.expected, actual.Message)
+			require.Equal(t, test.expected, actual.Message)
 
 			// Check that AST message converted back to string is equal to input.
 
 			// If strings already match, we're done.
 			// Otherwise check both sanitized strings.
-			if actualStr := actual.String(); actualStr != tt.input {
-				requireEqualMF2String(t, tt.input, actualStr)
+			if actualStr := actual.String(); actualStr != test.input {
+				requireEqualMF2String(t, test.input, actualStr)
 			}
 		})
 	}
@@ -894,16 +892,15 @@ func TestValidate(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tt.errorPath == "" {
+			if test.errorPath == "" {
 				require.FailNow(t, "test.errorPath is not set")
 			}
 
-			require.ErrorContains(t, tt.ast.validate(), tt.errorPath)
+			require.ErrorContains(t, test.ast.validate(), test.errorPath)
 		})
 	}
 }
