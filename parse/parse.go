@@ -739,7 +739,7 @@ func (p *parser) parseAttribute() (Attribute, error) {
 	return attribute, nil
 }
 
-func (p *parser) parseLiteral() (Literal, error) { //nolint:ireturn
+func (p *parser) parseLiteral() (Literal, error) {
 	switch itm := p.current(); itm.typ {
 	default:
 		return nil, unexpectedErr(itm, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
