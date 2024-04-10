@@ -351,7 +351,7 @@ func (p *parser) parseExpression() (Expression, error) {
 
 	switch itm := p.next(); itm.typ {
 	default:
-		return Expression{}, unexpectedErr(itm, itemFunction, itemPrivateStart, itemReservedStart)
+		return Expression{}, unexpectedErr(itm, itemFunction, itemPrivateStart, itemReservedStart, itemAttribute)
 	case itemFunction:
 		if expr.Annotation, err = p.parseFunction(); err != nil {
 			return Expression{}, fmt.Errorf("parse function: %w", err)
@@ -364,6 +364,13 @@ func (p *parser) parseExpression() (Expression, error) {
 		if expr.Annotation, err = p.parsePrivateUseAnnotation(); err != nil {
 			return Expression{}, fmt.Errorf("parse reserved annotation: %w", err)
 		}
+	case itemAttribute:
+		if expr.Operand == nil {
+			return Expression{}, errors.New("variable, literal or annotation is required before attribute")
+		}
+
+		p.backup() // attribute
+		p.backup() // whitespace
 	}
 
 	if p.peekNonWS().typ == itemExpressionClose {
