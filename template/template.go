@@ -325,7 +325,13 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 		// Supported private-use annotation with no operand: the annotation starting sigil, optionally followed by
 		// implementation-defined details conforming with patterns in the other cases (such as quoting literals).
 		// If details are provided, they SHOULD NOT leak potentially private information.
-		resolutionErr = fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, v, v)
+		resolutionErr = fmt.Errorf("%w with %T private use annotation: '%s'", ErrUnsupportedExpression, v, v)
+
+		if operand == nil {
+			return "{" + string(v.Start) + "}", resolutionErr
+		}
+	case ast.ReservedAnnotation:
+		resolutionErr = fmt.Errorf("%w with %T reserved annotation: '%s'", ErrUnsupportedExpression, v, v)
 
 		if operand == nil {
 			return "{" + string(v.Start) + "}", resolutionErr
