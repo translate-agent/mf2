@@ -691,10 +691,6 @@ func (m Markup) validate() error {
 		return fmt.Errorf("markup.%w", err)
 	}
 
-	if m.Typ == Close && len(m.Options) != 0 {
-		return errors.New("markup: options are not allowed for markup-close")
-	}
-
 	if err := validateSlice(m.Options); err != nil {
 		return fmt.Errorf("markup.%w", err)
 	}

@@ -395,7 +395,6 @@ func lexExpr(l *lexer) stateFn {
 		l.backup()
 
 		return lexIdentifier(l)
-
 	case v == '{': // expression/markup start
 		l.isExpression = true
 
@@ -414,7 +413,8 @@ func lexExpr(l *lexer) stateFn {
 			l.prev.typ == itemUnquotedLiteral ||
 			l.prev.typ == itemNumberLiteral ||
 			l.prev.typ == itemVariable) ||
-		l.prev.typ == itemMarkupOpen:
+		l.prev.typ == itemMarkupOpen ||
+		l.prev.typ == itemMarkupClose:
 		l.backup()
 		return lexIdentifier(l)
 	case isReservedStart(v):
