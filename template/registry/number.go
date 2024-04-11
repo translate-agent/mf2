@@ -185,8 +185,9 @@ func numberFunc(input any, options map[string]any, locale language.Tag) (any, er
 	case "decimal":
 		result = p.Sprint(number.Decimal(num))
 	case "percent":
-		const arbitrary = 6
-		result = p.Sprint(number.Percent(num, number.MaxFractionDigits(arbitrary)))
+		const arbitrary = 10
+		maxFractionDigits := number.MaxFractionDigits(arbitrary)
+		result = p.Sprint(number.Percent(num, maxFractionDigits))
 	default:
 		return nil, fmt.Errorf("option '%s' is not implemented", style)
 	}
