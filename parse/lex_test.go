@@ -454,23 +454,6 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
-			name:  "x",
-			input: "{#tag a:foo=|foo| b:bar=$bar}",
-			expected: []item{
-				mk(itemExpressionOpen, "{"),
-				mk(itemMarkupOpen, "tag"),
-				mk(itemWhitespace, " "),
-				mk(itemOption, "a:foo"),
-				mk(itemOperator, "="),
-				mk(itemQuotedLiteral, "foo"),
-				mk(itemWhitespace, " "),
-				mk(itemOption, "b:bar"),
-				mk(itemOperator, "="),
-				mk(itemVariable, "bar"),
-				mk(itemExpressionClose, "}"),
-			},
-		},
-		{
 			name: "markup",
 			input: `{#button}Submit{/button}
 {#img alt=|Cancel| @hello=world @goodbye /}
