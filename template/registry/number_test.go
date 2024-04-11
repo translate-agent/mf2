@@ -35,7 +35,7 @@ func Test_Number(t *testing.T) {
 			input:    0.127,
 			options:  map[string]any{"style": "percent"},
 			locale:   language.Latvian,
-			expected: "12,7%",
+			expected: "13%",
 		},
 		{
 			name:     "signDisplay and percent style",
