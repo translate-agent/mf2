@@ -140,11 +140,13 @@ func lex(input string) *lexer {
 //
 // See https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/message.abnf
 type lexer struct {
-	input      string
-	item, prev item // prev non-whitespace
-	pos, line  int
+	input     string
+	item      item
+	prevType  itemType // prev non-whitespace
+	pos, line int
 
 	isFunction,
+	isMarkup,
 	isReservedBody,
 	isExpression,
 	isPattern,
@@ -216,7 +218,7 @@ func (l *lexer) emitItem(i item) stateFn {
 	l.item = i
 
 	if i.typ != itemWhitespace && i.typ != itemEOF {
-		l.prev = i
+		l.prevType = i.typ
 	}
 
 	return nil
@@ -402,19 +404,19 @@ func lexExpr(l *lexer) stateFn {
 	case v == '}': // expression/markup end
 		l.isExpression = false
 		l.isFunction = false
+		l.isMarkup = false
 
 		return l.emitItem(mk(itemExpressionClose, "}"))
 	case isWhitespace(v):
 		l.backup()
 		return lexWhitespace(l)
-	case l.isFunction &&
-		(l.prev.typ == itemFunction ||
-			l.prev.typ == itemQuotedLiteral ||
-			l.prev.typ == itemUnquotedLiteral ||
-			l.prev.typ == itemNumberLiteral ||
-			l.prev.typ == itemVariable) ||
-		l.prev.typ == itemMarkupOpen ||
-		l.prev.typ == itemMarkupClose:
+	case (l.prevType == itemMarkupOpen || l.prevType == itemMarkupClose) ||
+		(l.isFunction || l.isMarkup) &&
+			(l.prevType == itemFunction ||
+				l.prevType == itemQuotedLiteral ||
+				l.prevType == itemUnquotedLiteral ||
+				l.prevType == itemNumberLiteral ||
+				l.prevType == itemVariable):
 		l.backup()
 		return lexIdentifier(l)
 	case isReservedStart(v):
@@ -565,10 +567,13 @@ func lexIdentifier(l *lexer) stateFn {
 				l.isFunction = true
 				typ = itemFunction
 			case '#':
+				l.isMarkup = true
 				typ = itemMarkupOpen
 			case '/':
+				l.isMarkup = true
 				typ = itemMarkupClose
 			case '@':
+				l.isFunction = false
 				typ = itemAttribute
 			}
 		case isName(r):
