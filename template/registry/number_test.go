@@ -12,9 +12,9 @@ func Test_Number(t *testing.T) {
 	// decimal
 
 	assert := assertFmt(t, numberRegistryFunc, nil, language.Latvian)
-	assert(-0.15, "-0,15")
+	assert(-0.1234, "-0,123")
 	assert(0, "0")
-	assert(0.15, "0,15")
+	assert(0.1234, "0,123")
 
 	assert = assertFmt(t, numberRegistryFunc, map[string]any{"signDisplay": "auto"}, language.AmericanEnglish)
 	assert(-0.15, "-0.15")
@@ -35,6 +35,9 @@ func Test_Number(t *testing.T) {
 	assert(-0.15, "0.15")
 	assert(0, "0")
 	assert(0.15, "0.15")
+
+	assert = assertFmt(t, numberRegistryFunc, map[string]any{"maximumFractionDigits": 1}, language.AmericanEnglish)
+	assert(0.15, "0.1")
 
 	// percent
 
@@ -66,4 +69,8 @@ func Test_Number(t *testing.T) {
 	assert(-0.127, "13%")
 	assert(0, "0%")
 	assert(0.127, "13%")
+
+	assert = assertFmt(t, numberRegistryFunc,
+		map[string]any{"style": "percent", "maximumFractionDigits": 1}, language.Latvian)
+	assert(0.127, "12,7%")
 }
