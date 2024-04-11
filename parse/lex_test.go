@@ -553,8 +553,8 @@ func logItem(t *testing.T, expected item, l lexer) func() {
 			return " "
 		}
 
-		t.Logf("c%s p%s e%s f%s r%s %-30s e%s(%s) a%s(%s)\n",
-			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody),
+		t.Logf("c%s p%s e%s f%s r%s m%s %-30s e%s(%s) a%s(%s)\n",
+			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody), f(l.isMarkup),
 			"'"+l.input[l.pos:]+"'", "'"+expected.val+"'", expected.typ, "'"+l.item.val+"'", l.item.typ)
 	}
 }
