@@ -68,7 +68,6 @@ func ExampleTemplate_complexMessage() {
 			Options: registry.Options{
 				{
 					Name:           "style",
-					Description:    `The style of the color.`,
 					PossibleValues: []any{"RGB", "HEX", "HSL"}, // Define possible values for the option
 					Default:        "RGB",                      // Set a default value for the option
 				},

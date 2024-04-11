@@ -7,3 +7,58 @@ This parser parses the localized message strings based on the [Message Format 2 
 # Requirements
 
 - Golang 1.22+
+
+# Features
+
+## Function registry
+
+List of the default functions registered in the function registry. The functions support localized formatting.
+
+| Function               | Signature | Option                   | Status |
+| ---------------------- | --------- | ------------------------ | :----: |
+| date                   | format    | style                    |   ❌   |
+| datetime               | format    | dateStyle                |   ❌   |
+| datetime               | format    | timeStyle                |   ❌   |
+| datetime               | format    | calendar                 |   ❌   |
+| datetime               | format    | numberingSystem          |   ❌   |
+| datetime               | format    | timeZone                 |   ❌   |
+| datetime               | format    | hourCycle                |   ❌   |
+| datetime               | format    | dayPeriod                |   ❌   |
+| datetime               | format    | weekday                  |   ❌   |
+| datetime               | format    | era                      |   ❌   |
+| datetime               | format    | year                     |   ❌   |
+| datetime               | format    | month                    |   ❌   |
+| datetime               | format    | day                      |   ❌   |
+| datetime               | format    | hour                     |   ❌   |
+| datetime               | format    | minute                   |   ❌   |
+| datetime               | format    | second                   |   ❌   |
+| datetime               | format    | fractionalSecondDigits   |   ❌   |
+| datetime               | format    | timeZoneName             |   ❌   |
+| number                 | format    | compactDisplay           |   ❌   |
+| number                 | format    | currency                 |   ❌   |
+| number                 | format    | currencyDisplay          |   ❌   |
+| number                 | format    | currencySign             |   ❌   |
+| number                 | format    | notation                 |   ❌   |
+| number                 | format    | numberingSystem          |   ❌   |
+| number                 | format    | signDisplay              |   ❌   |
+| number                 | format    | style (decimal, percent) |  ✅︎   |
+| number                 | format    | unit                     |   ❌   |
+| number                 | format    | unitDisplay              |   ❌   |
+| number                 | format    | minimumIntegerDigits     |   ❌   |
+| number                 | format    | minimumFractionDigits    |   ❌   |
+| number                 | format    | maximumFractionDigits    |   ❌   |
+| number                 | format    | minimumSignificantDigits |   ❌   |
+| number                 | format    | maximumSignificantDigits |   ❌   |
+| number                 | match     | select                   |   ❌   |
+| number                 | match     | minimumIntegerDigits     |   ❌   |
+| number                 | match     | minimumFractionDigits    |   ❌   |
+| number                 | match     | maximumFractionDigits    |   ❌   |
+| number                 | match     | minimumSignificantDigits |   ❌   |
+| number                 | match     | maximumSignificantDigits |   ❌   |
+| number                 | match     | minimumFractionDigits    |   ❌   |
+| number                 | match     | minimumFractionDigits    |   ❌   |
+| integer (number alias) |           |                          |   ❌   |
+| ordinal (number alias) |           |                          |   ❌   |
+| plural (number alias)  |           |                          |   ❌   |
+| string                 |           |                          |   ❌   |
+| time                   |           |                          |   ❌   |

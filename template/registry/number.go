@@ -13,9 +13,9 @@ import (
 
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L147
 
+// numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
 var numberRegistryFunc = &Func{
 	Name:           "number",
-	Description:    "Locale-sensitive number formatting",
 	Func:           numberFunc,
 	MatchSignature: nil, // Not allowed to use in matching context
 	FormatSignature: &Signature{
@@ -29,19 +29,19 @@ var numberRegistryFunc = &Func{
 		},
 		Options: Options{
 			{
+				// Only used when notation is "compact".
 				Name:           "compactDisplay",
-				Description:    `Only used when notation is "compact".`,
 				PossibleValues: []any{"short", "long"},
 				Default:        "short",
 			},
 			{
+				// The currency to use in currency formatting.
+				// Possible values are the ISO 4217 currency codes, such as "USD" for the US dollar,
+				// "EUR" for the euro, or "CNY" for the Chinese RMB — see the
+				// Current currency &amp; funds code list
+				// (https://www.unicode.org/cldr/charts/latest/supplemental/detailed_territory_currency_information.html).
+				// There is no default value; if the style is "currency", the currency property must be provided.
 				Name: "currency",
-				Description: `The currency to use in currency formatting.
-Possible values are the ISO 4217 currency codes, such as "USD" for the US dollar,
-"EUR" for the euro, or "CNY" for the Chinese RMB — see the
-Current currency &amp; funds code list
-(https://www.unicode.org/cldr/charts/latest/supplemental/detailed_territory_currency_information.html).
-There is no default value; if the style is "currency", the currency property must be provided.`,
 				ValidateValue: func(a any) error {
 					unit, ok := a.(currency.Unit)
 					if !ok {
@@ -57,27 +57,27 @@ There is no default value; if the style is "currency", the currency property mus
 				},
 			},
 			{
+				// How to display the currency in currency formatting.
 				Name:           "currencyDisplay",
-				Description:    `How to display the currency in currency formatting.`,
 				PossibleValues: []any{"code", "symbol", "narrowSymbol", "name"},
 			},
 			{
-				Name: "currencySign",
-				Description: `In many locales, accounting format means to wrap the number with parentheses
-instead of appending a minus sign. You can enable this formatting by setting the
-currencySign option to "accounting".`,
+				// In many locales, accounting format means to wrap the number with parentheses
+				// instead of appending a minus sign. You can enable this formatting by setting the
+				// currencySign option to "accounting".
+				Name:           "currencySign",
 				PossibleValues: []any{"standard", "accounting"},
 				Default:        "standard",
 			},
 			{
+				// The formatting that should be displayed for the number.
 				Name:           "notation",
-				Description:    "The formatting that should be displayed for the number.",
 				PossibleValues: []any{"standard", "scientific", "engineering", "compact"},
 				Default:        "standard",
 			},
 			{
-				Name:        "numberingSystem",
-				Description: "Numbering system to use.",
+				// Numbering system to use.
+				Name: "numberingSystem",
 				PossibleValues: []any{
 					"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru",
 					"hanidec", "khmr", "knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec",
@@ -85,68 +85,68 @@ currencySign option to "accounting".`,
 				},
 			},
 			{
+				// When to display the sign for the number. "negative" value is Experimental.
 				Name:           "signDisplay",
-				Description:    `When to display the sign for the number. "negative" value is Experimental.`,
 				PossibleValues: []any{"auto", "always", "exceptZero", "negative", "never"},
 				Default:        "auto",
 			},
 			{
+				// The formatting style to use.
 				Name:           "style",
-				Description:    "The formatting style to use.",
 				PossibleValues: []any{"decimal", "currency", "percent", "unit"},
 				Default:        "decimal",
 			},
 			{
-				Name: "unit",
-				Description: `The unit to use in unit formatting.
-Possible values are core unit identifiers, defined in UTS #35, Part 2, Section 6.
-A subset of units from the full list was selected for use in ECMAScript.
-Pairs of simple units can be concatenated with "-per-" to make a compound unit.
-There is no default value; if the style is "unit", the unit property must be provided.`,
+				// The unit to use in unit formatting.
+				// Possible values are core unit identifiers, defined in UTS #35, Part 2, Section 6.
+				// A subset of units from the full list was selected for use in ECMAScript.
+				// Pairs of simple units can be concatenated with "-per-" to make a compound unit.
+				// There is no default value; if the style is "unit", the unit property must be provided.
+				Name:          "unit",
 				ValidateValue: isPositiveInteger,
 			},
 			{
+				// The unit formatting style to use in unit formatting.
 				Name:           "unitDisplay",
-				Description:    "The unit formatting style to use in unit formatting.",
 				PossibleValues: []any{"long", "short", "narrow"},
 				Default:        "short",
 			},
 			{
-				Name: "minimumIntegerDigits",
-				Description: `The minimum number of integer digits to use.
-A value with a smaller number of integer digits than this number will be
-left-padded with zeros (to the specified length) when formatted.`,
+				// The minimum number of integer digits to use.
+				// A value with a smaller number of integer digits than this number will be
+				// left-padded with zeros (to the specified length) when formatted.
+				Name:          "minimumIntegerDigits",
 				ValidateValue: isPositiveInteger,
 				Default:       1,
 			},
 			{
-				Name: "minimumFractionDigits",
-				Description: `The minimum number of fraction digits to use.
-The default for plain number and percent formatting is 0;
-the default for currency formatting is the number of minor unit digits provided by
-the ISO 4217 currency code list (2 if the list doesn't provide that information).`,
+				// The minimum number of fraction digits to use.
+				// The default for plain number and percent formatting is 0;
+				// the default for currency formatting is the number of minor unit digits provided by
+				// the ISO 4217 currency code list (2 if the list doesn't provide that information).
+				Name:          "minimumFractionDigits",
 				ValidateValue: isPositiveInteger,
 			},
 			{
-				Name: "maximumFractionDigits",
-				Description: `The maximum number of fraction digits to use.
-The default for plain number formatting is the larger of minimumFractionDigits and 3;
-the default for currency formatting is the larger of minimumFractionDigits and the number of
-minor
-unit digits provided by the ISO 4217 currency code list (2 if the list doesn't provide that
-information);
-the default for percent formatting is the larger of minimumFractionDigits and 0.`,
+				// The maximum number of fraction digits to use.
+				// The default for plain number formatting is the larger of minimumFractionDigits and 3;
+				// the default for currency formatting is the larger of minimumFractionDigits and the number of
+				// minor
+				// unit digits provided by the ISO 4217 currency code list (2 if the list doesn't provide that
+				// information);
+				// the default for percent formatting is the larger of minimumFractionDigits and 0.
+				Name:          "maximumFractionDigits",
 				ValidateValue: isPositiveInteger,
 			},
 			{
+				// The minimum number of significant digits to use.
 				Name:          "minimumSignificantDigits",
-				Description:   `The minimum number of significant digits to use.`,
 				ValidateValue: isPositiveInteger,
 				Default:       1,
 			},
 			{
+				// The maximum number of significant digits to use.
 				Name:          "maximumSignificantDigits",
-				Description:   `The maximum number of significant digits to use.`,
 				ValidateValue: isPositiveInteger,
 				Default:       21, //nolint:gomnd
 			},
@@ -185,7 +185,7 @@ func numberFunc(input any, options map[string]any, locale language.Tag) (any, er
 	case "decimal":
 		result = p.Sprint(number.Decimal(num))
 	case "percent":
-		result = fmt.Sprintf("%.2f%%", num*100) //nolint:gomnd
+		result = p.Sprint(number.Percent(num))
 	default:
 		return nil, fmt.Errorf("option '%s' is not implemented", style)
 	}

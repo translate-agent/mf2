@@ -10,9 +10,9 @@ import (
 
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L13
 
+// datetimeFunc is the implementation of the datetime function. Locale-sensitive date and time formatting.
 var datetimeRegistryFunc = &Func{
 	Name:           "datetime",
-	Description:    "Locale-sensitive date and time formatting",
 	Func:           datetimeFunc,
 	MatchSignature: nil, // Not allowed to use in matching context
 	FormatSignature: &Signature{
@@ -26,18 +26,18 @@ var datetimeRegistryFunc = &Func{
 		},
 		Options: Options{
 			{
+				// The predefined date formatting style to use.
 				Name:           "dateStyle",
-				Description:    "The predefined date formatting style to use.",
 				PossibleValues: []any{"full", "long", "medium", "short"},
 			},
 			{
+				// The predefined time formatting style to use.
 				Name:           "timeStyle",
-				Description:    "The predefined time formatting style to use.",
 				PossibleValues: []any{"full", "long", "medium", "short"},
 			},
 			{
-				Name:        "calendar",
-				Description: "Calendar to use.",
+				//  Calendar to use.
+				Name: "calendar",
 				PossibleValues: []any{
 					"buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic", "gregory",
 					"hebrew", "indian", "islamic", "islamic-umalqura", "islamic-tbla",
@@ -45,8 +45,8 @@ var datetimeRegistryFunc = &Func{
 				},
 			},
 			{
-				Name:        "numberingSystem",
-				Description: "Numbering system to use.",
+				// Numbering system to use.
+				Name: "numberingSystem",
 				PossibleValues: []any{
 					"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru", "hanidec",
 					"khmr", "knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec",
@@ -54,73 +54,72 @@ var datetimeRegistryFunc = &Func{
 				},
 			},
 			{
-				Name: "timeZone",
-				Description: `The time zone to use.
-The only value implementations must recognize is "UTC";
-the default is the runtime's default time zone.
-Implementations may also recognize the time zone names of the IANA time zone database,
-such as "Asia/Shanghai", "Asia/Kolkata", "America/New_York".`,
+				// The time zone to use.
+				// The only value implementations must recognize is "UTC";
+				// the default is the runtime's default time zone.
+				// Implementations may also recognize the time zone names of the IANA time zone database,
+				// such as "Asia/Shanghai", "Asia/Kolkata", "America/New_York".
+				Name:    "timeZone",
 				Default: "UTC",
 			},
 			{
+				// The hour cycle to use.
 				Name:           "hourCycle",
-				Description:    "The hour cycle to use.",
 				PossibleValues: []any{"h11", "h12", "h23", "h24"},
 			},
 			{
+				// The formatting style used for day periods like "in the morning", "am", "noon", "n" etc.
 				Name:           "dayPeriod",
-				Description:    `The formatting style used for day periods like "in the morning", "am", "noon", "n" etc.`,
 				PossibleValues: []any{"narrow", "short", "long"},
 			},
 			{
+				// The representation of the weekday.
 				Name:           "weekday",
-				Description:    "The representation of the weekday.",
 				PossibleValues: []any{"narrow", "short", "long"},
 			},
 			{
+				// The representation of the era.
 				Name:           "era",
-				Description:    "The representation of the era.",
 				PossibleValues: []any{"narrow", "short", "long"},
 			},
 			{
+				// The representation of the year.
 				Name:           "year",
-				Description:    "The representation of the year.",
 				PossibleValues: []any{"numeric", "2-digit"},
 			},
 			{
+				// The representation of the month.
 				Name:           "month",
-				Description:    "The representation of the month.",
 				PossibleValues: []any{"numeric", "2-digit", "narrow", "short", "long"},
 			},
 			{
+				// The representation of the day.
 				Name:           "day",
-				Description:    "The representation of the day.",
 				PossibleValues: []any{"numeric", "2-digit"},
 			},
 			{
+				// The representation of the hour.
 				Name:           "hour",
-				Description:    "The representation of the hour.",
 				PossibleValues: []any{"numeric", "2-digit"},
 			},
 			{
+				// The representation of the minute.
 				Name:           "minute",
-				Description:    "The representation of the minute.",
 				PossibleValues: []any{"numeric", "2-digit"},
 			},
 			{
+				// The representation of the second.
 				Name:           "second",
-				Description:    "The representation of the second.",
 				PossibleValues: []any{"numeric", "2-digit"},
 			},
 			{
-				Name: "fractionalSecondDigits",
-				Description: `The number of digits used to represent fractions of a second
-(any additional digits are truncated).`,
+				// The number of digits used to represent fractions of a second (any additional digits are truncated).
+				Name:           "fractionalSecondDigits",
 				PossibleValues: []any{1, 2, 3},
 			},
 			{
+				// The localized representation of the time zone name.
 				Name:           "timeZoneName",
-				Description:    "The localized representation of the time zone name.",
 				PossibleValues: []any{"long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric"},
 			},
 		},
