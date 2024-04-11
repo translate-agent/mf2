@@ -46,7 +46,7 @@ List of the default functions registered in the function registry. The functions
 | number                 | format    | unitDisplay                                   |   ❌   |
 | number                 | format    | minimumIntegerDigits                          |   ❌   |
 | number                 | format    | minimumFractionDigits                         |   ❌   |
-| number                 | format    | maximumFractionDigits                         |   ❌   |
+| number                 | format    | maximumFractionDigits                         |  ✅︎   |
 | number                 | format    | minimumSignificantDigits                      |   ❌   |
 | number                 | format    | maximumSignificantDigits                      |   ❌   |
 | number                 | match     | select                                        |   ❌   |

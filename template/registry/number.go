@@ -165,27 +165,36 @@ func numberFunc(input any, options map[string]any, locale language.Tag) (any, er
 		switch optName {
 		case "compactDisplay", "currency", "currencyDisplay", "currencySign", "notation", "numberingSystem",
 			"unit", "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits",
-			"maximumFractionDigits", "minimumSignificantDigits", "maximumSignificantDigits":
+			"minimumSignificantDigits", "maximumSignificantDigits":
 			return nil, fmt.Errorf("option '%s' is not implemented", optName)
 		}
 	}
 
 	var (
-		result string
-		style  any = "decimal"
+		result                string
+		style                 = "decimal"
+		maximumFractionDigits int // percent default
 	)
 
-	if s, ok := options["style"]; ok {
-		style = s
+	if v, ok := options["style"]; ok {
+		style = v.(string) //nolint:forcetypeassert
+	}
+
+	if style == "decimal" {
+		maximumFractionDigits = 3
+	}
+
+	if v, ok := options["maximumFractionDigits"]; ok {
+		maximumFractionDigits, _ = castAs[int](v)
 	}
 
 	p := message.NewPrinter(locale)
 
 	switch style {
 	case "decimal":
-		result = p.Sprint(number.Decimal(num))
+		result = p.Sprint(number.Decimal(num, number.MaxFractionDigits(maximumFractionDigits)))
 	case "percent":
-		result = p.Sprint(number.Percent(num))
+		result = p.Sprint(number.Percent(num, number.MaxFractionDigits(maximumFractionDigits)))
 	default:
 		return nil, fmt.Errorf("option '%s' is not implemented", style)
 	}
