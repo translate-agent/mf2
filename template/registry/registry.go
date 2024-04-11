@@ -15,7 +15,6 @@ type Func struct {
 	FormatSignature, MatchSignature *Signature // Function signature when called in formatting or matching context
 	Func                            func(any, map[string]any, language.Tag) (any, error)
 	Name                            string
-	Description                     string
 }
 
 // Signature is a signature of the function, i.e. what input and options are allowed.
@@ -27,9 +26,8 @@ type Signature struct {
 
 // Option is a possible options for the function.
 type Option struct {
-	Name        string
-	Description string
-	Default     any
+	Name    string
+	Default any
 
 	ValidateValue  func(any) error // If option value is not restricted by a set of values.
 	PossibleValues []any           // If option value is restricted by a set of values.

@@ -13,6 +13,7 @@ func Test_Number(t *testing.T) {
 	tests := []struct {
 		input       any
 		options     map[string]any
+		locale      language.Tag
 		expected    any
 		name        string
 		expectedErr bool
@@ -27,13 +28,20 @@ func Test_Number(t *testing.T) {
 			name:     "style",
 			input:    0.23,
 			options:  map[string]any{"style": "percent"},
-			expected: "23.00%",
+			expected: "23%",
+		},
+		{
+			name:     "style",
+			input:    0.127,
+			options:  map[string]any{"style": "percent"},
+			locale:   language.Latvian,
+			expected: "12,7%",
 		},
 		{
 			name:     "signDisplay and percent style",
 			input:    0.23,
 			options:  map[string]any{"style": "percent", "signDisplay": "always"},
-			expected: "+23.00%",
+			expected: "+23%",
 		},
 		// negative
 		{
@@ -54,7 +62,7 @@ func Test_Number(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := numberRegistryFunc.Format(test.input, test.options, language.AmericanEnglish)
+			actual, err := numberRegistryFunc.Format(test.input, test.options, test.locale)
 
 			if test.expectedErr {
 				require.Error(t, err)
