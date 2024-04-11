@@ -3,76 +3,67 @@ package registry
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	"golang.org/x/text/language"
 )
 
 func Test_Number(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		input       any
-		options     map[string]any
-		locale      language.Tag
-		expected    any
-		name        string
-		expectedErr bool
-	}{
-		// positive
-		{
-			name:     "int",
-			input:    53,
-			expected: "53",
-		},
-		{
-			name:     "style",
-			input:    0.23,
-			options:  map[string]any{"style": "percent"},
-			expected: "23%",
-		},
-		{
-			name:     "style",
-			input:    0.127,
-			options:  map[string]any{"style": "percent"},
-			locale:   language.Latvian,
-			expected: "13%",
-		},
-		{
-			name:     "signDisplay and percent style",
-			input:    0.23,
-			options:  map[string]any{"style": "percent", "signDisplay": "always"},
-			expected: "+23%",
-		},
-		// negative
-		{
-			name:        "not implemented",
-			input:       0.23,
-			options:     map[string]any{"compactDisplay": "short"},
-			expectedErr: true,
-		},
-		{
-			name:        "illegal type",
-			input:       struct{}{},
-			options:     nil,
-			expectedErr: true,
-		},
-	}
+	// decimal
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+	assert := assertFmt(t, numberRegistryFunc, nil, language.Latvian)
+	assert(-0.15, "-0,15")
+	assert(0, "0")
+	assert(0.15, "0,15")
 
-			actual, err := numberRegistryFunc.Format(test.input, test.options, test.locale)
+	assert = assertFmt(t, numberRegistryFunc, map[string]any{"signDisplay": "auto"}, language.AmericanEnglish)
+	assert(-0.15, "-0.15")
+	assert(0, "0")
+	assert(0.15, "0.15")
 
-			if test.expectedErr {
-				require.Error(t, err)
-				require.Empty(t, actual)
+	assert = assertFmt(t, numberRegistryFunc, map[string]any{"signDisplay": "always"}, language.AmericanEnglish)
+	assert(-0.15, "-0.15")
+	assert(0, "+0")
+	assert(0.15, "+0.15")
 
-				return
-			}
+	assert = assertFmt(t, numberRegistryFunc, map[string]any{"signDisplay": "exceptZero"}, language.AmericanEnglish)
+	assert(-0.15, "-0.15")
+	assert(0, "0")
+	assert(0.15, "+0.15")
 
-			require.NoError(t, err)
-			require.Equal(t, test.expected, actual)
-		})
-	}
+	assert = assertFmt(t, numberRegistryFunc, map[string]any{"signDisplay": "never"}, language.AmericanEnglish)
+	assert(-0.15, "0.15")
+	assert(0, "0")
+	assert(0.15, "0.15")
+
+	// percent
+
+	assert = assertFmt(t, numberRegistryFunc, map[string]any{"style": "percent"}, language.Latvian)
+	assert(-0.127, "-13%")
+	assert(0, "0%")
+	assert(0.127, "13%")
+
+	assert = assertFmt(t, numberRegistryFunc,
+		map[string]any{"style": "percent", "signDisplay": "auto"}, language.AmericanEnglish)
+	assert(-0.127, "-13%")
+	assert(0, "0%")
+	assert(0.127, "13%")
+
+	assert = assertFmt(t, numberRegistryFunc,
+		map[string]any{"style": "percent", "signDisplay": "always"}, language.AmericanEnglish)
+	assert(-0.127, "-13%")
+	assert(0, "+0%")
+	assert(0.127, "+13%")
+
+	assert = assertFmt(t, numberRegistryFunc,
+		map[string]any{"style": "percent", "signDisplay": "exceptZero"}, language.AmericanEnglish)
+	assert(-0.127, "-13%")
+	assert(0, "0%")
+	assert(0.127, "+13%")
+
+	assert = assertFmt(t, numberRegistryFunc,
+		map[string]any{"style": "percent", "signDisplay": "never"}, language.AmericanEnglish)
+	assert(-0.127, "13%")
+	assert(0, "0%")
+	assert(0.127, "13%")
 }
