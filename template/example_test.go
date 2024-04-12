@@ -52,10 +52,8 @@ func ExampleTemplate_complexMessage() {
 
 	// Define new function color
 	colorF := registry.Func{
-		Name: "color",
 		FormatSignature: &registry.Signature{
 			// Mark that input/operand is required for a function
-			IsInputRequired: true,
 			// Set a validation function for the input/operand, in this
 			// scenario we want to ensure that the input is a string
 			ValidateInput: func(a any) error {
@@ -75,6 +73,10 @@ func ExampleTemplate_complexMessage() {
 		},
 		// Define the function
 		Func: func(color any, options map[string]any, locale language.Tag) (any, error) {
+			if color == nil {
+				return "", errors.New("input is required, got nil")
+			}
+
 			if options == nil {
 				return color, nil
 			}
@@ -107,7 +109,7 @@ func ExampleTemplate_complexMessage() {
 	}
 
 	// Parse template.
-	t, err := template.New(template.WithFunc(colorF)).Parse(input)
+	t, err := template.New(template.WithFunc("color", colorF)).Parse(input)
 	if err != nil {
 		panic(err)
 	}

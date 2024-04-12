@@ -14,207 +14,229 @@ import (
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L147
 
 // numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
-var numberRegistryFunc = &Func{
-	Name:           "number",
-	Func:           numberFunc,
-	MatchSignature: nil, // Not allowed to use in matching context
-	FormatSignature: &Signature{
-		IsInputRequired: true,
-		ValidateInput: func(a any) error {
-			if _, err := castAs[float64](a); err != nil {
-				return fmt.Errorf("unsupported type: %T: %w", a, err)
-			}
-
-			return nil
-		},
-		Options: Options{
-			{
-				// Only used when notation is "compact".
-				Name:           "compactDisplay",
-				PossibleValues: []any{"short", "long"},
-				Default:        "short",
-			},
-			{
-				// The currency to use in currency formatting.
-				// Possible values are the ISO 4217 currency codes, such as "USD" for the US dollar,
-				// "EUR" for the euro, or "CNY" for the Chinese RMB — see the
-				// Current currency &amp; funds code list
-				// (https://www.unicode.org/cldr/charts/latest/supplemental/detailed_territory_currency_information.html).
-				// There is no default value; if the style is "currency", the currency property must be provided.
-				Name: "currency",
-				ValidateValue: func(a any) error {
-					unit, ok := a.(currency.Unit)
-					if !ok {
-						return fmt.Errorf("expected currency.Unit got %T", a)
-					}
-
-					var zeroVal currency.Unit
-					if unit == zeroVal {
-						return errors.New("currency is not set")
-					}
-
-					return nil
-				},
-			},
-			{
-				// How to display the currency in currency formatting.
-				Name:           "currencyDisplay",
-				PossibleValues: []any{"code", "symbol", "narrowSymbol", "name"},
-			},
-			{
-				// In many locales, accounting format means to wrap the number with parentheses
-				// instead of appending a minus sign. You can enable this formatting by setting the
-				// currencySign option to "accounting".
-				Name:           "currencySign",
-				PossibleValues: []any{"standard", "accounting"},
-				Default:        "standard",
-			},
-			{
-				// The formatting that should be displayed for the number.
-				Name:           "notation",
-				PossibleValues: []any{"standard", "scientific", "engineering", "compact"},
-				Default:        "standard",
-			},
-			{
-				// Numbering system to use.
-				Name: "numberingSystem",
-				PossibleValues: []any{
-					"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru",
-					"hanidec", "khmr", "knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec",
-					"telu", "thai", "tibt",
-				},
-			},
-			{
-				// When to display the sign for the number. "negative" value is Experimental.
-				Name:           "signDisplay",
-				PossibleValues: []any{"auto", "always", "exceptZero", "negative", "never"},
-				Default:        "auto",
-			},
-			{
-				// The formatting style to use.
-				Name:           "style",
-				PossibleValues: []any{"decimal", "currency", "percent", "unit"},
-				Default:        "decimal",
-			},
-			{
-				// The unit to use in unit formatting.
-				// Possible values are core unit identifiers, defined in UTS #35, Part 2, Section 6.
-				// A subset of units from the full list was selected for use in ECMAScript.
-				// Pairs of simple units can be concatenated with "-per-" to make a compound unit.
-				// There is no default value; if the style is "unit", the unit property must be provided.
-				Name:          "unit",
-				ValidateValue: isPositiveInteger,
-			},
-			{
-				// The unit formatting style to use in unit formatting.
-				Name:           "unitDisplay",
-				PossibleValues: []any{"long", "short", "narrow"},
-				Default:        "short",
-			},
-			{
-				// The minimum number of integer digits to use.
-				// A value with a smaller number of integer digits than this number will be
-				// left-padded with zeros (to the specified length) when formatted.
-				Name:          "minimumIntegerDigits",
-				ValidateValue: isPositiveInteger,
-				Default:       1,
-			},
-			{
-				// The minimum number of fraction digits to use.
-				// The default for plain number and percent formatting is 0;
-				// the default for currency formatting is the number of minor unit digits provided by
-				// the ISO 4217 currency code list (2 if the list doesn't provide that information).
-				Name:          "minimumFractionDigits",
-				ValidateValue: isPositiveInteger,
-			},
-			{
-				// The maximum number of fraction digits to use.
-				// The default for plain number formatting is the larger of minimumFractionDigits and 3;
-				// the default for currency formatting is the larger of minimumFractionDigits and the number of
-				// minor
-				// unit digits provided by the ISO 4217 currency code list (2 if the list doesn't provide that
-				// information);
-				// the default for percent formatting is the larger of minimumFractionDigits and 0.
-				Name:          "maximumFractionDigits",
-				ValidateValue: isPositiveInteger,
-			},
-			{
-				// The minimum number of significant digits to use.
-				Name:          "minimumSignificantDigits",
-				ValidateValue: isPositiveInteger,
-				Default:       1,
-			},
-			{
-				// The maximum number of significant digits to use.
-				Name:          "maximumSignificantDigits",
-				ValidateValue: isPositiveInteger,
-				Default:       21, //nolint:gomnd
-			},
-		},
-	},
+var numberRegistryFunc = F{
+	Format: numberFunc,
 }
 
-// TODO: supports only style and signDisplay options.
-func numberFunc(input any, options map[string]any, locale language.Tag) (any, error) {
-	num, err := castAs[float64](input)
-	if err != nil {
-		return nil, fmt.Errorf("convert input to float64: %w", err)
+func parseNumberInput(input any) (float64, error) {
+	if input == nil {
+		return 0, errors.New("input is required, got nil")
 	}
 
-	for optName := range options {
-		switch optName {
+	v, err := castAs[float64](input)
+	if err != nil {
+		return 0, fmt.Errorf("unsupported type: %T: %w", input, err)
+	}
+
+	return v, nil
+}
+
+type numberOptions struct {
+	CompactDisplay           string
+	CurrencyDisplay          string
+	CurrencySign             string
+	Notation                 string
+	NumberingSystem          string
+	SignDisplay              string
+	Style                    string
+	UnitDisplay              string
+	Currency                 currency.Unit
+	Unit                     int
+	MinimumIntegerDigits     int
+	MinimumFractionDigits    int
+	MaximumFractionDigits    int
+	MinimumSignificantDigits int
+	MaximumSignificantDigits int
+}
+
+func parseNumberOptions(opts Opts) (*numberOptions, error) {
+	for k := range opts {
+		switch k {
+		default:
+			return nil, fmt.Errorf("unsupported option: %s", k)
 		case "compactDisplay", "currency", "currencyDisplay", "currencySign", "notation", "numberingSystem",
-			"unit", "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits",
-			"minimumSignificantDigits", "maximumSignificantDigits":
-			return nil, fmt.Errorf("option '%s' is not implemented", optName)
+			"signDisplay", "style", "unit", "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits",
+			"maximumFractionDigits", "minimumSignificantDigits", "maximumSignificantDigits": // noop
 		}
 	}
 
 	var (
-		result                string
-		style                 = "decimal"
-		maximumFractionDigits int // percent default
+		err     error
+		options numberOptions
 	)
 
-	if v, ok := options["style"]; ok {
-		style = v.(string) //nolint:forcetypeassert
+	// Only used when notation is "compact".
+	compactDisplays := []string{"short", "long"}
+	if options.CompactDisplay, err = opts.GetString("compactDisplay", "short", compactDisplays); err != nil {
+		return nil, err
 	}
 
-	if style == "decimal" {
-		maximumFractionDigits = 3
+	// The currency to use in currency formatting.
+	// Possible values are the ISO 4217 currency codes, such as "USD" for the US dollar,
+	// "EUR" for the euro, or "CNY" for the Chinese RMB — see the
+	// Current currency &amp; funds code list
+	// (https://www.unicode.org/cldr/charts/latest/supplemental/detailed_territory_currency_information.html).
+	// There is no default value; if the style is "currency", the currency property must be provided.
+	if curr, ok := opts["currency"]; ok {
+		switch v := curr.(type) {
+		default:
+			return nil, fmt.Errorf("invalid currency type: %T", v)
+		case string:
+			if options.Currency, err = currency.ParseISO(v); err != nil {
+				return nil, fmt.Errorf("invalid currency value: %s", v)
+			}
+
+			if options.Currency == currency.XXX {
+				return nil, errors.New("empty currency value")
+			}
+		case currency.Unit:
+			options.Currency = v
+		}
 	}
 
-	if v, ok := options["maximumFractionDigits"]; ok {
-		maximumFractionDigits, _ = castAs[int](v)
+	// How to display the currency in currency formatting.
+	currencyDisplays := []string{"code", "symbol", "narrowSymbol", "name"}
+	if options.CurrencyDisplay, err = opts.GetString("currencyDisplay", "", currencyDisplays); err != nil {
+		return nil, err
 	}
+
+	// In many locales, accounting format means to wrap the number with parentheses
+	// instead of appending a minus sign. You can enable this formatting by setting the
+	// currencySign option to "accounting".
+	currencySigns := []string{"standard", "accounting"}
+	if options.CurrencySign, err = opts.GetString("currencySign", "standard", currencySigns); err != nil {
+		return nil, err
+	}
+
+	// The formatting that should be displayed for the number.
+	notations := []string{"standard", "scientific", "engineering", "compact"}
+	if options.Notation, err = opts.GetString("notation", "standard", notations); err != nil {
+		return nil, err
+	}
+
+	// Numbering system to use.
+	numberingSystems := []string{
+		"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru", "hanidec", "khmr",
+		"knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec", "telu", "thai", "tibt",
+	}
+	if options.NumberingSystem, err = opts.GetString("numberingSystem", "", numberingSystems); err != nil {
+		return nil, err
+	}
+
+	// When to display the sign for the number. "negative" value is Experimental.
+	signDisplays := []string{"auto", "always", "exceptZero", "negative", "never"}
+	if options.SignDisplay, err = opts.GetString("signDisplay", "auto", signDisplays); err != nil {
+		return nil, err
+	}
+
+	// The formatting style to use.
+	styles := []string{"decimal", "percent"}
+	if options.Style, err = opts.GetString("style", "decimal", styles); err != nil {
+		return nil, err
+	}
+
+	// The unit to use in unit formatting.
+	// Possible values are core unit identifiers, defined in UTS #35, Part 2, Section 6.
+	// A subset of units from the full list was selected for use in ECMAScript.
+	// Pairs of simple units can be concatenated with "-per-" to make a compound unit.
+	// There is no default value; if the style is "unit", the unit property must be provided.
+	if options.Unit, err = opts.GetPositiveInt("unit", 0, nil); err != nil {
+		return nil, err
+	}
+
+	// The unit formatting style to use in unit formatting.
+	unitDisplays := []string{"short", "narrow"}
+	if options.UnitDisplay, err = opts.GetString("unitDisplay", "short", unitDisplays); err != nil {
+		return nil, err
+	}
+
+	// The minimum number of integer digits to use.
+	// A value with a smaller number of integer digits than this number will be
+	// left-padded with zeros (to the specified length) when formatted.
+	if options.MinimumIntegerDigits, err = opts.GetPositiveInt("minimumIntegerDigits", 1, nil); err != nil {
+		return nil, err
+	}
+
+	// The minimum number of fraction digits to use.
+	// The default for plain number and percent formatting is 0;
+	// the default for currency formatting is the number of minor unit digits provided by
+	// the ISO 4217 currency code list (2 if the list doesn't provide that information).
+	if options.MinimumFractionDigits, err = opts.GetPositiveInt("minimumFractionDigits", 0, nil); err != nil {
+		return nil, err
+	}
+
+	// The maximum number of fraction digits to use.
+	// The default for plain number formatting is the larger of minimumFractionDigits and 3;
+	// the default for currency formatting is the larger of minimumFractionDigits and the number of
+	// minor
+	// unit digits provided by the ISO 4217 currency code list (2 if the list doesn't provide that
+	// information);
+	// the default for percent formatting is the larger of minimumFractionDigits and 0.
+	var maxFractionDigits int // percent default
+
+	if options.Style == "decimal" {
+		maxFractionDigits = 3 // decimal default
+	}
+
+	options.MaximumFractionDigits, err = opts.GetPositiveInt("maximumFractionDigits", maxFractionDigits, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// The minimum number of significant digits to use.
+	if options.MinimumSignificantDigits, err = opts.GetPositiveInt("minimumSignificantDigits", 1, nil); err != nil {
+		return nil, err
+	}
+
+	// The maximum number of significant digits to use.
+	const maxSignificantDigits = 21
+
+	options.MaximumSignificantDigits, err = opts.GetPositiveInt("maximumSignificantDigits", maxSignificantDigits, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &options, nil
+}
+
+func numberFunc(input any, options Opts, locale language.Tag) (any, error) {
+	num, err := parseNumberInput(input)
+	if err != nil {
+		return nil, err
+	}
+
+	opts, err := parseNumberOptions(options)
+	if err != nil {
+		return nil, err
+	}
+
+	var result string
 
 	p := message.NewPrinter(locale)
 
-	switch style {
+	switch opts.Style {
 	case "decimal":
-		result = p.Sprint(number.Decimal(num, number.MaxFractionDigits(maximumFractionDigits)))
+		result = p.Sprint(number.Decimal(num, number.MaxFractionDigits(opts.MaximumFractionDigits)))
 	case "percent":
-		result = p.Sprint(number.Percent(num, number.MaxFractionDigits(maximumFractionDigits)))
+		result = p.Sprint(number.Percent(num, number.MaxFractionDigits(opts.MaximumFractionDigits)))
 	default:
-		return nil, fmt.Errorf("option '%s' is not implemented", style)
+		return nil, fmt.Errorf("style '%s' is not implemented", opts.Style)
 	}
 
-	if signDisplay, ok := options["signDisplay"].(string); ok {
-		switch signDisplay {
-		case "auto":
-		case "negative":
-		case "always":
-			if num >= 0 {
-				result = "+" + result
-			}
-		case "exceptZero":
-			if num > 0 {
-				result = "+" + result
-			}
-		case "never":
-			if num < 0 {
-				result = result[1:]
-			}
+	switch opts.SignDisplay {
+	case "auto":
+	case "negative":
+	case "always":
+		if num >= 0 {
+			result = "+" + result
+		}
+	case "exceptZero":
+		if num > 0 {
+			result = "+" + result
+		}
+	case "never":
+		if num < 0 {
+			result = result[1:]
 		}
 	}
 
@@ -236,17 +258,4 @@ func castAs[T any](val any) (T, error) {
 	v = v.Convert(typ)
 
 	return v.Interface().(T), nil //nolint:forcetypeassert
-}
-
-func isPositiveInteger(v any) error {
-	val, err := castAs[int](v)
-	if err != nil {
-		return fmt.Errorf("convert val to int: %w", err)
-	}
-
-	if val < 0 {
-		return errors.New("value must be at least 0")
-	}
-
-	return nil
 }

@@ -14,10 +14,10 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name, text string
 		input      map[string]any
+		funcs      registry.Registry // format functions to be added before executing
+		name, text string
 		expected   string
-		funcs      []registry.Func // format functions to be added before executing
 	}{
 		{
 			name: "empty message",
@@ -45,11 +45,9 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 		{
 			name: "function without operand",
 			text: "Hello, { :randName }",
-			funcs: []registry.Func{
-				{
-					Name:            "randName",
-					FormatSignature: &registry.Signature{},
-					Func:            func(any, map[string]any, language.Tag) (any, error) { return "John", nil },
+			funcs: registry.Registry{
+				"randName": registry.F{
+					Format: func(any, registry.Opts, language.Tag) (any, error) { return "John", nil },
 				},
 			},
 			expected: "Hello, John",
@@ -75,10 +73,10 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name, text string
 		inputs     map[string]any
+		funcs      registry.Registry // format functions to be added before executing
+		name, text string
 		expected   string
-		funcs      []registry.Func // format functions to be added before executing
 	}{
 		{
 			name:     "complex message without declaration",
@@ -92,11 +90,9 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		.local $var3 = { :randNum }
 		{{Hello, {$var1} {$var2} {$var3}!}}`,
 			inputs: map[string]any{"anotherVar": "World"},
-			funcs: []registry.Func{
-				{
-					Name:            "randNum",
-					FormatSignature: &registry.Signature{},
-					Func:            func(any, map[string]any, language.Tag) (any, error) { return 0, nil },
+			funcs: registry.Registry{
+				"randNum": registry.F{
+					Format: func(any, registry.Opts, language.Tag) (any, error) { return 0, nil },
 				},
 			},
 			expected: "Hello, literalExpression World 0!",
@@ -206,10 +202,10 @@ func Test_ExecuteErrors(t *testing.T) {
 	}
 
 	tests := []struct {
-		name, text string
 		input      map[string]any
+		funcs      registry.Registry
+		name, text string
 		expected   expected
-		funcs      []registry.Func // format function to be added before executing
 	}{
 		{
 			name:     "syntax error",
@@ -240,11 +236,9 @@ func Test_ExecuteErrors(t *testing.T) {
 			name:     "formatting error",
 			text:     "Hello, { :error }!",
 			expected: expected{execErr: ErrFormatting, text: "Hello, !"},
-			funcs: []registry.Func{
-				{
-					Name:            "error",
-					FormatSignature: &registry.Signature{},
-					Func:            func(any, map[string]any, language.Tag) (any, error) { return nil, errors.New("error") },
+			funcs: registry.Registry{
+				"error": registry.F{
+					Format: func(any, registry.Opts, language.Tag) (any, error) { return nil, errors.New("error") },
 				},
 			},
 		},

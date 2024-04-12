@@ -65,17 +65,16 @@ func New(options ...Option) *Template {
 type Option func(t *Template)
 
 // WithFunc adds a single function to function registry.
-func WithFunc(f registry.Func) Option {
+func WithFunc(name string, f registry.Func) Option {
 	return func(t *Template) {
-		t.funcRegistry[f.Name] = f
+		t.funcRegistry[name] = registry.F{Format: f.Format, Match: f.Match}
 	}
 }
 
-// WithFuncs adds functions to function registry.
-func WithFuncs(funcs []registry.Func) Option {
+func WithFuncs(reg registry.Registry) Option {
 	return func(t *Template) {
-		for _, v := range funcs {
-			t.funcRegistry[v.Name] = v
+		for k, f := range reg {
+			t.funcRegistry[k] = f
 		}
 	}
 }
@@ -364,6 +363,10 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 		return fmtOperand(), errors.Join(resolutionErr, fmt.Errorf("%w '%s'", ErrUnknownFunction, funcName))
 	}
 
+	if f.Format == nil {
+		return "", fmt.Errorf("function '%s' not allowed in formatting context", funcName)
+	}
+
 	result, err := f.Format(operand, options, e.template.locale)
 	if err != nil {
 		return "", errors.Join(resolutionErr, ErrFormatting, err)
@@ -430,6 +433,10 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 		f, ok := e.template.funcRegistry[function.Identifier.Name]
 		if !ok {
 			return nil, fmt.Errorf("%w '%s'", ErrUnknownFunction, function.Identifier.Name)
+		}
+
+		if f.Match == nil {
+			return nil, fmt.Errorf("function '%s' not allowed in selector context", function.Identifier.Name)
 		}
 
 		opts, err := e.resolveOptions(function.Options)
