@@ -212,19 +212,17 @@ func datetimeFunc(input any, options Opts, locale language.Tag) (any, error) {
 	}
 
 	if len(opts.TimeStyle) > 0 {
-		var timePrefix string
-
 		if len(layout) > 0 {
-			timePrefix = " "
+			layout += " "
 		}
 
 		switch opts.TimeStyle {
 		case "full", "long":
-			layout += timePrefix + "15:04:05"
+			layout += "15:04:05"
 		case "medium":
-			layout += timePrefix + "15:04"
+			layout += "15:04"
 		case "short":
-			layout += timePrefix + "15"
+			layout += "15"
 		}
 	}
 
