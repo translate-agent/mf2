@@ -213,12 +213,16 @@ func numberFunc(input any, options Options, locale language.Tag) (any, error) {
 	var result string
 
 	p := message.NewPrinter(locale)
+	numberOpts := []number.Option{
+		number.MinFractionDigits(opts.MinimumFractionDigits),
+		number.MaxFractionDigits(opts.MaximumFractionDigits),
+	}
 
 	switch opts.Style {
 	case "decimal":
-		result = p.Sprint(number.Decimal(value, number.MaxFractionDigits(opts.MaximumFractionDigits)))
+		result = p.Sprint(number.Decimal(value, numberOpts...))
 	case "percent":
-		result = p.Sprint(number.Percent(value, number.MaxFractionDigits(opts.MaximumFractionDigits)))
+		result = p.Sprint(number.Percent(value, numberOpts...))
 	default:
 		return nil, fmt.Errorf("style '%s' is not implemented", opts.Style)
 	}
