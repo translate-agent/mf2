@@ -216,6 +216,7 @@ func numberFunc(input any, options Options, locale language.Tag) (any, error) {
 	numberOpts := []number.Option{
 		number.MinFractionDigits(opts.MinimumFractionDigits),
 		number.MaxFractionDigits(opts.MaximumFractionDigits),
+		number.MinIntegerDigits(opts.MinimumIntegerDigits),
 	}
 
 	switch opts.Style {

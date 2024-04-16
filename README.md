@@ -50,7 +50,7 @@ List of the default functions registered in the function registry. The functions
 | number                 | format    | style (currency, unit)                        |   ❌   |
 | number                 | format    | unit                                          |   ❌   |
 | number                 | format    | unitDisplay                                   |   ❌   |
-| number                 | format    | minimumIntegerDigits                          |   ❌   |
+| number                 | format    | minimumIntegerDigits                          |  ✅︎   |
 | number                 | format    | minimumFractionDigits                         |  ✅︎   |
 | number                 | format    | maximumFractionDigits                         |  ✅︎   |
 | number                 | format    | minimumSignificantDigits                      |   ❌   |
