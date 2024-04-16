@@ -68,7 +68,7 @@ func (o Options) GetPositiveInt(name string, fallback int, allowed []int) (int, 
 func New() Registry {
 	return Registry{
 		"string":   stringRegistryFunc,
-		"number":   {Format: numberRegistryFunc.Format, Match: numberRegistryFunc.Match},
-		"datetime": {Format: datetimeRegistryFunc.Format, Match: datetimeRegistryFunc.Match},
+		"number":   numberRegistryFunc,
+		"datetime": datetimeRegistryFunc,
 	}
 }
