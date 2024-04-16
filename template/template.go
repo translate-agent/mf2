@@ -71,6 +71,7 @@ func WithFunc(name string, f registry.Func) Option {
 	}
 }
 
+// WithFuncs adds functions to function registry.
 func WithFuncs(reg registry.Registry) Option {
 	return func(t *Template) {
 		for k, f := range reg {
