@@ -11,7 +11,7 @@ import (
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L13
 
 // datetimeFunc is the implementation of the datetime function. Locale-sensitive date and time formatting.
-var datetimeRegistryFunc = F{
+var datetimeRegistryFunc = Func{
 	Format: datetimeFunc,
 }
 
@@ -48,7 +48,7 @@ func parseDatetimeInput(input any) (time.Time, error) {
 	return v, nil
 }
 
-func parseDatetimeOptions(options Opts) (*datetimeOptions, error) {
+func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 	var (
 		opts datetimeOptions
 		err  error
@@ -175,7 +175,7 @@ func parseDatetimeOptions(options Opts) (*datetimeOptions, error) {
 	return &opts, nil
 }
 
-func datetimeFunc(input any, options Opts, locale language.Tag) (any, error) {
+func datetimeFunc(input any, options Options, locale language.Tag) (any, error) {
 	tim, err := parseDatetimeInput(input)
 	if err != nil {
 		return "", err

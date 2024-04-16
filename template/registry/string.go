@@ -11,12 +11,12 @@ import (
 
 // stringRegistryFunc is the implementation of the string function.
 // Formatting of strings as a literal and selection based on string equality.
-var stringRegistryFunc = F{
+var stringRegistryFunc = Func{
 	Format: stringFunc,
 	Match:  stringFunc,
 }
 
-func stringFunc(input any, options Opts, locale language.Tag) (any, error) {
+func stringFunc(input any, options Options, locale language.Tag) (any, error) {
 	if input == nil {
 		return "", errors.New("string function requires input, got nil")
 	}

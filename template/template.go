@@ -67,7 +67,7 @@ type Option func(t *Template)
 // WithFunc adds a single function to function registry.
 func WithFunc(name string, f registry.Func) Option {
 	return func(t *Template) {
-		t.funcRegistry[name] = registry.F{Format: f.Format, Match: f.Match}
+		t.funcRegistry[name] = f
 	}
 }
 

@@ -72,5 +72,5 @@ func Test_Number(t *testing.T) {
 
 	assert = assertFormat(t, numberRegistryFunc,
 		map[string]any{"style": "percent", "maximumFractionDigits": 1}, language.Latvian)
-	assert(0.127, "12,7%")
+	assert(0.1275, "12,8%")
 }

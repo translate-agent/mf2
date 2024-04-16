@@ -14,7 +14,7 @@ import (
 // https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L147
 
 // numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
-var numberRegistryFunc = F{
+var numberRegistryFunc = Func{
 	Format: numberFunc,
 }
 
@@ -49,7 +49,7 @@ type numberOptions struct {
 	MaximumSignificantDigits int
 }
 
-func parseNumberOptions(opts Opts) (*numberOptions, error) {
+func parseNumberOptions(opts Options) (*numberOptions, error) {
 	for k := range opts {
 		switch k {
 		default:
@@ -199,7 +199,7 @@ func parseNumberOptions(opts Opts) (*numberOptions, error) {
 	return &options, nil
 }
 
-func numberFunc(input any, options Opts, locale language.Tag) (any, error) {
+func numberFunc(input any, options Options, locale language.Tag) (any, error) {
 	num, err := parseNumberInput(input)
 	if err != nil {
 		return nil, err

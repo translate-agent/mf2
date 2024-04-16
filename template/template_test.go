@@ -46,8 +46,8 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 			name: "function without operand",
 			text: "Hello, { :randName }",
 			funcs: registry.Registry{
-				"randName": registry.F{
-					Format: func(any, registry.Opts, language.Tag) (any, error) { return "John", nil },
+				"randName": registry.Func{
+					Format: func(any, registry.Options, language.Tag) (any, error) { return "John", nil },
 				},
 			},
 			expected: "Hello, John",
@@ -91,8 +91,8 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		{{Hello, {$var1} {$var2} {$var3}!}}`,
 			inputs: map[string]any{"anotherVar": "World"},
 			funcs: registry.Registry{
-				"randNum": registry.F{
-					Format: func(any, registry.Opts, language.Tag) (any, error) { return 0, nil },
+				"randNum": registry.Func{
+					Format: func(any, registry.Options, language.Tag) (any, error) { return 0, nil },
 				},
 			},
 			expected: "Hello, literalExpression World 0!",
@@ -133,7 +133,6 @@ func Test_Matcher(t *testing.T) {
 		text     string
 		inputs   []map[string]any
 		expected []string
-		funcs    []registry.Func
 	}{
 		{
 			name: "matcher string",
@@ -237,8 +236,8 @@ func Test_ExecuteErrors(t *testing.T) {
 			text:     "Hello, { :error }!",
 			expected: expected{execErr: ErrFormatting, text: "Hello, !"},
 			funcs: registry.Registry{
-				"error": registry.F{
-					Format: func(any, registry.Opts, language.Tag) (any, error) { return nil, errors.New("error") },
+				"error": registry.Func{
+					Format: func(any, registry.Options, language.Tag) (any, error) { return nil, errors.New("error") },
 				},
 			},
 		},
