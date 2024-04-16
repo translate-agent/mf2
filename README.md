@@ -47,7 +47,7 @@ List of the default functions registered in the function registry. The functions
 | number                 | format    | numberingSystem                               |   ❌   |
 | number                 | format    | signDisplay (auto, always, exceptZero, never) |  ✅︎   |
 | number                 | format    | style (decimal, percent)                      |  ✅︎   |
-| number                 | format    | style (currency)                              |   ❌   |
+| number                 | format    | style (currency, unit)                        |   ❌   |
 | number                 | format    | unit                                          |   ❌   |
 | number                 | format    | unitDisplay                                   |   ❌   |
 | number                 | format    | minimumIntegerDigits                          |   ❌   |
