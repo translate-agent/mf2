@@ -2,6 +2,7 @@ package template_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"go.expect.digital/mf2/template"
@@ -50,64 +51,47 @@ func ExampleTemplate_complexMessage() {
 .input { $color :color style=RGB}
 {{John is { $age } years old and his favorite color is { $color }.}}`
 
-	// Define new function color
-	colorF := registry.Func{
-		Name: "color",
-		FormatSignature: &registry.Signature{
-			// Mark that input/operand is required for a function
-			IsInputRequired: true,
-			// Set a validation function for the input/operand, in this
-			// scenario we want to ensure that the input is a string
-			ValidateInput: func(a any) error {
-				if _, ok := a.(string); !ok {
-					return errors.New("input is not a string")
-				}
-				return nil
-			},
-			// Define options for the function
-			Options: registry.Options{
-				{
-					Name:           "style",
-					PossibleValues: []any{"RGB", "HEX", "HSL"}, // Define possible values for the option
-					Default:        "RGB",                      // Set a default value for the option
-				},
-			},
-		},
-		// Define the function
-		Func: func(color any, options map[string]any, locale language.Tag) (any, error) {
-			if options == nil {
-				return color, nil
+	color := func(value any, options registry.Options, locale language.Tag) (any, error) {
+		if value == nil {
+			return "", errors.New("input is required, got nil")
+		}
+
+		color, ok := value.(string)
+		if !ok {
+			return nil, errors.New("input is not a string")
+		}
+
+		if options == nil {
+			return color, nil
+		}
+
+		style, err := options.GetString("style", "RGB", []string{"RGB", "HEX", "HSL"})
+		if err != nil {
+			return nil, fmt.Errorf("get style: %w", err)
+		}
+
+		var result string
+
+		switch style {
+		case "RGB":
+			switch color {
+			case "red":
+				result = "255,0,0"
+			case "green":
+				result = "0,255,0"
+			case "blue":
+				result = "0,0,255"
 			}
+		case "HEX": // Other Implementations
+		case "HSL": // Other Implementations
+		}
 
-			colorStr := color.(string) //nolint:forcetypeassert // Already validated by ValidateInput
-
-			style, ok := options["style"].(string)
-			if !ok {
-				style = "RGB"
-			}
-
-			var result string
-
-			switch style {
-			case "RGB":
-				switch colorStr {
-				case "red":
-					result = "255,0,0"
-				case "green":
-					result = "0,255,0"
-				case "blue":
-					result = "0,0,255"
-				}
-			case "HEX": // Other Implementations
-			case "HSL": // Other Implementations
-			}
-
-			return result, nil
-		},
+		return result, nil
 	}
+	// }
 
 	// Parse template.
-	t, err := template.New(template.WithFunc(colorF)).Parse(input)
+	t, err := template.New(template.WithFunc("color", registry.Func{Format: color})).Parse(input)
 	if err != nil {
 		panic(err)
 	}

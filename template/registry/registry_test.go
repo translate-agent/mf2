@@ -8,11 +8,11 @@ import (
 	"golang.org/x/text/language"
 )
 
-func assertFmt(t *testing.T, f *Func, options map[string]any, locale language.Tag) func(in any, out string) {
+func assertFormat(t *testing.T, f Func, options map[string]any, locale language.Tag) func(in any, out string) {
 	t.Helper()
 
 	return func(in any, out string) {
-		result, err := f.Func(in, options, locale)
+		result, err := f.Format(in, options, locale)
 
 		require.NoError(t, err)
 		assert.Equal(t, out, result)

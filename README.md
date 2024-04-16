@@ -7,6 +7,11 @@ This parser parses the localized message strings based on the [Message Format 2 
 # Requirements
 
 - Golang 1.22+
+- IANA Time Zone database - one of:
+  - the directory or uncompressed zip file named by the ZONEINFO environment variable
+  - on a Unix system, the system standard installation location
+  - $GOROOT/lib/time/zoneinfo.zip
+  - the time/tzdata package
 
 # Features
 
