@@ -51,28 +51,6 @@ func ExampleTemplate_complexMessage() {
 .input { $color :color style=RGB}
 {{John is { $age } years old and his favorite color is { $color }.}}`
 
-	// Define new function color
-	// colorF := registry.F{
-	// 	FormatSignature: &registry.Signature{
-	// 		// Mark that input/operand is required for a function
-	// 	// Set a validation function for the input/operand, in this
-	// 	// scenario we want to ensure that the input is a string
-	// 	ValidateInput: func(a any) error {
-	// 		if _, ok := a.(string); !ok {
-	// 			return errors.New("input is not a string")
-	// 		}
-	// 		return nil
-	// 	},
-	// 	// Define options for the function
-	// 	Options: registry.Options{
-	// 		{
-	// 			Name:           "style",
-	// 			PossibleValues: []any{"RGB", "HEX", "HSL"}, // Define possible values for the option
-	// 			Default:        "RGB",                      // Set a default value for the option
-	// 		},
-	// 	},
-	// },
-	// Define the function
 	color := func(value any, options registry.Options, locale language.Tag) (any, error) {
 		if value == nil {
 			return "", errors.New("input is required, got nil")
