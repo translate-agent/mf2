@@ -25,7 +25,7 @@ func stringFunc(input any, options Options, locale language.Tag) (any, error) {
 		return "", errors.New("string function takes no options")
 	}
 
-	switch v := input.(type) {
+	switch value := input.(type) {
 	default:
 		s, err := castAs[string](input) // if underlying type is not string, return error
 		if err != nil {
@@ -34,10 +34,10 @@ func stringFunc(input any, options Options, locale language.Tag) (any, error) {
 
 		return s, nil
 	case fmt.Stringer:
-		return v.String(), nil
+		return value.String(), nil
 	case string, []byte, []rune, int, int8, int16, int32, int64,
 		uint, uint8, uint16, uint32, uint64, float32, float64, bool,
 		complex64, complex128, error:
-		return fmt.Sprint(v), nil
+		return fmt.Sprint(value), nil
 	}
 }

@@ -176,7 +176,7 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 }
 
 func datetimeFunc(input any, options Options, locale language.Tag) (any, error) {
-	tim, err := parseDatetimeInput(input)
+	value, err := parseDatetimeInput(input)
 	if err != nil {
 		return "", err
 	}
@@ -226,7 +226,7 @@ func datetimeFunc(input any, options Options, locale language.Tag) (any, error) 
 		}
 	}
 
-	tim = tim.In(opts.TimeZone)
+	value = value.In(opts.TimeZone)
 
-	return tim.Format(layout), nil
+	return value.Format(layout), nil
 }

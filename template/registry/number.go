@@ -200,7 +200,7 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 }
 
 func numberFunc(input any, options Options, locale language.Tag) (any, error) {
-	num, err := parseNumberInput(input)
+	value, err := parseNumberInput(input)
 	if err != nil {
 		return nil, err
 	}
@@ -216,9 +216,9 @@ func numberFunc(input any, options Options, locale language.Tag) (any, error) {
 
 	switch opts.Style {
 	case "decimal":
-		result = p.Sprint(number.Decimal(num, number.MaxFractionDigits(opts.MaximumFractionDigits)))
+		result = p.Sprint(number.Decimal(value, number.MaxFractionDigits(opts.MaximumFractionDigits)))
 	case "percent":
-		result = p.Sprint(number.Percent(num, number.MaxFractionDigits(opts.MaximumFractionDigits)))
+		result = p.Sprint(number.Percent(value, number.MaxFractionDigits(opts.MaximumFractionDigits)))
 	default:
 		return nil, fmt.Errorf("style '%s' is not implemented", opts.Style)
 	}
@@ -227,15 +227,15 @@ func numberFunc(input any, options Options, locale language.Tag) (any, error) {
 	case "auto":
 	case "negative":
 	case "always":
-		if num >= 0 {
+		if value >= 0 {
 			result = "+" + result
 		}
 	case "exceptZero":
-		if num > 0 {
+		if value > 0 {
 			result = "+" + result
 		}
 	case "never":
-		if num < 0 {
+		if value < 0 {
 			result = result[1:]
 		}
 	}
