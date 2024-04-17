@@ -189,9 +189,7 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	}
 
 	// The maximum number of significant digits to use.
-	const maxSignificantDigits = 21
-
-	options.MaximumSignificantDigits, err = opts.GetPositiveInt("maximumSignificantDigits", maxSignificantDigits, nil)
+	options.MaximumSignificantDigits, err = opts.GetPositiveInt("maximumSignificantDigits", -1, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +215,7 @@ func numberFunc(input any, options Options, locale language.Tag) (any, error) {
 		number.MinFractionDigits(opts.MinimumFractionDigits),
 		number.MaxFractionDigits(opts.MaximumFractionDigits),
 		number.MinIntegerDigits(opts.MinimumIntegerDigits),
+		number.Precision(opts.MaximumSignificantDigits),
 	}
 
 	switch opts.Style {

@@ -54,7 +54,7 @@ List of the default functions registered in the function registry. The functions
 | number                 | format    | minimumFractionDigits                         |  ✅︎   |
 | number                 | format    | maximumFractionDigits                         |  ✅︎   |
 | number                 | format    | minimumSignificantDigits                      |   ❌   |
-| number                 | format    | maximumSignificantDigits                      |   ❌   |
+| number                 | format    | maximumSignificantDigits                      |  ✅︎   |
 | number                 | match     | select                                        |   ❌   |
 | number                 | match     | minimumIntegerDigits                          |   ❌   |
 | number                 | match     | minimumFractionDigits                         |   ❌   |
