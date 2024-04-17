@@ -66,7 +66,7 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	)
 
 	// Only used when notation is "compact".
-	compactDisplays := []string{"short", "long"}
+	compactDisplays := oneOf("short", "long")
 	if options.CompactDisplay, err = opts.GetString("compactDisplay", "short", compactDisplays); err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	}
 
 	// How to display the currency in currency formatting.
-	currencyDisplays := []string{"code", "symbol", "narrowSymbol", "name"}
+	currencyDisplays := oneOf("code", "symbol", "narrowSymbol", "name")
 	if options.CurrencyDisplay, err = opts.GetString("currencyDisplay", "", currencyDisplays); err != nil {
 		return nil, err
 	}
@@ -103,34 +103,34 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	// In many locales, accounting format means to wrap the number with parentheses
 	// instead of appending a minus sign. You can enable this formatting by setting the
 	// currencySign option to "accounting".
-	currencySigns := []string{"standard", "accounting"}
+	currencySigns := oneOf("standard", "accounting")
 	if options.CurrencySign, err = opts.GetString("currencySign", "standard", currencySigns); err != nil {
 		return nil, err
 	}
 
 	// The formatting that should be displayed for the number.
-	notations := []string{"standard", "scientific", "engineering", "compact"}
+	notations := oneOf("standard", "scientific", "engineering", "compact")
 	if options.Notation, err = opts.GetString("notation", "standard", notations); err != nil {
 		return nil, err
 	}
 
 	// Numbering system to use.
-	numberingSystems := []string{
+	numberingSystems := oneOf(
 		"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru", "hanidec", "khmr",
 		"knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec", "telu", "thai", "tibt",
-	}
+	)
 	if options.NumberingSystem, err = opts.GetString("numberingSystem", "", numberingSystems); err != nil {
 		return nil, err
 	}
 
 	// When to display the sign for the number. "negative" value is Experimental.
-	signDisplays := []string{"auto", "always", "exceptZero", "negative", "never"}
+	signDisplays := oneOf("auto", "always", "exceptZero", "negative", "never")
 	if options.SignDisplay, err = opts.GetString("signDisplay", "auto", signDisplays); err != nil {
 		return nil, err
 	}
 
 	// The formatting style to use.
-	styles := []string{"decimal", "percent"}
+	styles := oneOf("decimal", "percent")
 	if options.Style, err = opts.GetString("style", "decimal", styles); err != nil {
 		return nil, err
 	}
@@ -140,12 +140,12 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	// A subset of units from the full list was selected for use in ECMAScript.
 	// Pairs of simple units can be concatenated with "-per-" to make a compound unit.
 	// There is no default value; if the style is "unit", the unit property must be provided.
-	if options.Unit, err = opts.GetPositiveInt("unit", 0, nil); err != nil {
+	if options.Unit, err = opts.GetInt("unit", 0); err != nil {
 		return nil, err
 	}
 
 	// The unit formatting style to use in unit formatting.
-	unitDisplays := []string{"short", "narrow"}
+	unitDisplays := oneOf("short", "narrow")
 	if options.UnitDisplay, err = opts.GetString("unitDisplay", "short", unitDisplays); err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	// The minimum number of integer digits to use.
 	// A value with a smaller number of integer digits than this number will be
 	// left-padded with zeros (to the specified length) when formatted.
-	if options.MinimumIntegerDigits, err = opts.GetPositiveInt("minimumIntegerDigits", 1, nil); err != nil {
+	if options.MinimumIntegerDigits, err = opts.GetInt("minimumIntegerDigits", 1, eqOrGreaterThan(1)); err != nil {
 		return nil, err
 	}
 
@@ -161,7 +161,7 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	// The default for plain number and percent formatting is 0;
 	// the default for currency formatting is the number of minor unit digits provided by
 	// the ISO 4217 currency code list (2 if the list doesn't provide that information).
-	if options.MinimumFractionDigits, err = opts.GetPositiveInt("minimumFractionDigits", 0, nil); err != nil {
+	if options.MinimumFractionDigits, err = opts.GetInt("minimumFractionDigits", 0, eqOrGreaterThan(0)); err != nil {
 		return nil, err
 	}
 
@@ -178,20 +178,18 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		maxFractionDigits = 3 // decimal default
 	}
 
-	options.MaximumFractionDigits, err = opts.GetPositiveInt("maximumFractionDigits", maxFractionDigits, nil)
+	options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, eqOrGreaterThan(0))
 	if err != nil {
 		return nil, err
 	}
 
 	// The minimum number of significant digits to use.
-	if options.MinimumSignificantDigits, err = opts.GetPositiveInt("minimumSignificantDigits", 1, nil); err != nil {
+	if options.MinimumSignificantDigits, err = opts.GetInt("minimumSignificantDigits", 1, eqOrGreaterThan(1)); err != nil {
 		return nil, err
 	}
 
 	// The maximum number of significant digits to use.
-	const maxSignificantDigits = 21
-
-	options.MaximumSignificantDigits, err = opts.GetPositiveInt("maximumSignificantDigits", maxSignificantDigits, nil)
+	options.MaximumSignificantDigits, err = opts.GetInt("maximumSignificantDigits", -1)
 	if err != nil {
 		return nil, err
 	}
@@ -217,6 +215,7 @@ func numberFunc(input any, options Options, locale language.Tag) (any, error) {
 		number.MinFractionDigits(opts.MinimumFractionDigits),
 		number.MaxFractionDigits(opts.MaximumFractionDigits),
 		number.MinIntegerDigits(opts.MinimumIntegerDigits),
+		number.Precision(opts.MaximumSignificantDigits),
 	}
 
 	switch opts.Style {

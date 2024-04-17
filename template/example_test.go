@@ -65,7 +65,7 @@ func ExampleTemplate_complexMessage() {
 			return color, nil
 		}
 
-		style, err := options.GetString("style", "RGB", []string{"RGB", "HEX", "HSL"})
+		style, err := options.GetString("style", "RGB")
 		if err != nil {
 			return nil, fmt.Errorf("get style: %w", err)
 		}
