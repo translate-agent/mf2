@@ -1,4 +1,4 @@
-package registry
+package template
 
 import (
 	"errors"
@@ -7,11 +7,11 @@ import (
 	"golang.org/x/text/language"
 )
 
-// https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/registry.xml#L259
+// https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/registry.xml#L259
 
 // stringRegistryFunc is the implementation of the string function.
 // Formatting of strings as a literal and selection based on string equality.
-var stringRegistryFunc = Func{
+var stringRegistryFunc = RegistryFunc{
 	Format: stringFunc,
 	Match:  stringFunc,
 }

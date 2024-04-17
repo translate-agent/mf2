@@ -11,12 +11,11 @@ import (
 	"golang.org/x/text/language"
 
 	ast "go.expect.digital/mf2/parse"
-	"go.expect.digital/mf2/template/registry"
 )
 
 // MessageFormat2 Errors as defined in the specification.
 //
-// https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/errors.md
+// https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/errors.md
 var (
 	ErrSyntax                    = errors.New("syntax error")
 	ErrUnresolvedVariable        = errors.New("unresolved variable")
@@ -42,16 +41,16 @@ type Template struct {
 	// e.g. date formatting, given example { $date :datetime }:
 	//  - "en-US" -> 1/2/2023
 	//  - "lv-LV" -> 2.1.2023
-	ast          *ast.AST
-	funcRegistry registry.Registry
-	locale       language.Tag
+	ast      *ast.AST
+	registry Registry
+	locale   language.Tag
 }
 
 // New returns a new Template.
 func New(options ...Option) *Template {
 	t := &Template{
-		funcRegistry: registry.New(),
-		locale:       language.AmericanEnglish,
+		registry: NewRegistry(),
+		locale:   language.AmericanEnglish,
 	}
 
 	for _, o := range options {
@@ -65,17 +64,17 @@ func New(options ...Option) *Template {
 type Option func(t *Template)
 
 // WithFunc adds a single function to function registry.
-func WithFunc(name string, f registry.Func) Option {
+func WithFunc(name string, f RegistryFunc) Option {
 	return func(t *Template) {
-		t.funcRegistry[name] = f
+		t.registry[name] = f
 	}
 }
 
 // WithFuncs adds functions to function registry.
-func WithFuncs(reg registry.Registry) Option {
+func WithFuncs(reg Registry) Option {
 	return func(t *Template) {
 		for k, f := range reg {
-			t.funcRegistry[k] = f
+			t.registry[k] = f
 		}
 	}
 }
@@ -320,7 +319,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 			return "", fmt.Errorf("resolve options: %w", err)
 		}
 	case ast.PrivateUseAnnotation:
-		// https://github.com/unicode-org/message-format-wg/blob/20a61b4af534acb7ecb68a3812ca0143b34dfc76/spec/formatting.md
+		// https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/formatting.md
 		//
 		// Supported private-use annotation with no operand: the annotation starting sigil, optionally followed by
 		// implementation-defined details conforming with patterns in the other cases (such as quoting literals).
@@ -359,7 +358,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 		}
 	}
 
-	f, ok := e.template.funcRegistry[funcName] // TODO(jhorsts): lookup by namespace and name
+	f, ok := e.template.registry[funcName] // TODO(jhorsts): lookup by namespace and name
 	if !ok {
 		return fmtOperand(), errors.Join(resolutionErr, fmt.Errorf("%w '%s'", ErrUnknownFunction, funcName))
 	}
@@ -431,7 +430,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			function = annotation
 		}
 
-		f, ok := e.template.funcRegistry[function.Identifier.Name]
+		f, ok := e.template.registry[function.Identifier.Name]
 		if !ok {
 			return nil, fmt.Errorf("%w '%s'", ErrUnknownFunction, function.Identifier.Name)
 		}

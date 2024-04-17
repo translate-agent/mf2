@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.expect.digital/mf2/template/registry"
 	"golang.org/x/text/language"
 )
 
@@ -15,7 +14,7 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 
 	tests := []struct {
 		input      map[string]any
-		funcs      registry.Registry // format functions to be added before executing
+		funcs      Registry // format functions to be added before executing
 		name, text string
 		expected   string
 	}{
@@ -45,9 +44,9 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 		{
 			name: "function without operand",
 			text: "Hello, { :randName }",
-			funcs: registry.Registry{
-				"randName": registry.Func{
-					Format: func(any, registry.Options, language.Tag) (any, error) { return "John", nil },
+			funcs: Registry{
+				"randName": {
+					Format: func(any, Options, language.Tag) (any, error) { return "John", nil },
 				},
 			},
 			expected: "Hello, John",
@@ -74,7 +73,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 
 	tests := []struct {
 		inputs     map[string]any
-		funcs      registry.Registry // format functions to be added before executing
+		funcs      Registry // format functions to be added before executing
 		name, text string
 		expected   string
 	}{
@@ -90,9 +89,9 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		.local $var3 = { :randNum }
 		{{Hello, {$var1} {$var2} {$var3}!}}`,
 			inputs: map[string]any{"anotherVar": "World"},
-			funcs: registry.Registry{
-				"randNum": registry.Func{
-					Format: func(any, registry.Options, language.Tag) (any, error) { return 0, nil },
+			funcs: Registry{
+				"randNum": {
+					Format: func(any, Options, language.Tag) (any, error) { return 0, nil },
 				},
 			},
 			expected: "Hello, literalExpression World 0!",
@@ -202,7 +201,7 @@ func Test_ExecuteErrors(t *testing.T) {
 
 	tests := []struct {
 		input      map[string]any
-		funcs      registry.Registry
+		funcs      Registry
 		name, text string
 		expected   expected
 	}{
@@ -235,9 +234,9 @@ func Test_ExecuteErrors(t *testing.T) {
 			name:     "formatting error",
 			text:     "Hello, { :error }!",
 			expected: expected{execErr: ErrFormatting, text: "Hello, !"},
-			funcs: registry.Registry{
-				"error": registry.Func{
-					Format: func(any, registry.Options, language.Tag) (any, error) { return nil, errors.New("error") },
+			funcs: Registry{
+				"error": {
+					Format: func(any, Options, language.Tag) (any, error) { return nil, errors.New("error") },
 				},
 			},
 		},
