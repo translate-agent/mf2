@@ -1,4 +1,4 @@
-package registry
+package template
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-func assertFormat(t *testing.T, f Func, options map[string]any, locale language.Tag) func(in any, out string) {
+func assertFormat(t *testing.T, f RegistryFunc, options map[string]any, locale language.Tag) func(in any, out string) {
 	t.Helper()
 
 	return func(in any, out string) {

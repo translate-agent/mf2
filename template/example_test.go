@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"go.expect.digital/mf2/template"
-	"go.expect.digital/mf2/template/registry"
 	"golang.org/x/text/language"
 )
 
@@ -51,7 +50,7 @@ func ExampleTemplate_complexMessage() {
 .input { $color :color style=RGB}
 {{John is { $age } years old and his favorite color is { $color }.}}`
 
-	color := func(value any, options registry.Options, locale language.Tag) (any, error) {
+	color := func(value any, options template.Options, locale language.Tag) (any, error) {
 		if value == nil {
 			return "", errors.New("input is required, got nil")
 		}
@@ -91,7 +90,7 @@ func ExampleTemplate_complexMessage() {
 	// }
 
 	// Parse template.
-	t, err := template.New(template.WithFunc("color", registry.Func{Format: color})).Parse(input)
+	t, err := template.New(template.WithFunc("color", template.RegistryFunc{Format: color})).Parse(input)
 	if err != nil {
 		panic(err)
 	}

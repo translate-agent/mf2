@@ -1,4 +1,4 @@
-package registry
+package template
 
 import (
 	"errors"
@@ -9,12 +9,12 @@ import (
 	"golang.org/x/text/language"
 )
 
-type Func struct {
+type RegistryFunc struct {
 	Match  func(input any, options Options, locale language.Tag) (output any, err error)
 	Format func(input any, options Options, locale language.Tag) (output any, err error)
 }
 
-type Registry map[string]Func
+type Registry map[string]RegistryFunc
 
 // Options are a possible options for the function.
 type Options map[string]any
@@ -69,8 +69,8 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 	return i, nil
 }
 
-// New returns a new registry with default functions.
-func New() Registry {
+// NewRegistry returns a new registry with default functions.
+func NewRegistry() Registry {
 	return Registry{
 		"string":   stringRegistryFunc,
 		"number":   numberRegistryFunc,
