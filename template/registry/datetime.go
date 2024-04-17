@@ -55,33 +55,33 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 	)
 
 	// The predefined date formatting style to use.
-	dateStyles := []string{"full", "long", "medium", "short"}
+	dateStyles := oneOf("full", "long", "medium", "short")
 	if opts.DateStyle, err = options.GetString("dateStyle", "", dateStyles); err != nil {
 		return nil, err
 	}
 
 	// The predefined time formatting style to use.
-	timeStyles := []string{"full", "long", "medium", "short"}
+	timeStyles := oneOf("full", "long", "medium", "short")
 	if opts.TimeStyle, err = options.GetString("timeStyle", "", timeStyles); err != nil {
 		return nil, err
 	}
 
 	//  Calendar to use.
-	calendars := []string{
+	calendars := oneOf(
 		"buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic", "gregory",
 		"hebrew", "indian", "islamic", "islamic-umalqura", "islamic-tbla",
 		"islamic-civil", "islamic-rgsa", "iso8601", "japanese", "persian", "roc",
-	}
+	)
 	if opts.Calendar, err = options.GetString("calendar", "", calendars); err != nil {
 		return nil, err
 	}
 
 	// Numbering system to use.
-	numberingSystems := []string{
+	numberingSystems := oneOf(
 		"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru", "hanidec",
 		"khmr", "knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec",
 		"telu", "thai", "tibt",
-	}
+	)
 	if opts.NumberingSystem, err = options.GetString("numberingSystem", "", numberingSystems); err != nil {
 		return nil, err
 	}
@@ -102,72 +102,73 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 	}
 
 	// The hour cycle to use.
-	hourCycles := []string{"h11", "h12", "h23", "h24"}
+	hourCycles := oneOf("h11", "h12", "h23", "h24")
 	if opts.HourCycle, err = options.GetString("hourCycle", "", hourCycles); err != nil {
 		return nil, err
 	}
 
 	// The formatting style used for day periods like "in the morning", "am", "noon", "n" etc.
-	dayPeriods := []string{"short", "long"}
+	dayPeriods := oneOf("short", "long")
 	if opts.DayPeriod, err = options.GetString("dayPeriod", "", dayPeriods); err != nil {
 		return nil, err
 	}
 
 	// The representation of the weekday.
-	weekdays := []string{"narrow", "short", "long"}
+	weekdays := oneOf("narrow", "short", "long")
 	if opts.Weekday, err = options.GetString("weekday", "", weekdays); err != nil {
 		return nil, err
 	}
 
 	// The representation of the era.
-	eras := []string{"narrow", "short", "long"}
+	eras := oneOf("narrow", "short", "long")
 	if opts.Era, err = options.GetString("era", "", eras); err != nil {
 		return nil, err
 	}
 
 	// The representation of the year.
-	years := []string{"numeric", "2-digit"}
+	years := oneOf("numeric", "2-digit")
 	if opts.Year, err = options.GetString("year", "", years); err != nil {
 		return nil, err
 	}
 
 	// The representation of the month.
-	months := []string{"numeric", "2-digit", "narrow", "short", "long"}
+	months := oneOf("numeric", "2-digit", "narrow", "short", "long")
 	if opts.Month, err = options.GetString("month", "", months); err != nil {
 		return nil, err
 	}
 
 	// The representation of the day.
-	days := []string{"numeric", "2-digit"}
+	days := oneOf("numeric", "2-digit")
 	if opts.Day, err = options.GetString("day", "", days); err != nil {
 		return nil, err
 	}
 
 	// The representation of the hour.
-	hours := []string{"numeric", "2-digit"}
+	hours := oneOf("numeric", "2-digit")
 	if opts.Hour, err = options.GetString("hour", "", hours); err != nil {
 		return nil, err
 	}
 
 	// The representation of the minute.
-	minutes := []string{"numeric", "2-digit"}
+	minutes := oneOf("numeric", "2-digit")
 	if opts.Minute, err = options.GetString("minute", "", minutes); err != nil {
 		return nil, err
 	}
 
 	// The representation of the second.
-	seconds := []string{"numeric", "2-digit"}
+	seconds := oneOf("numeric", "2-digit")
 	if opts.Second, err = options.GetString("second", "", seconds); err != nil {
 		return nil, err
 	}
 
 	// The number of fractional seconds to display.
-	if opts.FractionalSecondDigits, err = options.GetPositiveInt("fractionalSecondDigits", 0, []int{1, 2, 3}); err != nil {
+	//nolint:gomnd
+	if opts.FractionalSecondDigits, err = options.GetInt("fractionalSecondDigits", 0, oneOf(1, 2, 3)); err != nil {
 		return nil, err
 	}
 
 	// The localized representation of the time zone name.
-	timeZoneNames := []string{"long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric"}
+	timeZoneNames := oneOf("long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric")
 	if opts.TimeZoneName, err = options.GetString("timeZoneName", "", timeZoneNames); err != nil {
 		return nil, err
 	}
