@@ -233,7 +233,7 @@ func Test_ExecuteErrors(t *testing.T) {
 		{
 			name:     "formatting error",
 			text:     "Hello, { :error }!",
-			expected: expected{execErr: ErrFormatting, text: "Hello, !"},
+			expected: expected{execErr: ErrFormatting, text: "Hello, {:error}!"},
 			funcs: Registry{
 				"error": {
 					Format: func(any, Options, language.Tag) (any, error) { return nil, errors.New("error") },

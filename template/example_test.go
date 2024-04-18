@@ -1,7 +1,6 @@
 package template_test
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -52,12 +51,12 @@ func ExampleTemplate_complexMessage() {
 
 	color := func(value any, options template.Options, locale language.Tag) (any, error) {
 		if value == nil {
-			return "", errors.New("input is required, got nil")
+			return "", fmt.Errorf("input is required: %w", template.ErrOperandMismatch)
 		}
 
 		color, ok := value.(string)
 		if !ok {
-			return nil, errors.New("input is not a string")
+			return nil, fmt.Errorf("input is not a string: %w", template.ErrOperandMismatch)
 		}
 
 		if options == nil {
