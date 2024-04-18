@@ -17,16 +17,22 @@ import (
 //
 // https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/errors.md
 var (
-	ErrSyntax                    = errors.New("syntax error")
-	ErrUnresolvedVariable        = errors.New("unresolved variable")
-	ErrUnknownFunction           = errors.New("unknown function reference")
-	ErrDuplicateOptionName       = errors.New("duplicate option name")
-	ErrUnsupportedExpression     = errors.New("unsupported expression")
-	ErrFormatting                = errors.New("formatting error")
-	ErrUnsupportedStatement      = errors.New("unsupported statement")
 	ErrDuplicateDeclaration      = errors.New("duplicate declaration")
+	ErrDuplicateOptionName       = errors.New("duplicate option name")
+	ErrFormatting                = errors.New("formatting error")
 	ErrMissingSelectorAnnotation = errors.New("missing selector annotation")
-	ErrSelection                 = errors.New("selection error")
+	// ErrOperandMismatch is an Invalid Expression error that occurs when an operand provided
+	// to a function during function resolution does not match one of the expected
+	// implementation-defined types for that function; or in which a literal operand value does not
+	// have the required format and thus cannot be processed into one of the expected
+	// implementation-defined types for that specific function.
+	ErrOperandMismatch       = errors.New("operand mismatch")
+	ErrSelection             = errors.New("selection error")
+	ErrSyntax                = errors.New("syntax error")
+	ErrUnknownFunction       = errors.New("unknown function reference")
+	ErrUnresolvedVariable    = errors.New("unresolved variable")
+	ErrUnsupportedExpression = errors.New("unsupported expression")
+	ErrUnsupportedStatement  = errors.New("unsupported statement")
 )
 
 // Func is a function, that will be called when a function is encountered in the template.
@@ -369,7 +375,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 
 	result, err := f.Format(operand, options, e.template.locale)
 	if err != nil {
-		return "", errors.Join(resolutionErr, ErrFormatting, err)
+		return "{:" + funcName + "}", errors.Join(resolutionErr, ErrFormatting, err)
 	}
 
 	return fmt.Sprint(result), resolutionErr

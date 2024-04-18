@@ -1,7 +1,6 @@
 package template
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -37,12 +36,12 @@ type datetimeOptions struct {
 
 func parseDatetimeInput(input any) (time.Time, error) {
 	if input == nil {
-		return time.Time{}, errors.New("input is required, got nil")
+		return time.Time{}, fmt.Errorf("input is required: %w", ErrOperandMismatch)
 	}
 
 	v, ok := input.(time.Time)
 	if !ok {
-		return time.Time{}, fmt.Errorf("unsupported type: %T", input)
+		return time.Time{}, fmt.Errorf("unsupported type %T: %w", input, ErrOperandMismatch)
 	}
 
 	return v, nil

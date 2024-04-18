@@ -20,12 +20,12 @@ var numberRegistryFunc = RegistryFunc{
 
 func parseNumberInput(input any) (float64, error) {
 	if input == nil {
-		return 0, errors.New("input is required, got nil")
+		return 0, fmt.Errorf("input is required: %w", ErrOperandMismatch)
 	}
 
 	v, err := castAs[float64](input)
 	if err != nil {
-		return 0, fmt.Errorf("unsupported type: %T: %w", input, err)
+		return 0, fmt.Errorf("unsupported type %T: %w: %w", input, err, ErrOperandMismatch)
 	}
 
 	return v, nil
@@ -256,7 +256,7 @@ func castAs[T any](val any) (T, error) {
 
 	v := (reflect.ValueOf(val))
 	if !v.Type().ConvertibleTo(typ) {
-		return zeroVal, fmt.Errorf("cannot convert %v to %T", v.Type(), zeroVal)
+		return zeroVal, fmt.Errorf("convert %v to %T", v.Type(), zeroVal)
 	}
 
 	v = v.Convert(typ)

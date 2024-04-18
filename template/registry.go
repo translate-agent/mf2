@@ -1,7 +1,6 @@
 package template
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 
@@ -53,11 +52,7 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 
 	i, err := castAs[int](v)
 	if err != nil {
-		return 0, fmt.Errorf("convert val to int: %w", err)
-	}
-
-	if i < 0 {
-		return 0, errors.New("value must be at least 0")
+		return 0, err
 	}
 
 	for _, f := range validate {
