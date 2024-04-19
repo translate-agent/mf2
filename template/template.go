@@ -308,17 +308,17 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 	}
 
 	fmtErroredExpr := func() string {
-		wrap := func(s string) string { return "{" + s + "}" }
+		wrap := func(s fmt.Stringer) string { return "{" + s.String() + "}" }
 
 		switch v := expr.Operand.(type) {
 		default:
-			return wrap(expr.Annotation.String())
+			return wrap(expr.Annotation)
 		case ast.Variable:
-			return wrap(v.String())
+			return wrap(v)
 		case ast.NameLiteral, ast.NumberLiteral:
-			return wrap(ast.QuotedLiteral(v.String()).String())
+			return wrap(ast.QuotedLiteral(v.String()))
 		case ast.QuotedLiteral:
-			return wrap(v.String())
+			return wrap(v)
 		}
 	}
 
