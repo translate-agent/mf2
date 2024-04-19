@@ -272,12 +272,82 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 		return fmt.Sprint(value), fmt.Errorf("resolve value: %w", err)
 	}
 
-	resolved, err := e.resolveAnnotation(value, expr.Annotation)
-	if err != nil {
-		return resolved, fmt.Errorf("resolve annotation: %w", err)
+	var (
+		funcName      string
+		options       map[string]any
+		resolutionErr error
+	)
+
+	switch v := expr.Annotation.(type) {
+	default:
+		return "", fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, v, v)
+	case ast.Function:
+		funcName = v.Identifier.Name
+
+		if options, err = e.resolveOptions(v.Options); err != nil {
+			return "", fmt.Errorf("resolve options: %w", err)
+		}
+	case ast.PrivateUseAnnotation:
+		// https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/formatting.md
+		//
+		// Supported private-use annotation with no operand: the annotation starting sigil, optionally followed by
+		// implementation-defined details conforming with patterns in the other cases (such as quoting literals).
+		// If details are provided, they SHOULD NOT leak potentially private information.
+		resolutionErr = fmt.Errorf("%w with %T private use annotation: '%s'", ErrUnsupportedExpression, v, v)
+
+		if value == nil {
+			return "{" + string(v.Start) + "}", resolutionErr
+		}
+	case ast.ReservedAnnotation:
+		resolutionErr = fmt.Errorf("%w with %T reserved annotation: '%s'", ErrUnsupportedExpression, v, v)
+
+		if value == nil {
+			return "{" + string(v.Start) + "}", resolutionErr
+		}
+	case nil: // noop, no annotation
 	}
 
-	return resolved, nil
+	fmtErroredExpr := func() string {
+		wrap := func(s string) string { return "{" + s + "}" }
+
+		switch v := expr.Operand.(type) {
+		default:
+			return wrap(expr.Annotation.String())
+		case ast.Variable:
+			return wrap(v.String())
+		case ast.NameLiteral, ast.NumberLiteral:
+			return wrap(ast.QuotedLiteral(v.String()).String())
+		case ast.QuotedLiteral:
+			return wrap(v.String())
+		}
+	}
+
+	if funcName == "" {
+		switch value.(type) {
+		default: // TODO(jhorsts): how is unknown type formatted?
+			return fmtErroredExpr(), resolutionErr
+		case string:
+			funcName = "string"
+		case float64:
+			funcName = "number"
+		}
+	}
+
+	f, ok := e.template.registry[funcName] // TODO(jhorsts): lookup by namespace and name
+	if !ok {
+		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("%w '%s'", ErrUnknownFunction, funcName))
+	}
+
+	if f.Format == nil {
+		return "", fmt.Errorf("function '%s' not allowed in formatting context", funcName)
+	}
+
+	result, err := f.Format(value, options, e.template.locale)
+	if err != nil {
+		return fmtErroredExpr(), errors.Join(resolutionErr, ErrFormatting, err)
+	}
+
+	return fmt.Sprint(result), resolutionErr
 }
 
 // resolveValue resolves the value of an expression's operand.
@@ -304,80 +374,6 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 
 		return val, nil
 	}
-}
-
-func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (string, error) {
-	var (
-		funcName      string
-		options       map[string]any
-		resolutionErr error
-	)
-
-	switch v := annotation.(type) {
-	default:
-		return "", fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, v, v)
-	case ast.Function:
-		var err error
-
-		funcName = v.Identifier.Name
-
-		if options, err = e.resolveOptions(v.Options); err != nil {
-			return "", fmt.Errorf("resolve options: %w", err)
-		}
-	case ast.PrivateUseAnnotation:
-		// https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/formatting.md
-		//
-		// Supported private-use annotation with no operand: the annotation starting sigil, optionally followed by
-		// implementation-defined details conforming with patterns in the other cases (such as quoting literals).
-		// If details are provided, they SHOULD NOT leak potentially private information.
-		resolutionErr = fmt.Errorf("%w with %T private use annotation: '%s'", ErrUnsupportedExpression, v, v)
-
-		if operand == nil {
-			return "{" + string(v.Start) + "}", resolutionErr
-		}
-	case ast.ReservedAnnotation:
-		resolutionErr = fmt.Errorf("%w with %T reserved annotation: '%s'", ErrUnsupportedExpression, v, v)
-
-		if operand == nil {
-			return "{" + string(v.Start) + "}", resolutionErr
-		}
-	case nil: // noop, no annotation
-	}
-
-	fmtErroredExpr := func() string {
-		if operand != nil {
-			return "{" + ast.QuotedLiteral(fmt.Sprint(operand)).String() + "}"
-		}
-
-		return "{:" + funcName + "}"
-	}
-
-	if funcName == "" {
-		switch operand.(type) {
-		default: // TODO(jhorsts): how is unknown type formatted?
-			return fmtErroredExpr(), resolutionErr
-		case string:
-			funcName = "string"
-		case float64:
-			funcName = "number"
-		}
-	}
-
-	f, ok := e.template.registry[funcName] // TODO(jhorsts): lookup by namespace and name
-	if !ok {
-		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("%w '%s'", ErrUnknownFunction, funcName))
-	}
-
-	if f.Format == nil {
-		return "", fmt.Errorf("function '%s' not allowed in formatting context", funcName)
-	}
-
-	result, err := f.Format(operand, options, e.template.locale)
-	if err != nil {
-		return fmtErroredExpr(), errors.Join(resolutionErr, ErrFormatting, err)
-	}
-
-	return fmt.Sprint(result), resolutionErr
 }
 
 func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) {
