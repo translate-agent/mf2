@@ -39,12 +39,19 @@ func parseDatetimeInput(input any) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("input is required: %w", ErrOperandMismatch)
 	}
 
-	v, ok := input.(time.Time)
-	if !ok {
-		return time.Time{}, fmt.Errorf("unsupported type %T: %w", input, ErrOperandMismatch)
-	}
+	switch v := input.(type) {
+	default:
+		return time.Time{}, fmt.Errorf("unsupported datetime type %T: %w", input, ErrOperandMismatch)
+	case string:
+		t, err := time.Parse(time.RFC3339[:len(v)], v)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("parse datetime %s: %w", v, ErrOperandMismatch)
+		}
 
-	return v, nil
+		return t, nil
+	case time.Time:
+		return v, nil
+	}
 }
 
 func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
