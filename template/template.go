@@ -345,11 +345,11 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 	}
 
 	fmtErroredExpr := func() string {
-		if operand == nil {
-			return "{:" + funcName + "}"
+		if operand != nil {
+			return "{" + ast.QuotedLiteral(fmt.Sprint(operand)).String() + "}"
 		}
 
-		return "{" + ast.QuotedLiteral(fmt.Sprint(operand)).String() + "}"
+		return "{:" + funcName + "}"
 	}
 
 	if funcName == "" {
