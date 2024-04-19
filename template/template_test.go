@@ -218,7 +218,7 @@ func Test_ExecuteErrors(t *testing.T) {
 		{
 			name:     "unknown function",
 			text:     "Hello, { :f }!",
-			expected: expected{execErr: ErrUnknownFunction, text: "Hello, !"},
+			expected: expected{execErr: ErrUnknownFunction, text: "Hello, {:f}!"},
 		},
 		{
 			name:     "duplicate option name",
