@@ -43,6 +43,7 @@ func parseDatetimeInput(input any) (time.Time, error) {
 	default:
 		return time.Time{}, fmt.Errorf("unsupported datetime type %T: %w", input, ErrOperandMismatch)
 	case string:
+		// layout is quick and dirty, does not conform with ISO 8601 fully as required
 		t, err := time.Parse(time.RFC3339[:len(v)], v)
 		if err != nil {
 			return time.Time{}, fmt.Errorf("parse datetime %s: %w", v, ErrOperandMismatch)
