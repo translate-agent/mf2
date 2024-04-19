@@ -113,6 +113,10 @@ func assertWgTest(t *testing.T, test WgTest) {
 
 	actual, err := templ.Sprint(test.Params)
 
+	if len(test.Errors) == 0 {
+		require.NoError(t, err)
+	}
+
 	for _, wgErr := range test.Errors {
 		switch wgErr.Type {
 		default:
