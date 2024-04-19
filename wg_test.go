@@ -121,6 +121,8 @@ func assertWgTest(t *testing.T, test WgTest) {
 		switch wgErr.Type {
 		default:
 			t.Errorf("asserting error %s is not implemented", wgErr)
+		case "bad-input":
+			require.ErrorIs(t, err, template.ErrOperandMismatch)
 		case "missing-func":
 			require.ErrorIs(t, err, template.ErrUnknownFunction)
 		case "not-selectable":

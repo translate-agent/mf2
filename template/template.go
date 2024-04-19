@@ -344,19 +344,18 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 	case nil: // noop, no annotation
 	}
 
-	// return empty string if operand is nil
-	fmtOperand := func() string {
+	fmtErroredExpr := func() string {
 		if operand == nil {
-			return ""
+			return "{:" + funcName + "}"
 		}
 
-		return fmt.Sprint(operand)
+		return "{" + ast.QuotedLiteral(fmt.Sprint(operand)).String() + "}"
 	}
 
 	if funcName == "" {
 		switch operand.(type) {
 		default: // TODO(jhorsts): how is unknown type formatted?
-			return fmtOperand(), resolutionErr
+			return fmtErroredExpr(), resolutionErr
 		case string:
 			funcName = "string"
 		case float64:
@@ -366,7 +365,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 
 	f, ok := e.template.registry[funcName] // TODO(jhorsts): lookup by namespace and name
 	if !ok {
-		return fmtOperand(), errors.Join(resolutionErr, fmt.Errorf("%w '%s'", ErrUnknownFunction, funcName))
+		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("%w '%s'", ErrUnknownFunction, funcName))
 	}
 
 	if f.Format == nil {
@@ -375,7 +374,7 @@ func (e *executer) resolveAnnotation(operand any, annotation ast.Annotation) (st
 
 	result, err := f.Format(operand, options, e.template.locale)
 	if err != nil {
-		return "{:" + funcName + "}", errors.Join(resolutionErr, ErrFormatting, err)
+		return fmtErroredExpr(), errors.Join(resolutionErr, ErrFormatting, err)
 	}
 
 	return fmt.Sprint(result), resolutionErr
