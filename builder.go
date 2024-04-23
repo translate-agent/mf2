@@ -1,6 +1,7 @@
 package mf2
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -319,7 +320,7 @@ func (v *variant) build(spacing string) string {
 
 	for i, k := range v.keys {
 		if i > 0 {
-			s += coalesce(spacing, defaultSpacing)
+			s += cmp.Or(spacing, defaultSpacing)
 		}
 
 		if k == "*" {
@@ -816,16 +817,4 @@ func isNameStart(r rune) bool {
 // isAlpha returns true if r is alphabetic character.
 func isAlpha(r rune) bool {
 	return ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z')
-}
-
-func coalesce[T comparable](l ...T) T {
-	var c T
-
-	for _, v := range l {
-		if v != c {
-			return v
-		}
-	}
-
-	return c
 }
