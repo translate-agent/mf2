@@ -2,10 +2,10 @@ linters:
   enable-all: true
   disable:
     - asasalint
-    - deadcode
     - depguard
     - dupl
-    - exhaustivestruct
+    - err113
+    - execinquery
     - exhaustruct
     - forbidigo
     - funlen
@@ -16,33 +16,25 @@ linters:
     - gochecknoinits
     - gocyclo
     - godox
-    - goerr113
     - gofmt
     - goheader
     - goimports
-    - golint
+    - gomnd
     - gomodguard
     - gosmopolitan
     - grouper
-    - ifshort
     - inamedparam
-    - interfacer
     - loggercheck
     - maintidx
-    - maligned
     - nlreturn
     - nonamedreturns
-    - nosnakecase
     - promlinter
     - revive
-    - scopelint
-    - structcheck
     - tagliatelle
     - testableexamples
     - testpackage
     - thelper
     - tparallel
-    - varcheck
     - varnamelen
     - wastedassign
     - whitespace

@@ -169,7 +169,7 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 	}
 
 	// The number of fractional seconds to display.
-	//nolint:gomnd
+	//nolint:mnd
 	if opts.FractionalSecondDigits, err = options.GetInt("fractionalSecondDigits", 0, oneOf(1, 2, 3)); err != nil {
 		return nil, err
 	}
