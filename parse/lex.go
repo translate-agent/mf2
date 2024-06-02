@@ -250,7 +250,7 @@ func lexPattern(l *lexer) stateFn {
 			switch next := l.next(); next {
 			default:
 				return l.emitErrorf("unexpected escaped char in pattern: %s", string(next))
-			case '\\', '{', '}': // text-escape = backslash ( backslash / "{" / "}" )
+			case '\\', '|', '{', '}': // escaped-char = backslash ( backslash / "{" / "|" / "}" )
 				s += string(next)
 			}
 		case r == '{':
@@ -597,10 +597,10 @@ func lexIdentifier(l *lexer) stateFn {
 // ABNF:
 //
 //	reserved-body      = reserved-body-part *([s] reserved-body-part)
-//	reserved-body-part = reserved-char / reserved-escape / quoted
+//	reserved-body-part = reserved-char / escaped-char / quoted
 //	reserved-char      = content-char / "."
-//	reserved-escape    = backslash ( backslash / "{" / "|" / "}" )
-//	quoted             = "|" *(quoted-char / quoted-escape) "|"
+//	escaped-char       = backslash ( backslash / "{" / "|" / "}" )
+//	quoted             = "|" *(quoted-char / escaped-char) "|"
 func lexReservedBody(l *lexer) stateFn {
 	var s string
 
@@ -629,8 +629,8 @@ func lexReservedBody(l *lexer) stateFn {
 		case v == '\\': // Reserved escape
 			v = l.next()
 
-			if !isReservedEscape(v) {
-				return l.emitErrorf("unexpected escaped character in reserved: %s", string(v))
+			if !isEscapedChar(v) {
+				return l.emitErrorf("unexpected escaped character in reserved body: %s", string(v))
 			}
 
 			s += string(v)
@@ -734,12 +734,12 @@ func isReserved(r rune) bool {
 	return isContent(r) || r == '.'
 }
 
-// isReservedEscape returns true if r is reserved escape character.
+// isEscapedChar returns true if r is an escaped character.
 //
 // ABNF:
 //
-//	reserved-escape = backslash ( backslash / "{" / "|" / "}" ).
-func isReservedEscape(r rune) bool {
+//	escaped-char = backslash ( backslash / "{" / "|" / "}" )
+func isEscapedChar(r rune) bool {
 	return r == '\\' || r == '{' || r == '|' || r == '}'
 }
 
