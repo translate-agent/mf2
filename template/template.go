@@ -15,7 +15,7 @@ import (
 
 // MessageFormat2 Errors as defined in the specification.
 //
-// https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/errors.md
+// See ".message-format-wg/spec/errors.md".
 var (
 	ErrDuplicateDeclaration      = errors.New("duplicate declaration")
 	ErrDuplicateOptionName       = errors.New("duplicate option name")
@@ -256,9 +256,8 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 			if err := e.write(resolved); err != nil {
 				return errors.Join(resolutionErr, fmt.Errorf("write expression: %w", err))
 			}
-		//nolint:lll
 		// When formatting to a string, markup placeholders format to an empty string by default.
-		// https://github.com/unicode-org/message-format-wg/blob/main/exploration/open-close-placeholders.md#formatting-to-a-string
+		// See ".message-format-wg/exploration/open-close-placeholders.md#formatting-to-a-string"
 		case ast.Markup:
 		}
 	}
@@ -288,7 +287,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 			return "", fmt.Errorf("resolve options: %w", err)
 		}
 	case ast.PrivateUseAnnotation:
-		// https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/formatting.md
+		// See ".message-format-wg/spec/formatting.md".
 		//
 		// Supported private-use annotation with no operand: the annotation starting sigil, optionally followed by
 		// implementation-defined details conforming with patterns in the other cases (such as quoting literals).

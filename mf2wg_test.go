@@ -108,6 +108,13 @@ func run(t *testing.T, test Test) {
 	}
 }
 
+// Tests contains harness tests by MF2 WG, schema defined in
+// ".message-format-wg/spec/schemas/v0/tests.schema.json".
+type Tests struct {
+	Tests                 []Test                `json:"tests"`
+	DefaultTestProperties DefaultTestProperties `json:"defaultTestProperties"`
+}
+
 type Test struct {
 	// The MF2 message to be tested.
 	Src string `json:"src"`
@@ -182,11 +189,6 @@ type Var struct {
 	Name  string `json:"name"`
 	Value any    `json:"value"`
 	Type  string `json:"type"`
-}
-
-type Tests struct {
-	Tests                 []Test                `json:"tests"`
-	DefaultTestProperties DefaultTestProperties `json:"defaultTestProperties"`
 }
 
 func assertErr(t *testing.T, expected Errors, err error) {
