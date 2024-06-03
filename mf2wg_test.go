@@ -53,7 +53,11 @@ func TestMF2WG(t *testing.T) {
 			require.NoError(t, json.NewDecoder(f).Decode(&tests))
 
 			for _, test := range tests.Tests {
-				run(t, test.Apply(tests.DefaultTestProperties))
+				t.Run(test.Src, func(t *testing.T) {
+					t.Parallel()
+
+					run(t, test.Apply(tests.DefaultTestProperties))
+				})
 			}
 		})
 
@@ -63,48 +67,45 @@ func TestMF2WG(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// run runs single test by Message Format Working Group.
 func run(t *testing.T, test Test) {
-	t.Run(test.Src, func(t *testing.T) {
-		t.Parallel()
+	var options []template.Option
+	if test.Locale != nil {
+		options = append(options, template.WithLocale(*test.Locale))
+	}
 
-		var options []template.Option
-		if test.Locale != nil {
-			options = append(options, template.WithLocale(*test.Locale))
-		}
-
-		templ, err := template.New(options...).Parse(test.Src)
-		// The implementation returns error in two places:
-		// - when parsing the template
-		// - when executing the template
-		//
-		// This affects asserting the error. We do not know if expected error is parsing
-		// or executing the template.
-		//
-		// If the test expects parse error but parsing does not return error,
-		// then the test tries to assert when executing error.
-		if err != nil {
-			assertErr(t, test.ExpErrors, err)
-
-			return
-		}
-
-		input := make(map[string]interface{}, len(test.Params))
-
-		for _, v := range test.Params {
-			input[v.Name] = v.Value
-		}
-
-		actual, err := templ.Sprint(input)
-
-		// Look at the description of first assertWgErr() in this func.
+	templ, err := template.New(options...).Parse(test.Src)
+	// The implementation returns error in two places:
+	// - when parsing the template
+	// - when executing the template
+	//
+	// This affects asserting the error. We do not know if expected error is parsing
+	// or executing the template.
+	//
+	// If the test expects parse error but parsing does not return error,
+	// then the test tries to assert when executing error.
+	if err != nil {
 		assertErr(t, test.ExpErrors, err)
 
-		// Expected is optional. The built-in formatters is implementation
-		// specific across programming languages and libraries.
-		if test.Expected != nil {
-			assert.Equal(t, *test.Expected, actual)
-		}
-	})
+		return
+	}
+
+	input := make(map[string]interface{}, len(test.Params))
+
+	for _, v := range test.Params {
+		input[v.Name] = v.Value
+	}
+
+	actual, err := templ.Sprint(input)
+
+	// Look at the description of first assertWgErr() in this func.
+	assertErr(t, test.ExpErrors, err)
+
+	// Expected is optional. The built-in formatters is implementation
+	// specific across programming languages and libraries.
+	if test.Expected != nil {
+		assert.Equal(t, *test.Expected, actual)
+	}
 }
 
 type Test struct {
