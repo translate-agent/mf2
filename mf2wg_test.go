@@ -103,8 +103,8 @@ func run(t *testing.T, test Test) {
 
 	// Expected is optional. The built-in formatters is implementation
 	// specific across programming languages and libraries.
-	if test.Expected != nil {
-		assert.Equal(t, *test.Expected, actual)
+	if test.Exp != nil {
+		assert.Equal(t, *test.Exp, actual)
 	}
 }
 
@@ -116,7 +116,7 @@ type Test struct {
 	// Parameters to pass in to the formatter for resolving external variables.
 	Params []Var `json:"params"`
 	// The expected result of formatting the message to a string.
-	Expected *string `json:"exp"`
+	Exp *string `json:"exp"`
 	// The expected result of formatting the message to parts.
 	Parts []any `json:"parts"`
 	// A normalixed form of `src`, for testing stringifiers.
