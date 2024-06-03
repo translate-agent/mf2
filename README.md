@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/expect-digital/go-mf2/actions/workflows/ci.yaml/badge.svg)
 
-This parser parses the localized message strings based on the [Message Format 2 Draft](https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/message.abnf) by the Message Format Working Group (MFWG).
+This parser parses the localized message strings based on the [Message Format 2 Draft](https://github.com/unicode-org/message-format-wg/blob/b4fd5a666a02950c57f0a454f65bf16a0bf03bf4/spec/message.abnf) by the Message Format Working Group (MFWG).
 
 # Requirements
 

@@ -1,6 +1,8 @@
 {
-  "go.lintOnSave": "workspace",
+  "editor.formatOnSave": true,
   "go.coverOnSave": true,
-  "go.testOnSave": true,
+  "go.formatTool": "gofumpt",
+  "go.lintOnSave": "workspace",
   "go.lintTool": "golangci-lint",
+  "go.testOnSave": true
 }

@@ -11,7 +11,7 @@ import (
 	"golang.org/x/text/number"
 )
 
-// https://github.com/unicode-org/message-format-wg/blob/1dc84e648a6f98d74ac62306abaacc0bed8e4fc5/spec/registry.xml#L147
+// See ".message-format-wg/spec/registry.xml".
 
 // numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
 var numberRegistryFunc = RegistryFunc{
