@@ -247,12 +247,12 @@ func lexPattern(l *lexer) stateFn {
 
 			return l.emitItem(mk(itemText, s))
 		case r == '\\':
-			switch next := l.next(); next {
-			default:
+			next := l.next()
+			if !isEscapedChar(next) {
 				return l.emitErrorf("unexpected escaped char in pattern: %s", string(next))
-			case '\\', '|', '{', '}': // escaped-char = backslash ( backslash / "{" / "|" / "}" )
-				s += string(next)
 			}
+
+			s += string(next)
 		case r == '{':
 			if l.peek() == '{' { // complex message without declarations
 				l.backup()
