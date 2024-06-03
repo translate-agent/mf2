@@ -626,14 +626,14 @@ func lexReservedBody(l *lexer) stateFn {
 		case v == '|':
 			l.backup()
 			return lexLiteral(l)
-		case v == '\\': // Reserved escape
-			v = l.next()
+		case v == '\\': // escaped character
+			next := l.next()
 
-			if !isEscapedChar(v) {
+			if !isEscapedChar(next) {
 				return l.emitErrorf("unexpected escaped character in reserved body: %s", string(v))
 			}
 
-			s += string(v)
+			s += string(next)
 		case isReserved(v):
 			s += string(v)
 		}
