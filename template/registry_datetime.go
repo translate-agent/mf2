@@ -194,6 +194,10 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 // resolved value of the expression.
 func conflictingOptions(options datetimeOptions) error {
 	hasStyleOptions := options.TimeStyle != "" || options.DateStyle != ""
+	if !hasStyleOptions {
+		return nil
+	}
+
 	hasFieldOptions := options.Weekday != "" ||
 		options.Era != "" ||
 		options.Year != "" ||
@@ -205,8 +209,7 @@ func conflictingOptions(options datetimeOptions) error {
 		options.FractionalSecondDigits != 0 ||
 		options.HourCycle != "" ||
 		options.TimeZoneName != ""
-
-	if hasStyleOptions && hasFieldOptions {
+	if hasFieldOptions {
 		return errors.New("bad option")
 	}
 
