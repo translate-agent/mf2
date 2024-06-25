@@ -23,24 +23,18 @@ func init() {
 	failing = []string{
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.input_{$foo}_.input_{$foo}_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.input_{$foo}_.local_$foo_=_{42}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.input_{$foo}_.match_{$foo}_one_{{one}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{:unknown}_.local_$foo_=_{42}_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$foo}_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{42_:func_opt=$foo}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{42}_.input_{$foo}_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar}_.local_$bar_=_{42}_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar}_.local_$bar_=_{$baz}_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{42_:func_opt=$bar}_.local_$bar_=_{42}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar}_.match_{$foo}_one_{{one}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar_:func}_.local_$bar_=_{$baz}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{$foo}_one_{{one}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{$foo_:x}_*_*_{{foo}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_{:bar}_*_1_{{_}}_1_*_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_1_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_other_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{$foo_:x}_{$bar_:x}_*_{{foo}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/bad_{:placeholder_option=x_option=x}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/bad_{:placeholder_ns:option=x_ns:option=y}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{horse_:date}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{:date}",
@@ -291,20 +285,26 @@ func assertErr(t *testing.T, expected Errors, err error) {
 		switch v.Type {
 		default:
 			t.Errorf("asserting error %s is not implemented", v)
-		case "bad-input":
-			require.ErrorIs(t, err, template.ErrOperandMismatch)
-		case "missing-func":
-			require.ErrorIs(t, err, template.ErrUnknownFunction)
-		case "not-selectable":
-			require.ErrorIs(t, err, template.ErrSelection)
-		case "unresolved-variable":
-			require.ErrorIs(t, err, template.ErrUnresolvedVariable)
-		case "unsupported-statement":
-			require.ErrorIs(t, err, template.ErrUnsupportedStatement)
+		case "bad-operand":
+			require.ErrorIs(t, err, template.ErrBadOperand)
+		case "duplicate-declaration":
+			require.ErrorIs(t, err, template.ErrDuplicateDeclaration)
+		case "duplicate-option-name":
+			require.ErrorIs(t, err, template.ErrDuplicateOptionName)
+		case "missing-fallback-variant":
+			require.ErrorIs(t, err, template.ErrMissingFallbackVariant)
+		case "missing-selector-annotation":
+			require.ErrorIs(t, err, template.ErrMissingSelectorAnnotation)
 		case "unsupported-expression":
 			require.ErrorIs(t, err, template.ErrUnsupportedExpression)
+		case "unsupported-statement":
+			require.ErrorIs(t, err, template.ErrUnsupportedStatement)
+		case "unresolved-variable":
+			require.ErrorIs(t, err, template.ErrUnresolvedVariable)
 		case "syntax-error":
 			require.ErrorIs(t, err, template.ErrSyntax)
+		case "variant-key-mismatch":
+			require.ErrorIs(t, err, template.ErrVariantKeyMismatch)
 		}
 	}
 }
