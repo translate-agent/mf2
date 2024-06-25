@@ -536,7 +536,6 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 				f()
 			}
 		}
-
 	}
 }
 
