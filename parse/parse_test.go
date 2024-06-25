@@ -3,36 +3,34 @@ package parse
 import (
 	"strings"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestParseSimpleMessage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name     string
-		expected Message
-		input    string
+		name  string
+		want  Message
+		input string
 	}{
 		{
 			name:  "text only",
 			input: "Hello, World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, World!"),
 			},
 		},
 		{
 			name:  "text only with escaped chars",
 			input: "Hello, \\{World!\\}",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, {World!}"),
 			},
 		},
 		{
 			name:  "variable expression in the middle",
 			input: "Hello, { $variable } World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, "),
 				Expression{Operand: Variable("variable")},
 				Text(" World!"),
@@ -41,7 +39,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "variable expression at the start",
 			input: "{ $variable } Hello, World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Expression{Operand: Variable("variable")},
 				Text(" Hello, World!"),
 			},
@@ -49,7 +47,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "variable expression at the end",
 			input: "Hello, World! { $variable }",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, World! "),
 				Expression{Operand: Variable("variable")},
 			},
@@ -57,7 +55,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "variable expression with annotation",
 			input: "Hello, { $variable :function }  World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, "),
 				Expression{
 					Operand: Variable("variable"),
@@ -74,7 +72,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "variable expression with annotation options and attributes",
 			input: "Hello, { $variable :function option1 = -3.14 ns:option2 = |value2| option3 = $variable2 @attr1 = attr1} World!", //nolint:lll
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, "),
 				Expression{
 					Operand: Variable("variable"),
@@ -120,7 +118,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "quoted literal expression",
 			input: "Hello, { |literal| }  World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, "),
 				Expression{Operand: QuotedLiteral("literal")},
 				Text("  World!"),
@@ -129,7 +127,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "unquoted scientific notation number literal expression",
 			input: "Hello, { 1e3 }  World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, "),
 				Expression{Operand: NumberLiteral(1e3)},
 				Text("  World!"),
@@ -138,7 +136,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "unquoted name literal expression",
 			input: "Hello, { name } World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, "),
 				Expression{Operand: NameLiteral("name")},
 				Text(" World!"),
@@ -147,7 +145,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "quoted name literal expression with annotation",
 			input: "Hello, { |name| :function } World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, "),
 				Expression{
 					Operand: QuotedLiteral("name"),
@@ -164,7 +162,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "quoted name literal expression with annotation and options",
 			input: "Hello, { |name| :function ns1:option1 = -1 ns2:option2 = 1 option3 = |value3| } World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello, "),
 				Expression{
 					Operand: QuotedLiteral("name"),
@@ -204,7 +202,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "function expression",
 			input: "Hello { :function } World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello "),
 				Expression{
 					Annotation: Function{
@@ -220,7 +218,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "function expression with options and namespace",
 			input: "Hello { :namespace:function namespace:option999 = 999 } World!",
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello "),
 				Expression{
 					Annotation: Function{
@@ -245,7 +243,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "private use and reserved annotation",
 			input: `Hello { $hey ^private }{ !|reserved| \|hey\| \{ @v @k=2 @l:l=$s} World!`,
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				Text("Hello "),
 				Expression{
 					Operand: Variable("hey"),
@@ -285,7 +283,7 @@ func TestParseSimpleMessage(t *testing.T) {
 		{
 			name:  "markup",
 			input: `It is a {#button opt1=val1 @attr1=val1 } button { /button } this is a { #br /} something else, {#ns:tag1}{#tag2}text{ #img /}{/tag2}{/ns:tag1}`, //nolint:lll
-			expected: SimpleMessage{
+			want: SimpleMessage{
 				// 1. Open-Close markup
 				Text("It is a "),
 				Markup{
@@ -330,11 +328,15 @@ func TestParseSimpleMessage(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := Parse(test.input)
-			require.NoError(t, err)
+			got, err := Parse(test.input)
+			if err != nil {
+				t.Error(err)
+			}
 
 			// Check that AST message is equal to expected one.
-			require.Equal(t, test.expected, actual.Message)
+			if test.want.String() != got.Message.String() {
+				t.Errorf("want %v, got %v", test.want, got.Message)
+			}
 
 			// Check that AST message converted back to string is equal to input.
 
@@ -346,8 +348,8 @@ func TestParseSimpleMessage(t *testing.T) {
 
 			// If strings already match, we're done.
 			// Otherwise check both sanitized strings.
-			if actualStr := actual.String(); actualStr != test.input {
-				requireEqualMF2String(t, test.input, actualStr)
+			if got := got.String(); got != test.input {
+				requireEqualMF2String(t, test.input, got)
 			}
 		})
 	}
@@ -357,14 +359,14 @@ func TestParseComplexMessage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name     string
-		expected Message
-		input    string
+		name  string
+		want  Message
+		input string
 	}{
 		{
 			name:  "no declarations",
 			input: "{{Hello, { |literal| } World!}}",
-			expected: ComplexMessage{
+			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: QuotedPattern{
 					Text("Hello, "),
@@ -386,7 +388,7 @@ func TestParseComplexMessage(t *testing.T) {
 .reserved2 hey |quot| hey { |reserved| :func }
 .reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
 {{Text}}`,
-			expected: ComplexMessage{
+			want: ComplexMessage{
 				ComplexBody: QuotedPattern{Text("Text")},
 				Declarations: []Declaration{
 					// .input{$input :number @a}
@@ -502,7 +504,7 @@ func TestParseComplexMessage(t *testing.T) {
 		{
 			name:  "simple matcher one line",
 			input: ".match { $variable :number } 1 {{Hello { $variable} world}} * {{Hello { $variable } worlds}}",
-			expected: ComplexMessage{
+			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
@@ -539,7 +541,7 @@ func TestParseComplexMessage(t *testing.T) {
 			input: `.match { $variable :number }
 1 {{Hello { $variable } world}}
 * {{Hello { $variable } worlds}}`,
-			expected: ComplexMessage{
+			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
@@ -576,7 +578,7 @@ func TestParseComplexMessage(t *testing.T) {
 			input: `.match { $variable :number }
 
 1 {{Hello { $variable} world}}* {{Hello { $variable } worlds}}`,
-			expected: ComplexMessage{
+			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
@@ -616,7 +618,7 @@ func TestParseComplexMessage(t *testing.T) {
 male {{Hello sir!}}
 |female| {{Hello madam!}}
 * {{Hello { $var1 } or { $var2 }!}}`,
-			expected: ComplexMessage{
+			want: ComplexMessage{
 				Declarations: []Declaration{
 					LocalDeclaration{
 						Variable:   Variable("var1"),
@@ -673,7 +675,7 @@ yes yes {{Hello beautiful world!}}
 yes no {{Hello beautiful!}}
 no yes {{Hello world!}}
 no no {{Hello!}}`,
-			expected: ComplexMessage{
+			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
 					MatchStatements: []Expression{
@@ -727,18 +729,22 @@ no no {{Hello!}}`,
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := Parse(test.input)
-			require.NoError(t, err)
+			got, err := Parse(test.input)
+			if err != nil {
+				t.Error(err)
+			}
 
 			// Check that AST message is equal to expected one.
-			require.Equal(t, test.expected, actual.Message)
+			if test.want.String() != got.Message.String() {
+				t.Errorf("want %s, got %s", test.want, test.want)
+			}
 
 			// Check that AST message converted back to string is equal to input.
 
 			// If strings already match, we're done.
 			// Otherwise check both sanitized strings.
-			if actualStr := actual.String(); actualStr != test.input {
-				requireEqualMF2String(t, test.input, actualStr)
+			if got := got.String(); got != test.input {
+				requireEqualMF2String(t, test.input, got)
 			}
 		})
 	}
@@ -897,10 +903,13 @@ func TestValidate(t *testing.T) {
 			t.Parallel()
 
 			if test.errorPath == "" {
-				require.FailNow(t, "test.errorPath is not set")
+				t.Error("test.errorPath is not set")
 			}
 
-			require.ErrorContains(t, test.ast.validate(), test.errorPath)
+			err := test.ast.validate()
+			if !strings.Contains(err.Error(), test.errorPath) {
+				t.Errorf("want %s, got %s", test.errorPath, err)
+			}
 		})
 	}
 }
@@ -908,7 +917,7 @@ func TestValidate(t *testing.T) {
 // helpers
 
 // requireEqualMF2String compares two strings, but ignores whitespace, tabs, and newlines.
-func requireEqualMF2String(t *testing.T, expected, actual string) {
+func requireEqualMF2String(t *testing.T, want, got string) {
 	t.Helper()
 
 	r := strings.NewReplacer(
@@ -917,5 +926,7 @@ func requireEqualMF2String(t *testing.T, expected, actual string) {
 		" ", "",
 	)
 
-	require.Equal(t, r.Replace(expected), r.Replace(actual))
+	if r.Replace(want) != r.Replace(got) {
+		t.Errorf("want %s, got %s", want, got)
+	}
 }

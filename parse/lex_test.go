@@ -1,28 +1,24 @@
 package parse
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
+import "testing"
 
 func Test_lex(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
-		name     string
-		input    string // MessageFormat2 formatted string
-		expected []item
+		name  string
+		input string // MessageFormat2 formatted string
+		want  []item
 	}{
 		{
-			name:     "empty simple message",
-			input:    "",
-			expected: []item{mk(itemEOF, "")},
+			name:  "empty simple message",
+			input: "",
+			want:  []item{mk(itemEOF, "")},
 		},
 		{
 			name:  "text",
 			input: `escaped text: \\ \} \{`,
-			expected: []item{
+			want: []item{
 				mk(itemText, `escaped text: \ } {`),
 				mk(itemEOF, ""),
 			},
@@ -30,14 +26,14 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "unescaped }",
 			input: `}`,
-			expected: []item{
+			want: []item{
 				mk(itemError, "unescaped } in pattern"),
 			},
 		},
 		{
 			name:  "function",
 			input: "{:rand seed=1 log:level=$log lag:k=v o = $k @attr1=val1 @attr2}",
-			expected: []item{
+			want: []item{
 				mk(itemExpressionOpen, "{"),
 				mk(itemFunction, "rand"),
 				mk(itemWhitespace, " "),
@@ -71,7 +67,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "variable",
 			input: "{$count :math:round}",
-			expected: []item{
+			want: []item{
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "count"),
 				mk(itemWhitespace, " "),
@@ -83,7 +79,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "text with variable",
 			input: "Hello, {$guest}!",
-			expected: []item{
+			want: []item{
 				mk(itemText, "Hello, "),
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "guest"),
@@ -95,7 +91,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "empty quoted literal",
 			input: "{||}",
-			expected: []item{
+			want: []item{
 				mk(itemExpressionOpen, "{"),
 				mk(itemQuotedLiteral, ""),
 				mk(itemExpressionClose, "}"),
@@ -105,7 +101,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "quoted literal",
 			input: "{|\\| is escaped| :uppercase}",
-			expected: []item{
+			want: []item{
 				mk(itemExpressionOpen, "{"),
 				mk(itemQuotedLiteral, "| is escaped"),
 				mk(itemWhitespace, " "),
@@ -117,7 +113,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "number literal",
 			input: "{-1.9e+10 :odd}",
-			expected: []item{
+			want: []item{
 				mk(itemExpressionOpen, "{"),
 				mk(itemNumberLiteral, "-1.9e+10"),
 				mk(itemWhitespace, " "),
@@ -129,7 +125,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "unquoted literal",
 			input: "{hello :uppercase}",
-			expected: []item{
+			want: []item{
 				mk(itemExpressionOpen, "{"),
 				mk(itemUnquotedLiteral, "hello"),
 				mk(itemWhitespace, " "),
@@ -141,7 +137,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "reserved annotations",
 			input: `{!a}{%b c}{* \{}{+txt |quoted| txt}{ <r }{>}{?a b c}{ ~ a b c }text`,
-			expected: []item{
+			want: []item{
 				// 1
 				mk(itemExpressionOpen, "{"),
 				mk(itemReservedStart, "!"),
@@ -209,7 +205,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "private use annotations",
 			input: "{ ^ .body }{&|body| a}{^ \\|body \\}}{&hey}",
-			expected: []item{
+			want: []item{
 				// 1
 				mk(itemExpressionOpen, "{"),
 				mk(itemWhitespace, " "),
@@ -245,7 +241,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "local declaration",
 			input: ".local $hostName = {$host} .local $h = {|host| :func @a=1}",
-			expected: []item{
+			want: []item{
 				// .local $hostName = {$host}
 				mk(itemLocalKeyword, "local"),
 				mk(itemWhitespace, " "),
@@ -279,7 +275,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "input declaration",
 			input: ".input {$host} .input {$user :func @a} .input {$num ^private}",
-			expected: []item{
+			want: []item{
 				// .input {$host}
 				mk(itemInputKeyword, "input"),
 				mk(itemWhitespace, " "),
@@ -316,7 +312,7 @@ func Test_lex(t *testing.T) {
 			input: ".first {$var} " +
 				".second body1 |body2| {|quoted| ^exprBody} " +
 				".third ho ho ho {$var !reserved} {:func @a} {2} {{.}}",
-			expected: []item{
+			want: []item{
 				// .first {$var} // 1 expression
 				mk(itemReservedKeyword, "first"),
 				mk(itemWhitespace, " "),
@@ -374,7 +370,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "matcher",
 			input: ".match {$n} 0 {{no apples}} 1 {{{$n} apple}} * {{{$n} apples}}",
-			expected: []item{
+			want: []item{
 				mk(itemMatchKeyword, "match"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionOpen, "{"),
@@ -414,7 +410,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "complex message with unexpected }",
 			input: "{{}}}",
-			expected: []item{
+			want: []item{
 				mk(itemQuotedPatternOpen, "{{"),
 				mk(itemQuotedPatternClose, "}}"),
 				mk(itemError, "unexpected } in complex message"),
@@ -423,7 +419,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "complex message without declaration",
 			input: "{{Hello, {|literal|} World!}}",
-			expected: []item{
+			want: []item{
 				mk(itemQuotedPatternOpen, "{{"),
 				mk(itemText, "Hello, "),
 				mk(itemExpressionOpen, "{"),
@@ -436,7 +432,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "variable with _",
 			input: "{$csv_filename}",
-			expected: []item{
+			want: []item{
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "csv_filename"),
 				mk(itemExpressionClose, "}"),
@@ -445,7 +441,7 @@ func Test_lex(t *testing.T) {
 		{
 			name:  "variable with whitespace",
 			input: "{ $csv_filename }",
-			expected: []item{
+			want: []item{
 				mk(itemExpressionOpen, "{"),
 				mk(itemWhitespace, " "),
 				mk(itemVariable, "csv_filename"),
@@ -458,7 +454,7 @@ func Test_lex(t *testing.T) {
 			input: `{#button}Submit{/button}
 {#img alt=|Cancel| @hello=world @goodbye /}
 { #nest1}{#nest2}text{#nest3/}{/nest2}{/nest1 a=b}`,
-			expected: []item{
+			want: []item{
 				// 1. simple open-close
 				mk(itemExpressionOpen, "{"),
 				mk(itemMarkupOpen, "button"),
@@ -518,26 +514,29 @@ func Test_lex(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			assertItems(t, test.expected, lex(test.input))
+			assertItems(t, test.want, lex(test.input))
 		})
 	}
 }
 
-func assertItems(t *testing.T, expected []item, l *lexer) {
+func assertItems(t *testing.T, want []item, l *lexer) {
 	t.Helper()
 
-	logItems := make([]func(), 0, len(expected))
+	logItems := make([]func(), 0, len(want))
 
-	for _, exp := range expected {
-		v := l.nextItem()
+	for _, wantItem := range want {
+		got := l.nextItem()
 
-		logItems = append(logItems, logItem(t, exp, *l))
+		logItems = append(logItems, logItem(t, wantItem, *l))
 
-		if !assert.Equal(t, exp, v, "expected %s, got %s", exp.typ, v.typ) {
+		if wantItem != got {
+			t.Errorf("want %v, got %v", wantItem, got)
+
 			for _, f := range logItems {
 				f()
 			}
 		}
+
 	}
 }
 
