@@ -16,6 +16,96 @@ import (
 	"golang.org/x/text/language"
 )
 
+var failing []string
+
+func init() {
+	//nolint:lll
+	failing = []string{
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.input_{$foo}_.input_{$foo}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.input_{$foo}_.local_$foo_=_{42}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.input_{$foo}_.match_{$foo}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{:unknown}_.local_$foo_=_{42}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$foo}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{42_:func_opt=$foo}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{42}_.input_{$foo}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar}_.local_$bar_=_{42}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar}_.local_$bar_=_{$baz}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{42_:func_opt=$bar}_.local_$bar_=_{42}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar}_.match_{$foo}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar_:func}_.local_$bar_=_{$baz}_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{$foo}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{$foo_:x}_*_*_{{foo}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_{:bar}_*_1_{{_}}_1_*_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_1_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_other_{{_}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{$foo_:x}_{$bar_:x}_*_{{foo}}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/bad_{:placeholder_option=x_option=x}",
+		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/bad_{:placeholder_ns:option=x_ns:option=y}",
+
+		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{horse_:date}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{:date}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{|2006-01-02T15:04:06|_:date}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{|2006-01-02|_:date}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/.local_$t_=_{|2006-01-02T15:04:06|_:time}_{{{$t_:date}}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/.local_$d_=_{|2006-01-02|_:date_style=long}_{{{$d_:date}}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{|2006-01-02|_:date_style=long}",
+
+		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{:datetime}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{horse_:datetime}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{$x_:datetime}",
+
+		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.match_{$foo_:integer}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/hello_{0.42e+1_:integer}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/hello_{4.2_:integer}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/hello_{-4.20_:integer}",
+
+		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.match_{$foo_:string}_|1|_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.match_{$foo_:string}_1_{{one}}_*_{{other}}#01",
+		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.match_{$foo_:string}_1_{{one}}_*_{{other}}#02",
+
+		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$d_=_{|2006-01-02T15:04:06|_:date}_{{{$d_:time}}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{|2006-01-02T15:04:06|_:time}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{:time}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{horse_:time}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$t_=_{|2006-01-02T15:04:06|_:time_style=medium}_{{{$t_:time}}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{|2006-01-02T15:04:06|_:time_style=medium}",
+
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{01_:number}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#03",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{0x1_:number}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number_minimumFractionDigits=foo}_{{bar_{$foo}}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#02",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$bar_=_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$bar}}}#01",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_{$bar_:number}_one_one_{{one_one}}_one_*_{{one_other}}_*_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$bar_=_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$bar}}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number}_{{bar_{$foo}}}#01",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/hello_{:number}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/hello_{|4.2|_:number_minimumFractionDigits=|2|}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$none}}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{.1_:number}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{|+1|_:number}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/hello_{foo_:number}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number}_.local_$bar_=_{$foo}_.match_{$bar}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{1._:number}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_{$bar_:number}_one_one_{{one_one}}_one_*_{{one_other}}_*_*_{{other}}#02",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_one_{{one}}_1_{{=1}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar_:number}_.match_{$bar}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number}_.match_{$foo}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#01",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$foo_=_{$bar_:number}_{{bar_{$foo}}}#01",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$foo_=_{$bar_:number_minimumFractionDigits=foo}_{{bar_{$foo}}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$foo_=_{$bar_:number}_.match_{$foo}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_{$bar_:number}_one_one_{{one_one}}_one_*_{{one_other}}_*_*_{{other}}#01",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_1_{{=1}}_one_{{one}}_*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/hello_{|4.2|_:number_minimumFractionDigits=$foo}",
+
+		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/.match_{|foo|_:x}_{|bar|_:x}_**_{{foo}}",
+	}
+}
+
 // TestMF2WG runs tests by Message Format Working Group.
 func TestMF2WG(t *testing.T) {
 	t.Parallel()
@@ -32,21 +122,6 @@ func TestMF2WG(t *testing.T) {
 		t.Run(path, func(t *testing.T) {
 			t.Parallel()
 
-			// skip the tests that are NOT IMPLEMENTED yet fully
-			if slices.Contains([]string{
-				".message-format-wg/test/tests/data-model-errors.json",
-				".message-format-wg/test/tests/functions/date.json",
-				".message-format-wg/test/tests/functions/datetime.json",
-				".message-format-wg/test/tests/functions/integer.json",
-				".message-format-wg/test/tests/functions/string.json",
-				".message-format-wg/test/tests/functions/time.json",
-				".message-format-wg/test/tests/functions/number.json",
-				".message-format-wg/test/tests/syntax-errors.json",
-			}, path) {
-				t.Skip()
-				return
-			}
-
 			f, err := os.Open(path)
 
 			require.NoError(t, err)
@@ -60,6 +135,10 @@ func TestMF2WG(t *testing.T) {
 			for _, test := range tests.Tests {
 				t.Run(test.Src, func(t *testing.T) {
 					t.Parallel()
+
+					if slices.Contains(failing, t.Name()) {
+						t.Skip()
+					}
 
 					run(t, test.Apply(tests.DefaultTestProperties))
 				})
