@@ -272,13 +272,13 @@ type Var struct {
 	Type  string `json:"type"`
 }
 
-func assertErr(t *testing.T, expected Errors, err error) {
+func assertErr(t *testing.T, want Errors, err error) {
 	// we expect error but we don't know the exact error
-	if expected.Expected != nil && *expected.Expected && err == nil {
+	if want.Expected != nil && *want.Expected && err == nil {
 		t.Error("want error, got nil")
 	}
 
-	if len(expected.Errors) == 0 && err != nil {
+	if len(want.Errors) == 0 && err != nil {
 		t.Errorf("want no error, got %s", err)
 	}
 
@@ -288,7 +288,7 @@ func assertErr(t *testing.T, expected Errors, err error) {
 		}
 	}
 
-	for _, v := range expected.Errors {
+	for _, v := range want.Errors {
 		switch v.Type {
 		default:
 			t.Errorf("asserting error %s is not implemented", v)

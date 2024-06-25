@@ -72,7 +72,7 @@ func Test_Datetime(t *testing.T) {
 
 			if test.wantErr {
 				if err == nil {
-					t.Error(err)
+					t.Error("want error, got nil")
 				}
 
 				return
