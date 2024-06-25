@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/expect-digital/go-mf2/actions/workflows/ci.yaml/badge.svg)
 
-The repo implements localization by the [Message Format 2 Draft](https://github.com/unicode-org/message-format-wg/blob/b4fd5a666a02950c57f0a454f65bf16a0bf03bf4/spec/message.abnf) by the Message Format Working Group (MFWG):
+The repo implements localization by the [Message Format 2 Draft](https://github.com/unicode-org/message-format-wg/blob/b4fd5a666a02950c57f0a454f65bf16a0bf03bf4/spec/message.abnf) of the Message Format Working Group (MFWG):
 
 - `go.expect.digital/mf2/parse` to parse the localized message strings (**WIP**)
 - `go.expect.digital/mf2` to build the localized message strings (**WIP**)
