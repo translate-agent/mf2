@@ -29,18 +29,23 @@ func TestMF2WG(t *testing.T) {
 			return nil
 		}
 
-		// skip the tests that are NOT IMPLEMENTED yet fully
-		if slices.Contains([]string{
-			".message-format-wg/test/tests/data-model-errors.json",
-			".message-format-wg/test/tests/functions/datetime.json",
-			".message-format-wg/test/tests/functions/integer.json",
-			".message-format-wg/test/tests/functions/string.json",
-		}, path) {
-			t.Skip()
-		}
-
 		t.Run(path, func(t *testing.T) {
 			t.Parallel()
+
+			// skip the tests that are NOT IMPLEMENTED yet fully
+			if slices.Contains([]string{
+				".message-format-wg/test/tests/data-model-errors.json",
+				".message-format-wg/test/tests/functions/date.json",
+				".message-format-wg/test/tests/functions/datetime.json",
+				".message-format-wg/test/tests/functions/integer.json",
+				".message-format-wg/test/tests/functions/string.json",
+				".message-format-wg/test/tests/functions/time.json",
+				".message-format-wg/test/tests/functions/number.json",
+				".message-format-wg/test/tests/syntax-errors.json",
+			}, path) {
+				t.Skip()
+				return
+			}
 
 			f, err := os.Open(path)
 
