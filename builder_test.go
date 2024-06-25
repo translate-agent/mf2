@@ -1,19 +1,15 @@
 package mf2
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
-)
+import "testing"
 
 func Test_Builder(t *testing.T) {
 	t.Parallel()
 
 	//nolint:lll
 	for _, test := range []struct {
-		name     string
-		b        *Builder
-		expected string
+		name string
+		b    *Builder
+		want string
 	}{
 		{
 			"simple message, empty text",
@@ -226,10 +222,14 @@ func Test_Builder(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actual, err := test.b.Build()
-			require.NoError(t, err)
+			got, err := test.b.Build()
+			if err != nil {
+				t.Error(err)
+			}
 
-			require.Equal(t, test.expected, actual)
+			if test.want != got {
+				t.Errorf("want %s, got %s", test.want, got)
+			}
 		})
 	}
 }

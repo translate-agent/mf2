@@ -2,6 +2,7 @@ package mf2_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -10,8 +11,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.expect.digital/mf2/template"
 	"golang.org/x/text/language"
 )
@@ -117,14 +116,17 @@ func TestMF2WG(t *testing.T) {
 			t.Parallel()
 
 			f, err := os.Open(path)
-
-			require.NoError(t, err)
+			if err != nil {
+				t.Error(err)
+			}
 
 			defer f.Close()
 
 			var tests Tests
 
-			require.NoError(t, json.NewDecoder(f).Decode(&tests))
+			if err := json.NewDecoder(f).Decode(&tests); err != nil {
+				t.Error(err)
+			}
 
 			for _, test := range tests.Tests {
 				t.Run(test.Src, func(t *testing.T) {
@@ -141,8 +143,9 @@ func TestMF2WG(t *testing.T) {
 
 		return nil
 	})
-
-	require.NoError(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 // run runs single test by Message Format Working Group.
@@ -174,15 +177,15 @@ func run(t *testing.T, test Test) {
 		input[v.Name] = v.Value
 	}
 
-	actual, err := templ.Sprint(input)
+	got, err := templ.Sprint(input)
 
 	// Look at the description of first assertWgErr() in this func.
 	assertErr(t, test.ExpErrors, err)
 
 	// Expected is optional. The built-in formatters is implementation
 	// specific across programming languages and libraries.
-	if test.Exp != nil {
-		assert.Equal(t, *test.Exp, actual)
+	if test.Exp != nil && *test.Exp != got {
+		t.Errorf("want %s, got %s", *test.Exp, got)
 	}
 }
 
@@ -269,42 +272,46 @@ type Var struct {
 	Type  string `json:"type"`
 }
 
-func assertErr(t *testing.T, expected Errors, err error) {
-	if expected.Expected != nil && *expected.Expected {
-		// we expect error but we don't know the exact error
-		assert.NotNil(t, err) //nolint:testifylint
-
-		return
+func assertErr(t *testing.T, want Errors, err error) {
+	// we expect error but we don't know the exact error
+	if want.Expected != nil && *want.Expected && err == nil {
+		t.Error("want error, got nil")
 	}
 
-	if len(expected.Errors) == 0 {
-		require.NoError(t, err)
+	if len(want.Errors) == 0 && err != nil {
+		t.Errorf("want no error, got %s", err)
 	}
 
-	for _, v := range expected.Errors {
+	wantErr := func(want error) {
+		if !errors.Is(err, want) {
+			t.Errorf("want %s, got %s", want, err)
+		}
+	}
+
+	for _, v := range want.Errors {
 		switch v.Type {
 		default:
 			t.Errorf("asserting error %s is not implemented", v)
 		case "bad-operand":
-			require.ErrorIs(t, err, template.ErrBadOperand)
+			wantErr(template.ErrBadOperand)
 		case "duplicate-declaration":
-			require.ErrorIs(t, err, template.ErrDuplicateDeclaration)
+			wantErr(template.ErrDuplicateDeclaration)
 		case "duplicate-option-name":
-			require.ErrorIs(t, err, template.ErrDuplicateOptionName)
+			wantErr(template.ErrDuplicateOptionName)
 		case "missing-fallback-variant":
-			require.ErrorIs(t, err, template.ErrMissingFallbackVariant)
+			wantErr(template.ErrMissingFallbackVariant)
 		case "missing-selector-annotation":
-			require.ErrorIs(t, err, template.ErrMissingSelectorAnnotation)
+			wantErr(template.ErrMissingSelectorAnnotation)
 		case "unsupported-expression":
-			require.ErrorIs(t, err, template.ErrUnsupportedExpression)
+			wantErr(template.ErrUnsupportedExpression)
 		case "unsupported-statement":
-			require.ErrorIs(t, err, template.ErrUnsupportedStatement)
+			wantErr(template.ErrUnsupportedStatement)
 		case "unresolved-variable":
-			require.ErrorIs(t, err, template.ErrUnresolvedVariable)
+			wantErr(template.ErrUnresolvedVariable)
 		case "syntax-error":
-			require.ErrorIs(t, err, template.ErrSyntax)
+			wantErr(template.ErrSyntax)
 		case "variant-key-mismatch":
-			require.ErrorIs(t, err, template.ErrVariantKeyMismatch)
+			wantErr(template.ErrVariantKeyMismatch)
 		}
 	}
 }
