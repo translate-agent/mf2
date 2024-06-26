@@ -180,13 +180,13 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 }
 
 func datetimeFunc(input any, options Options, locale language.Tag) (any, error) {
-	if len(options) == 0 {
-		return fmt.Sprint(input), nil
-	}
-
 	value, err := parseDatetimeInput(input)
 	if err != nil {
 		return "", err
+	}
+
+	if len(options) == 0 {
+		return fmt.Sprint(input), nil
 	}
 
 	opts, err := parseDatetimeOptions(options)
