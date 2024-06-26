@@ -28,9 +28,7 @@ List of the default functions registered in the function registry. The functions
 | date                   | format    | style                                         |   ❌   |
 | datetime               | format    | dateStyle                                     |   ❌   |
 | datetime               | format    | timeStyle                                     |   ❌   |
-| datetime               | format    | calendar                                      |   ❌   |
-| datetime               | format    | numberingSystem                               |   ❌   |
-| datetime               | format    | timeZone                                      |   ❌   |
+| datetime               | format    | timeZone<sup>\*</sup>                         |   ❌   |
 | datetime               | format    | hourCycle                                     |   ❌   |
 | datetime               | format    | dayPeriod                                     |   ❌   |
 | datetime               | format    | weekday                                       |   ❌   |
@@ -72,3 +70,5 @@ List of the default functions registered in the function registry. The functions
 | plural (number alias)  |           |                                               |   ❌   |
 | string                 |           |                                               |   ❌   |
 | time                   |           |                                               |   ❌   |
+
+> **_NOTE_:** the `:datetime` option `timeZone` is not part of the default registry. Pending more clarity from MF2 definition or Tech Reviews.
