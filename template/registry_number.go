@@ -118,7 +118,7 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 			return nil, fmt.Errorf("unsupported option: %s", k)
 		case "compactDisplay", "currency", "currencyDisplay", "currencySign", "notation", "numberingSystem",
 			"signDisplay", "style", "unit", "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits",
-			"maximumFractionDigits", "minimumSignificantDigits", "maximumSignificantDigits", "select": // noop
+			"maximumFractionDigits", "minimumSignificantDigits", "maximumSignificantDigits", "select", "useGrouping": // noop
 		}
 	}
 
