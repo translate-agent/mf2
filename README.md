@@ -42,16 +42,16 @@ List of the default functions registered in the function registry. The functions
 | datetime               | format    | fractionalSecondDigits                        |   ❌   |
 | datetime               | format    | timeZoneName                                  |   ❌   |
 | number                 | format    | compactDisplay                                |   ❌   |
-| number                 | format    | currency                                      |   ❌   |
-| number                 | format    | currencyDisplay                               |   ❌   |
-| number                 | format    | currencySign                                  |   ❌   |
+| number                 | format    | currency<sup>\*</sup>                         |   ❌   |
+| number                 | format    | currencyDisplay<sup>\*</sup>                  |   ❌   |
+| number                 | format    | currencySign<sup>\*</sup>                     |   ❌   |
 | number                 | format    | notation                                      |   ❌   |
 | number                 | format    | numberingSystem                               |   ❌   |
 | number                 | format    | signDisplay (auto, always, exceptZero, never) |  ✅︎   |
 | number                 | format    | style (decimal, percent)                      |  ✅︎   |
 | number                 | format    | style (currency, unit)                        |   ❌   |
-| number                 | format    | unit                                          |   ❌   |
-| number                 | format    | unitDisplay                                   |   ❌   |
+| number                 | format    | unit<sup>\*</sup>                             |   ❌   |
+| number                 | format    | unitDisplay<sup>\*</sup>                      |   ❌   |
 | number                 | format    | minimumIntegerDigits                          |  ✅︎   |
 | number                 | format    | minimumFractionDigits                         |  ✅︎   |
 | number                 | format    | maximumFractionDigits                         |  ✅︎   |
@@ -71,4 +71,4 @@ List of the default functions registered in the function registry. The functions
 | string                 |           |                                               |   ❌   |
 | time                   |           |                                               |   ❌   |
 
-> **_NOTE_:** the `:datetime` option `timeZone` is not part of the default registry. Pending more clarity from MF2 definition or Tech Reviews.
+> **<sup>\*</sup>** The options are not part of the default registry. MF2 WG says, "Implementations SHOULD avoid creating options that conflict with these, but are encouraged to track development of these options during Tech Preview".
