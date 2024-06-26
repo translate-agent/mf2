@@ -15,22 +15,40 @@ var datetimeRegistryFunc = RegistryFunc{
 }
 
 type datetimeOptions struct {
-	TimeZone               *time.Location
-	DateStyle              string
-	TimeStyle              string
-	Calendar               string
-	NumberingSystem        string
-	HourCycle              string
-	DayPeriod              string
-	Weekday                string
-	Era                    string
-	Year                   string
-	Month                  string
-	Day                    string
-	Hour                   string
-	Minute                 string
-	Second                 string
-	TimeZoneName           string
+	// Timezone is implemented for now but it is NOT part of the default registry.
+	// (default is system default time zone or UTC)
+	TimeZone *time.Location
+	// The predefined date formatting style to use (full, long, medium, short).
+	DateStyle string
+	// The predefined time formatting style to use (full, long, medium, short).
+	TimeStyle string
+	// The hour cycle to use (h11, h12, h23, h24).
+	HourCycle string
+	// DayPeriod is mentioned in registry.xml, but NOT in registry.md.
+	// See https://github.com/unicode-org/message-format-wg/issues/596
+	//
+	// The formatting style used for day periods like "in the morning", "am", "noon", "n" etc.
+	DayPeriod string
+	// The representation of the weekday (long, short, narrow).
+	Weekday string
+	// The representation of the era (long, short, narrow).
+	Era string
+	// The representation of the year (numeric, 2-digit).
+	Year string
+	// The representation of the month (numeric, 2-digit).
+	Month string
+	// The representation of the day (numeric, 2-digit, long, short, narrow).
+	Day string
+	// The representation of the hour (numeric, 2-digit).
+	Hour string
+	// The representation of the minute (numeric, 2-digit).
+	Minute string
+	// The representation of the second (numeric, 2-digit).
+	Second string
+	// The localized representation of the time zone name
+	// (long, short, shortOffset, longOffset, shortGeneric, longGeneric).
+	TimeZoneName string
+	// The number of fractional seconds to display (1, 2, 3).
 	FractionalSecondDigits int
 }
 
@@ -55,41 +73,20 @@ func parseDatetimeInput(input any) (time.Time, error) {
 	}
 }
 
+// parseDatetimeOptions parses :datetime options.
 func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 	var (
 		opts datetimeOptions
 		err  error
 	)
 
-	// The predefined date formatting style to use.
 	dateStyles := oneOf("full", "long", "medium", "short")
 	if opts.DateStyle, err = options.GetString("dateStyle", "", dateStyles); err != nil {
 		return nil, err
 	}
 
-	// The predefined time formatting style to use.
 	timeStyles := oneOf("full", "long", "medium", "short")
 	if opts.TimeStyle, err = options.GetString("timeStyle", "", timeStyles); err != nil {
-		return nil, err
-	}
-
-	//  Calendar to use.
-	calendars := oneOf(
-		"buddhist", "chinese", "coptic", "dangi", "ethioaa", "ethiopic", "gregory",
-		"hebrew", "indian", "islamic", "islamic-umalqura", "islamic-tbla",
-		"islamic-civil", "islamic-rgsa", "iso8601", "japanese", "persian", "roc",
-	)
-	if opts.Calendar, err = options.GetString("calendar", "", calendars); err != nil {
-		return nil, err
-	}
-
-	// Numbering system to use.
-	numberingSystems := oneOf(
-		"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru", "hanidec",
-		"khmr", "knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec",
-		"telu", "thai", "tibt",
-	)
-	if opts.NumberingSystem, err = options.GetString("numberingSystem", "", numberingSystems); err != nil {
 		return nil, err
 	}
 
@@ -108,73 +105,61 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 		}
 	}
 
-	// The hour cycle to use.
 	hourCycles := oneOf("h11", "h12", "h23", "h24")
 	if opts.HourCycle, err = options.GetString("hourCycle", "", hourCycles); err != nil {
 		return nil, err
 	}
 
-	// The formatting style used for day periods like "in the morning", "am", "noon", "n" etc.
 	dayPeriods := oneOf("short", "long")
 	if opts.DayPeriod, err = options.GetString("dayPeriod", "", dayPeriods); err != nil {
 		return nil, err
 	}
 
-	// The representation of the weekday.
 	weekdays := oneOf("narrow", "short", "long")
 	if opts.Weekday, err = options.GetString("weekday", "", weekdays); err != nil {
 		return nil, err
 	}
 
-	// The representation of the era.
 	eras := oneOf("narrow", "short", "long")
 	if opts.Era, err = options.GetString("era", "", eras); err != nil {
 		return nil, err
 	}
 
-	// The representation of the year.
 	years := oneOf("numeric", "2-digit")
 	if opts.Year, err = options.GetString("year", "", years); err != nil {
 		return nil, err
 	}
 
-	// The representation of the month.
 	months := oneOf("numeric", "2-digit", "narrow", "short", "long")
 	if opts.Month, err = options.GetString("month", "", months); err != nil {
 		return nil, err
 	}
 
-	// The representation of the day.
 	days := oneOf("numeric", "2-digit")
 	if opts.Day, err = options.GetString("day", "", days); err != nil {
 		return nil, err
 	}
 
-	// The representation of the hour.
 	hours := oneOf("numeric", "2-digit")
 	if opts.Hour, err = options.GetString("hour", "", hours); err != nil {
 		return nil, err
 	}
 
-	// The representation of the minute.
 	minutes := oneOf("numeric", "2-digit")
 	if opts.Minute, err = options.GetString("minute", "", minutes); err != nil {
 		return nil, err
 	}
 
-	// The representation of the second.
 	seconds := oneOf("numeric", "2-digit")
 	if opts.Second, err = options.GetString("second", "", seconds); err != nil {
 		return nil, err
 	}
 
-	// The number of fractional seconds to display.
 	//nolint:mnd
 	if opts.FractionalSecondDigits, err = options.GetInt("fractionalSecondDigits", 0, oneOf(1, 2, 3)); err != nil {
 		return nil, err
 	}
 
-	// The localized representation of the time zone name.
 	timeZoneNames := oneOf("long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric")
 	if opts.TimeZoneName, err = options.GetString("timeZoneName", "", timeZoneNames); err != nil {
 		return nil, err
