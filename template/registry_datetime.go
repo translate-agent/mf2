@@ -15,8 +15,11 @@ var datetimeRegistryFunc = RegistryFunc{
 }
 
 type datetimeOptions struct {
-	// Timezone is implemented for now but it is NOT part of the default registry.
 	// (default is system default time zone or UTC)
+	//
+	// NOTE: The option is not part of the default registry.
+	// Implementations SHOULD avoid creating options that conflict with these, but
+	// are encouraged to track development of these options during Tech Preview.
 	TimeZone *time.Location
 	// The predefined date formatting style to use (full, long, medium, short).
 	DateStyle string
@@ -75,6 +78,14 @@ func parseDatetimeInput(input any) (time.Time, error) {
 
 // parseDatetimeOptions parses :datetime options.
 func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
+	for opt := range options {
+		switch opt {
+		case "calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
+			"year", "month", "day", "hour", "minute", "second", "fractionalSecondDigits":
+			return nil, fmt.Errorf("option '%s' is not implemented", opt)
+		}
+	}
+
 	var (
 		opts datetimeOptions
 		err  error
@@ -169,6 +180,10 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 }
 
 func datetimeFunc(input any, options Options, locale language.Tag) (any, error) {
+	if len(options) == 0 {
+		return fmt.Sprint(input), nil
+	}
+
 	value, err := parseDatetimeInput(input)
 	if err != nil {
 		return "", err
@@ -177,18 +192,6 @@ func datetimeFunc(input any, options Options, locale language.Tag) (any, error) 
 	opts, err := parseDatetimeOptions(options)
 	if err != nil {
 		return "", err
-	}
-
-	if len(options) == 0 {
-		return fmt.Sprint(input), nil
-	}
-
-	for optName := range options {
-		switch optName {
-		case "calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
-			"year", "month", "day", "hour", "minute", "second", "fractionalSecondDigits":
-			return nil, fmt.Errorf("option '%s' is not implemented", optName)
-		}
 	}
 
 	var layout string
