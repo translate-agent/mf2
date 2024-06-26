@@ -4,8 +4,11 @@
 
 The repo implements localization by the [Message Format 2 Draft](https://github.com/unicode-org/message-format-wg/blob/b4fd5a666a02950c57f0a454f65bf16a0bf03bf4/spec/message.abnf) of the Message Format Working Group (MFWG):
 
-- `go.expect.digital/mf2/parse` to parse the localized message strings (**WIP**)
-- `go.expect.digital/mf2` to build the localized message strings (**WIP**)
+The project implements the following packages (temporary layout):
+
+- `go.expect.digital/mf2/template` executes MF2 templates (**WIP**)
+- `go.expect.digital/mf2/parse` parses MF2 templates (**WIP**)
+- `go.expect.digital/mf2` builds MF2 templates (**WIP**)
 - **CLI** to extract and update localized message strings (**NOT IMPLEMENTED**)
 
 # Requirements
