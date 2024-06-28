@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -20,12 +21,12 @@ var numberRegistryFunc = RegistryFunc{
 
 func parseNumberInput(input any) (float64, error) {
 	if input == nil {
-		return 0, fmt.Errorf("input is required: %w", ErrOperandMismatch)
+		return 0, fmt.Errorf("input is required: %w", mf2.ErrOperandMismatch)
 	}
 
 	v, err := castAs[float64](input)
 	if err != nil {
-		return 0, fmt.Errorf("unsupported type %T: %w: %w", input, err, ErrOperandMismatch)
+		return 0, fmt.Errorf("unsupported type %T: %w: %w", input, err, mf2.ErrOperandMismatch)
 	}
 
 	return v, nil

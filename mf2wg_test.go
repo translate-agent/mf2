@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"testing"
 
+	"go.expect.digital/mf2"
 	"go.expect.digital/mf2/template"
 	"golang.org/x/text/language"
 )
@@ -291,25 +292,25 @@ func assertErr(t *testing.T, want Errors, err error) {
 		default:
 			t.Errorf("asserting error %s is not implemented", v)
 		case "bad-operand":
-			wantErr(template.ErrBadOperand)
+			wantErr(mf2.ErrBadOperand)
 		case "duplicate-declaration":
-			wantErr(template.ErrDuplicateDeclaration)
+			wantErr(mf2.ErrDuplicateDeclaration)
 		case "duplicate-option-name":
-			wantErr(template.ErrDuplicateOptionName)
+			wantErr(mf2.ErrDuplicateOptionName)
 		case "missing-fallback-variant":
-			wantErr(template.ErrMissingFallbackVariant)
+			wantErr(mf2.ErrMissingFallbackVariant)
 		case "missing-selector-annotation":
-			wantErr(template.ErrMissingSelectorAnnotation)
+			wantErr(mf2.ErrMissingSelectorAnnotation)
 		case "unsupported-expression":
-			wantErr(template.ErrUnsupportedExpression)
+			wantErr(mf2.ErrUnsupportedExpression)
 		case "unsupported-statement":
-			wantErr(template.ErrUnsupportedStatement)
+			wantErr(mf2.ErrUnsupportedStatement)
 		case "unresolved-variable":
-			wantErr(template.ErrUnresolvedVariable)
+			wantErr(mf2.ErrUnresolvedVariable)
 		case "syntax-error":
-			wantErr(template.ErrSyntax)
+			wantErr(mf2.ErrSyntax)
 		case "variant-key-mismatch":
-			wantErr(template.ErrVariantKeyMismatch)
+			wantErr(mf2.ErrVariantKeyMismatch)
 		}
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"go.expect.digital/mf2"
 	"go.expect.digital/mf2/template"
 	"golang.org/x/text/language"
 )
@@ -51,12 +52,12 @@ func ExampleTemplate_complexMessage() {
 
 	color := func(value any, options template.Options, locale language.Tag) (any, error) {
 		if value == nil {
-			return "", fmt.Errorf("input is required: %w", template.ErrOperandMismatch)
+			return "", fmt.Errorf("input is required: %w", mf2.ErrOperandMismatch)
 		}
 
 		color, ok := value.(string)
 		if !ok {
-			return nil, fmt.Errorf("input is not a string: %w", template.ErrOperandMismatch)
+			return nil, fmt.Errorf("input is not a string: %w", mf2.ErrOperandMismatch)
 		}
 
 		if options == nil {

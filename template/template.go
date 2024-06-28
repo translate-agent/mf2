@@ -10,58 +10,8 @@ import (
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/language"
 
+	"go.expect.digital/mf2"
 	ast "go.expect.digital/mf2/parse"
-)
-
-// MessageFormat2 Errors as defined in the specification.
-//
-// See ".message-format-wg/spec/errors.md".
-var (
-	// ErrBadOperand is any error that occurs due to the content or format of the operand,
-	// such as when the operand provided to a function during function resolution does not match one of the
-	// expected implementation-defined types for that function;
-	// or in which a literal operand value does not have the required format
-	// and thus cannot be processed into one of the expected implementation-defined types
-	// for that specific function.
-	ErrBadOperand = errors.New("bad operand")
-	// ErrDuplicateDeclaration occurs when a variable is declared more than once.
-	// Note that an input variable is implicitly declared when it is first used,
-	// so explicitly declaring it after such use is also an error.
-	ErrDuplicateDeclaration = errors.New("duplicate declaration")
-	// ErrDuplicateOptionName occurs when the same identifier
-	// appears on the left-hand side of more than one option in the same expression.
-	ErrDuplicateOptionName = errors.New("duplicate option name")
-	ErrFormatting          = errors.New("formatting error")
-	// ErrMissingFallbackVariant occurs when the number of keys on a variant
-	// does not equal the number of selectors.
-	ErrMissingFallbackVariant = errors.New("missing fallback variant")
-	// ErrMissingSelectorAnnotation occurs when the message
-	// contains a selector that does not have an annotation,
-	// or contains a variable that does not directly or indirectly reference a declaration with an annotation.
-	ErrMissingSelectorAnnotation = errors.New("missing selector annotation")
-	// ErrOperandMismatch is an Invalid Expression error that occurs when an operand provided
-	// to a function during function resolution does not match one of the expected
-	// implementation-defined types for that function; or in which a literal operand value does not
-	// have the required format and thus cannot be processed into one of the expected
-	// implementation-defined types for that specific function.
-	ErrOperandMismatch = errors.New("operand mismatch")
-	ErrSelection       = errors.New("selection error")
-	// ErrSyntax occurs when the syntax representation of a message is not well-formed.
-	ErrSyntax = errors.New("syntax error")
-	// ErrUnknownFunction occurs when an expression includes
-	// a reference to a function which cannot be resolved.
-	ErrUnknownFunction = errors.New("unknown function reference")
-	// ErrUnresolvedVariable occurs when a variable reference cannot be resolved.
-	ErrUnresolvedVariable = errors.New("unresolved variable")
-	// ErrUnsupportedExpression occurs when an expression uses
-	// syntax reserved for future standardization,
-	// or for private implementation use that is not supported by the current implementation.
-	ErrUnsupportedExpression = errors.New("unsupported expression")
-	// ErrUnsupportedStatement occurs when a message includes a reserved statement.
-	ErrUnsupportedStatement = errors.New("unsupported statement")
-	// ErrVariantKeyMismatch occurs when the number of keys on a variant
-	// does not equal the number of selectors.
-	ErrVariantKeyMismatch = errors.New("variant key mismatch")
 )
 
 // Func is a function, that will be called when a function is encountered in the template.
@@ -124,7 +74,7 @@ func WithLocale(locale language.Tag) Option {
 func (t *Template) Parse(input string) (*Template, error) {
 	ast, err := ast.Parse(input)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrSyntax, err.Error())
+		return nil, fmt.Errorf("%w: %s", mf2.ErrSyntax, err.Error())
 	}
 
 	t.ast = &ast
@@ -195,7 +145,7 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 	err := e.resolveDeclarations(message.Declarations)
 
 	switch {
-	case errors.Is(err, ErrUnsupportedStatement), errors.Is(err, ErrUnresolvedVariable):
+	case errors.Is(err, mf2.ErrUnsupportedStatement), errors.Is(err, mf2.ErrUnresolvedVariable):
 		resolutionErr = fmt.Errorf("resolve declarations: %w", err)
 	case err != nil:
 		return fmt.Errorf("resolve declarations: %w", err)
@@ -204,7 +154,7 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 	err = e.resolveComplexBody(message.ComplexBody)
 
 	switch {
-	case errors.Is(err, ErrUnresolvedVariable):
+	case errors.Is(err, mf2.ErrUnresolvedVariable):
 		resolutionErr = fmt.Errorf("resolve complex body: %w", err)
 	case err != nil:
 		return fmt.Errorf("resolve complex body: %w", err)
@@ -219,10 +169,10 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 	for _, decl := range declarations {
 		switch d := decl.(type) {
 		case ast.ReservedStatement:
-			return fmt.Errorf("%w: '%s'", ErrUnsupportedStatement, "reserved statement")
+			return fmt.Errorf("%w: '%s'", mf2.ErrUnsupportedStatement, "reserved statement")
 		case ast.LocalDeclaration:
 			if _, ok := m[d.Variable]; ok {
-				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, d)
+				return fmt.Errorf("%w '%s'", mf2.ErrDuplicateDeclaration, d)
 			}
 
 			m[d.Variable] = struct{}{}
@@ -235,7 +185,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 			e.variables[string(d.Variable)] = resolved
 		case ast.InputDeclaration:
 			if _, ok := m[d.Operand]; ok {
-				return fmt.Errorf("%w '%s'", ErrDuplicateDeclaration, d)
+				return fmt.Errorf("%w '%s'", mf2.ErrDuplicateDeclaration, d)
 			}
 
 			m[d.Operand] = struct{}{}
@@ -308,7 +258,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	switch v := expr.Annotation.(type) {
 	default:
-		return "", fmt.Errorf("%w with %T annotation: '%s'", ErrUnsupportedExpression, v, v)
+		return "", fmt.Errorf("%w with %T annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
 	case ast.Function:
 		funcName = v.Identifier.Name
 
@@ -321,13 +271,13 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 		// Supported private-use annotation with no operand: the annotation starting sigil, optionally followed by
 		// implementation-defined details conforming with patterns in the other cases (such as quoting literals).
 		// If details are provided, they SHOULD NOT leak potentially private information.
-		resolutionErr = fmt.Errorf("%w with %T private use annotation: '%s'", ErrUnsupportedExpression, v, v)
+		resolutionErr = fmt.Errorf("%w with %T private use annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
 
 		if value == nil {
 			return "{" + string(v.Start) + "}", resolutionErr
 		}
 	case ast.ReservedAnnotation:
-		resolutionErr = fmt.Errorf("%w with %T reserved annotation: '%s'", ErrUnsupportedExpression, v, v)
+		resolutionErr = fmt.Errorf("%w with %T reserved annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
 
 		if value == nil {
 			return "{" + string(v.Start) + "}", resolutionErr
@@ -363,7 +313,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	f, ok := e.template.registry[funcName] // TODO(jhorsts): lookup by namespace and name
 	if !ok {
-		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("%w '%s'", ErrUnknownFunction, funcName))
+		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("%w '%s'", mf2.ErrUnknownFunction, funcName))
 	}
 
 	if f.Format == nil {
@@ -372,7 +322,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	result, err := f.Format(value, options, e.template.locale)
 	if err != nil {
-		return fmtErroredExpr(), errors.Join(resolutionErr, ErrFormatting, err)
+		return fmtErroredExpr(), errors.Join(resolutionErr, mf2.ErrFormatting, err)
 	}
 
 	return fmt.Sprint(result), resolutionErr
@@ -397,7 +347,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.Variable:
 		val, ok := e.variables[string(v)]
 		if !ok {
-			return fmt.Sprintf("{%s}", v), fmt.Errorf("%w '%s'", ErrUnresolvedVariable, v)
+			return fmt.Sprintf("{%s}", v), fmt.Errorf("%w '%s'", mf2.ErrUnresolvedVariable, v)
 		}
 
 		return val, nil
@@ -410,7 +360,7 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 	for _, opt := range options {
 		name := opt.Identifier.Name
 		if _, ok := m[name]; ok {
-			return nil, fmt.Errorf("%w '%s'", ErrDuplicateOptionName, name)
+			return nil, fmt.Errorf("%w '%s'", mf2.ErrDuplicateOptionName, name)
 		}
 
 		value, err := e.resolveValue(opt.Value)
@@ -452,16 +402,16 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		switch annotation := selectExpr.Annotation.(type) {
 		case nil:
-			return nil, ErrMissingSelectorAnnotation
+			return nil, mf2.ErrMissingSelectorAnnotation
 		case ast.ReservedAnnotation, ast.PrivateUseAnnotation:
-			return nil, ErrUnsupportedExpression
+			return nil, mf2.ErrUnsupportedExpression
 		case ast.Function:
 			function = annotation
 		}
 
 		f, ok := e.template.registry[function.Identifier.Name]
 		if !ok {
-			return nil, fmt.Errorf("%w '%s'", ErrUnknownFunction, function.Identifier.Name)
+			return nil, fmt.Errorf("%w '%s'", mf2.ErrUnknownFunction, function.Identifier.Name)
 		}
 
 		if f.Match == nil {
@@ -480,7 +430,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		rslt, err := f.Match(input, opts, e.template.locale)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrSelection, err.Error())
+			return nil, fmt.Errorf("%w: %s", mf2.ErrSelection, err.Error())
 		}
 
 		res = append(res, rslt)

@@ -8,7 +8,7 @@ The project implements the following packages (temporary layout):
 
 - `go.expect.digital/mf2/template` executes MF2 templates (**WIP**)
 - `go.expect.digital/mf2/parse` parses MF2 templates (**WIP**)
-- `go.expect.digital/mf2` builds MF2 templates (**WIP**)
+- `go.expect.digital/mf2/builder` builds MF2 templates (**WIP**)
 - **CLI** to extract and update localized message strings (**NOT IMPLEMENTED**)
 
 # Requirements
