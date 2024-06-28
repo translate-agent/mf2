@@ -1,4 +1,4 @@
-package mf2
+package builder
 
 import "testing"
 

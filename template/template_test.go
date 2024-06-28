@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
 )
 
@@ -224,32 +225,32 @@ func Test_ExecuteErrors(t *testing.T) {
 		{
 			name: "syntax error",
 			text: "Hello { $name",
-			want: want{parseErr: ErrSyntax},
+			want: want{parseErr: mf2.ErrSyntax},
 		},
 		{
 			name: "unresolved variable",
 			text: "Hello, { $name }!",
-			want: want{execErr: ErrUnresolvedVariable, text: "Hello, {$name}!"},
+			want: want{execErr: mf2.ErrUnresolvedVariable, text: "Hello, {$name}!"},
 		},
 		{
 			name: "unknown function",
 			text: "Hello, { :f }!",
-			want: want{execErr: ErrUnknownFunction, text: "Hello, {:f}!"},
+			want: want{execErr: mf2.ErrUnknownFunction, text: "Hello, {:f}!"},
 		},
 		{
 			name: "duplicate option name",
 			text: "Hello, { :number style=decimal style=percent }!",
-			want: want{execErr: ErrDuplicateOptionName, text: "Hello, !"},
+			want: want{execErr: mf2.ErrDuplicateOptionName, text: "Hello, !"},
 		},
 		{
 			name: "unsupported expression",
 			text: "Hello, { 12 ^private }!",
-			want: want{execErr: ErrUnsupportedExpression, text: "Hello, 12!"},
+			want: want{execErr: mf2.ErrUnsupportedExpression, text: "Hello, 12!"},
 		},
 		{
 			name: "formatting error",
 			text: "Hello, { :error }!",
-			want: want{execErr: ErrFormatting, text: "Hello, {:error}!"},
+			want: want{execErr: mf2.ErrFormatting, text: "Hello, {:error}!"},
 			funcs: Registry{
 				"error": {
 					Format: func(any, Options, language.Tag) (any, error) { return nil, errors.New("error") },
@@ -259,31 +260,31 @@ func Test_ExecuteErrors(t *testing.T) {
 		{
 			name: "unsupported declaration",
 			text: ".reserved { name } {{Hello!}}",
-			want: want{execErr: ErrUnsupportedStatement, text: "Hello!"},
+			want: want{execErr: mf2.ErrUnsupportedStatement, text: "Hello!"},
 		},
 		{
 			name:  "duplicate declaration",
 			text:  ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
 			input: map[string]any{"var": "22"},
-			want:  want{execErr: ErrDuplicateDeclaration},
+			want:  want{execErr: mf2.ErrDuplicateDeclaration},
 		},
 		{
 			name:  "duplicate declaration",
 			text:  ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
 			input: map[string]any{"ext": "22"},
-			want:  want{execErr: ErrDuplicateDeclaration},
+			want:  want{execErr: mf2.ErrDuplicateDeclaration},
 		},
 		{
 			name:  "Selection Error No Annotation",
 			text:  ".match {$n} 0 {{no apples}} 1 {{apple}} * {{apples}}",
 			input: map[string]any{"n": "1"},
-			want:  want{execErr: ErrMissingSelectorAnnotation},
+			want:  want{execErr: mf2.ErrMissingSelectorAnnotation},
 		},
 		{
 			name:  "Selection with Reversed Annotation",
 			text:  ".match {$count ^string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
 			input: map[string]any{"count": "1"},
-			want:  want{execErr: ErrUnsupportedExpression},
+			want:  want{execErr: mf2.ErrUnsupportedExpression},
 		},
 	}
 
