@@ -634,23 +634,37 @@ func (p *parser) parseMatcher() (Matcher, error) {
 }
 
 func (p *parser) parseVariantKeys() ([]VariantKey, error) {
-	var keys []VariantKey
+	var (
+		keys   []VariantKey
+		spaced bool // all keys must be separated by space
+	)
 
 	for itm := p.current(); itm.typ != itemQuotedPatternOpen; itm = p.next() {
 		switch itm.typ {
 		case itemError:
-			return nil, fmt.Errorf("got error token: '%s'", itm.val)
+			return nil, fmt.Errorf("got error token: %s", itm.val)
 		case itemWhitespace:
+			spaced = true
 			continue
 		case itemCatchAllKey:
+			if !spaced && len(keys) > 0 {
+				return nil, fmt.Errorf("missing space between keys %v and *", keys[len(keys)-1])
+			}
+
 			keys = append(keys, CatchAllKey{})
+			spaced = false
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
+			if !spaced && len(keys) > 0 {
+				return nil, fmt.Errorf("missing space between keys %v and %s", keys[len(keys)-1], itm.val)
+			}
+
 			literal, err := p.parseLiteral()
 			if err != nil {
 				return nil, fmt.Errorf("parse literal: %w", err)
 			}
 
 			keys = append(keys, literal)
+			spaced = false
 		// bad tokens
 		default:
 			return nil,
