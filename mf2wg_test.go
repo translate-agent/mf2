@@ -94,8 +94,6 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_{$bar_:number}_one_one_{{one_one}}_one_*_{{one_other}}_*_*_{{other}}#01",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_1_{{=1}}_one_{{one}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/hello_{|4.2|_:number_minimumFractionDigits=$foo}",
-
-		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/.match_{|foo|_:x}_{|bar|_:x}_**_{{foo}}",
 	}
 }
 

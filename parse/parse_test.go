@@ -750,6 +750,31 @@ no no {{Hello!}}`,
 	}
 }
 
+func TestParseErrors(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		in, wantErr string
+	}{
+		{
+			in:      ".match {|foo| :x} {|bar| :x} ** {{foo}}",
+			wantErr: "parse message `.match {|foo| :x} {|bar| :x} ** {{foo}}`: parse matcher: parse variant keys: missing space between keys * and *", //nolint:lll
+		},
+		{
+			in:      ".match {|foo| :x} {|bar| :x} *1 {{foo}}",
+			wantErr: "parse message `.match {|foo| :x} {|bar| :x} *1 {{foo}}`: parse matcher: parse variant keys: missing space between keys * and 1", //nolint:lll
+		},
+	} {
+		t.Run(test.in, func(t *testing.T) {
+			t.Parallel()
+
+			if _, err := Parse(test.in); err == nil || err.Error() != test.wantErr {
+				t.Errorf("want %s, got %s", test.wantErr, err)
+			}
+		})
+	}
+}
+
 // TestValidate tests negative cases for AST validation. Positive cases are covered by TestParse* tests.
 func TestValidate(t *testing.T) {
 	t.Parallel()
