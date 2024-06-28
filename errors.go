@@ -2,9 +2,9 @@ package mf2
 
 import "errors"
 
-// List of MF2 errors as defined in the specification.
+// List of [MF2 errors] as defined in the specification.
 //
-// See ".message-format-wg/spec/errors.md".
+// [MF2 errors]: https://github.com/unicode-org/message-format-wg/blob/main/spec/errors.md
 var (
 	// ErrBadOperand is any error that occurs due to the content or format of the operand,
 	// such as when the operand provided to a function during function resolution does not match one of the
