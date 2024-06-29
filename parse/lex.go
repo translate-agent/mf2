@@ -327,7 +327,7 @@ func lexComplexMessage(l *lexer) stateFn {
 		case l.isReservedBody:
 			l.backup()
 			return lexReservedBody(l)
-		case r == '$':
+		case r == variablePrefix:
 			l.backup()
 			return lexName(l)
 		case isWhitespace(r):
@@ -383,7 +383,7 @@ func lexExpr(l *lexer) stateFn {
 		return lexReservedBody(l)
 	case v == eof:
 		return l.emitErrorf("unexpected eof in expression")
-	case v == '$': // variable
+	case v == variablePrefix: // variable
 		l.backup()
 
 		return lexName(l)

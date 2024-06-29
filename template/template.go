@@ -347,7 +347,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.Variable:
 		val, ok := e.variables[string(v)]
 		if !ok {
-			return "{" + v + "}", fmt.Errorf("%w '%s'", mf2.ErrUnresolvedVariable, v)
+			return "{" + v.String() + "}", fmt.Errorf("%w '%s'", mf2.ErrUnresolvedVariable, v)
 		}
 
 		return val, nil
@@ -451,7 +451,7 @@ func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 				switch key := vKey.(type) {
 				case ast.CatchAllKey:
 					continue
-				case ast.NameLiteral, ast.QuotedLiteral, *ast.NumberLiteral:
+				case ast.NameLiteral, ast.QuotedLiteral, ast.NumberLiteral:
 					keys = append(keys, key.String())
 				}
 			}
