@@ -57,7 +57,7 @@ func (p *parser) collect() error {
 	for range 1000 {
 		itm := p.lexer.nextItem()
 		if itm.typ == itemError {
-			return fmt.Errorf("got error token: %s", itm.val)
+			return errors.New(itm.String())
 		}
 
 		p.items = append(p.items, itm)
@@ -67,7 +67,7 @@ func (p *parser) collect() error {
 		}
 	}
 
-	return errors.New("too many tokens. infinite loop ?")
+	return errors.New("too many tokens. infinite loop?")
 }
 
 // isComplexMessage returns true if first token is one of the complex message tokens.
@@ -127,9 +127,13 @@ Examples:
 	}
 */
 func Parse(input string) (AST, error) {
+	errorf := func(format string, a ...any) (AST, error) {
+		return AST{}, fmt.Errorf("parse MF2: "+format, a...)
+	}
+
 	p := &parser{lexer: lex(input), pos: -1}
 	if err := p.collect(); err != nil {
-		return AST{}, fmt.Errorf("collect tokens: %w", err)
+		return errorf("%w", err)
 	}
 
 	if len(p.items) == 1 && p.items[0].typ == itemEOF {
@@ -143,12 +147,12 @@ func Parse(input string) (AST, error) {
 
 	message, err := parse()
 	if err != nil {
-		return AST{}, fmt.Errorf("parse message `%s`: %w", input, err)
+		return errorf("%w", err)
 	}
 
 	ast := AST{Message: message}
 	if err := ast.validate(); err != nil {
-		return AST{}, fmt.Errorf("validate AST: %w", err)
+		return errorf("validate: %w", err)
 	}
 
 	return ast, nil
@@ -159,7 +163,7 @@ func Parse(input string) (AST, error) {
 func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
 	pattern, err := p.parsePattern()
 	if err != nil {
-		return SimpleMessage{}, fmt.Errorf("parse pattern: %w", err)
+		return SimpleMessage{}, fmt.Errorf("simple message: %w", err)
 	}
 
 	return SimpleMessage(pattern), nil
@@ -168,49 +172,54 @@ func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
 func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 	var message ComplexMessage
 
+	errorf := func(format string, args ...any) (ComplexMessage, error) {
+		return ComplexMessage{}, fmt.Errorf("complex message: "+format, args...)
+	}
+
 	for {
 		switch itm := p.nextNonWS(); itm.typ {
 		// Ending tokens
 		default:
-			return ComplexMessage{},
-				unexpectedErr(itm, itemInputKeyword, itemLocalKeyword, itemReservedKeyword, itemMatchKeyword, itemQuotedPatternOpen)
+			err := unexpectedErr(
+				itm, itemInputKeyword, itemLocalKeyword, itemReservedKeyword, itemMatchKeyword, itemQuotedPatternOpen)
+			return errorf("%w", err)
 		case itemError:
-			return ComplexMessage{}, fmt.Errorf("got error token: '%s'", itm.val)
+			return errorf("%s", itm)
 		case itemEOF:
 			return message, nil
 		// Non-ending tokens
 		case itemInputKeyword:
 			declaration, err := p.parseInputDeclaration()
 			if err != nil {
-				return ComplexMessage{}, fmt.Errorf("parse input declaration: %w", err)
+				return errorf("%w", err)
 			}
 
 			message.Declarations = append(message.Declarations, declaration)
 		case itemLocalKeyword:
 			declaration, err := p.parseLocalDeclaration()
 			if err != nil {
-				return ComplexMessage{}, fmt.Errorf("parse local declaration: %w", err)
+				return errorf("%w", err)
 			}
 
 			message.Declarations = append(message.Declarations, declaration)
 		case itemReservedKeyword:
 			declaration, err := p.parseReservedStatement()
 			if err != nil {
-				return ComplexMessage{}, fmt.Errorf("parse reserved statement: %w", err)
+				return errorf("%w", err)
 			}
 
 			message.Declarations = append(message.Declarations, declaration)
 		case itemMatchKeyword:
 			matcher, err := p.parseMatcher()
 			if err != nil {
-				return ComplexMessage{}, fmt.Errorf("parse matcher: %w", err)
+				return errorf("%w", err)
 			}
 
 			message.ComplexBody = matcher
 		case itemQuotedPatternOpen:
 			pattern, err := p.parsePattern()
 			if err != nil {
-				return ComplexMessage{}, fmt.Errorf("parse pattern: %w", err)
+				return errorf("%w", err)
 			}
 
 			message.ComplexBody = QuotedPattern(pattern)
@@ -224,11 +233,15 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 func (p *parser) parsePattern() ([]PatternPart, error) {
 	var pattern []PatternPart
 
+	errorf := func(format string, args ...any) ([]PatternPart, error) {
+		return nil, fmt.Errorf("pattern: "+format, args...)
+	}
+
 	// Loop until the end, or closing pattern quote, if parsing complex message.
 	for itm := p.next(); itm.typ != itemEOF && itm.typ != itemQuotedPatternClose; itm = p.next() {
 		switch itm.typ {
 		case itemError:
-			return nil, fmt.Errorf("got error token: '%s'", itm.val)
+			return errorf("%s", itm)
 		case itemWhitespace:
 			continue
 		case itemText:
@@ -241,20 +254,21 @@ func (p *parser) parsePattern() ([]PatternPart, error) {
 
 			expression, err := p.parseExpression()
 			if err != nil {
-				return nil, fmt.Errorf("parse expression: %w", err)
+				return errorf("%w", err)
 			}
 
 			pattern = append(pattern, expression)
 		case itemMarkupOpen, itemMarkupClose:
 			markup, err := p.parseMarkup()
 			if err != nil {
-				return nil, fmt.Errorf("parse markup: %w", err)
+				return errorf("%w", err)
 			}
 
 			pattern = append(pattern, markup)
 		// bad tokens
 		default:
-			return nil, unexpectedErr(itm, itemWhitespace, itemText, itemExpressionOpen, itemMarkupOpen, itemMarkupClose)
+			err := unexpectedErr(itm, itemWhitespace, itemText, itemExpressionOpen, itemMarkupOpen, itemMarkupClose)
+			return errorf("%w", err)
 		}
 	}
 
@@ -266,16 +280,19 @@ func (p *parser) parsePattern() ([]PatternPart, error) {
 func (p *parser) parseMarkup() (Markup, error) {
 	var markup Markup
 
+	errorf := func(format string, args ...any) (Markup, error) {
+		return Markup{}, fmt.Errorf("markup: "+format, args...)
+	}
+
 	for itm := p.current(); itm.typ != itemExpressionClose; itm = p.next() {
 		switch itm.typ {
 		case itemError:
-			return Markup{}, fmt.Errorf("got error token: '%s'", itm.val)
+			return errorf("%s", itm)
 		case itemWhitespace:
 			continue
 		case itemMarkupOpen:
 			markup.Typ = Open
 			markup.Identifier = p.parseIdentifier()
-
 		case itemMarkupClose:
 			if markup.Typ == Unspecified {
 				markup.Typ = Close
@@ -283,24 +300,23 @@ func (p *parser) parseMarkup() (Markup, error) {
 			} else {
 				markup.Typ = SelfClose
 			}
-
 		case itemOption:
 			option, err := p.parseOption()
 			if err != nil {
-				return Markup{}, fmt.Errorf("parse option: %w", err)
+				return errorf("%w", err)
 			}
 
 			markup.Options = append(markup.Options, option)
-
 		case itemAttribute:
 			attribute, err := p.parseAttribute()
 			if err != nil {
-				return Markup{}, fmt.Errorf("parse attribute: %w", err)
+				return errorf("%w", err)
 			}
 
 			markup.Attributes = append(markup.Attributes, attribute)
 		default:
-			return Markup{}, unexpectedErr(itm, itemWhitespace, itemMarkupOpen, itemMarkupClose, itemOption, itemAttribute)
+			err := unexpectedErr(itm, itemWhitespace, itemMarkupOpen, itemMarkupClose, itemOption, itemAttribute)
+			return errorf("%w", err)
 		}
 	}
 
@@ -315,19 +331,24 @@ func (p *parser) parseExpression() (Expression, error) {
 		err  error
 	)
 
+	errorf := func(format string, args ...any) (Expression, error) {
+		return Expression{}, fmt.Errorf("expression: "+format, args...)
+	}
+
 	// optional operand - literal or variable
 
 	switch itm := p.nextNonWS(); itm.typ {
 	default:
-		return Expression{},
-			unexpectedErr(itm,
-				itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-				itemFunction, itemPrivateStart, itemReservedStart, itemExpressionClose)
+		err = unexpectedErr(itm,
+			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
+			itemFunction, itemPrivateStart, itemReservedStart, itemExpressionClose)
+
+		return errorf("%w", err)
 	case itemVariable:
 		expr.Operand = Variable(itm.val)
 	case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 		if expr.Operand, err = p.parseLiteral(); err != nil {
-			return Expression{}, fmt.Errorf("parse literal: %w", err)
+			return errorf("%w", err)
 		}
 	case itemFunction, itemPrivateStart, itemReservedStart:
 		p.backup()
@@ -343,7 +364,7 @@ func (p *parser) parseExpression() (Expression, error) {
 	// ensure whitespace follows operand before annotation
 	if expr.Operand != nil {
 		if itm := p.next(); itm.typ != itemWhitespace {
-			return Expression{}, unexpectedErr(itm, itemWhitespace)
+			return errorf("between operand and annotation: %w", unexpectedErr(itm, itemWhitespace))
 		}
 	}
 
@@ -351,22 +372,22 @@ func (p *parser) parseExpression() (Expression, error) {
 
 	switch itm := p.next(); itm.typ {
 	default:
-		return Expression{}, unexpectedErr(itm, itemFunction, itemPrivateStart, itemReservedStart, itemAttribute)
+		return errorf("%w", unexpectedErr(itm, itemFunction, itemPrivateStart, itemReservedStart, itemAttribute))
 	case itemFunction:
 		if expr.Annotation, err = p.parseFunction(); err != nil {
-			return Expression{}, fmt.Errorf("parse function: %w", err)
+			return errorf("%w", err)
 		}
 	case itemReservedStart:
 		if expr.Annotation, err = p.parseReservedAnnotation(); err != nil {
-			return Expression{}, fmt.Errorf("parse private use annotation: %w", err)
+			return errorf("%w", err)
 		}
 	case itemPrivateStart:
 		if expr.Annotation, err = p.parsePrivateUseAnnotation(); err != nil {
-			return Expression{}, fmt.Errorf("parse reserved annotation: %w", err)
+			return errorf("%w", err)
 		}
 	case itemAttribute:
 		if expr.Operand == nil {
-			return Expression{}, errors.New("variable, literal or annotation is required before attribute")
+			return errorf("variable, literal or annotation is required before attribute")
 		}
 
 		p.backup() // attribute
@@ -380,17 +401,17 @@ func (p *parser) parseExpression() (Expression, error) {
 
 	// ensure whitespace follows annotation before attributes
 	if itm := p.next(); itm.typ != itemWhitespace {
-		return Expression{}, unexpectedErr(itm, itemWhitespace)
+		return errorf("%w", unexpectedErr(itm, itemWhitespace))
 	}
 
 	// parse attributes
 
 	if expr.Attributes, err = p.parseAttributes(); err != nil {
-		return Expression{}, fmt.Errorf("parse attributes: %w", err)
+		return errorf("%w", err)
 	}
 
 	if itm := p.nextNonWS(); itm.typ != itemExpressionClose {
-		return Expression{}, unexpectedErr(itm, itemExpressionClose)
+		return errorf("%w", unexpectedErr(itm, itemExpressionClose))
 	}
 
 	return expr, nil
@@ -405,20 +426,24 @@ func (p *parser) parseFunction() (Function, error) {
 		return function, nil
 	}
 
+	errorf := func(format string, args ...any) (Function, error) {
+		return Function{}, fmt.Errorf("function: "+format, args...)
+	}
+
 	// parse options
 
 	for {
 		if itm := p.next(); itm.typ != itemWhitespace {
-			return Function{}, unexpectedErr(itm, itemWhitespace)
+			return errorf("%w", unexpectedErr(itm, itemWhitespace))
 		}
 
 		switch itm := p.next(); itm.typ {
 		default:
-			return Function{}, unexpectedErr(itm, itemOption, itemExpressionClose, itemAttribute)
+			return errorf("%w", unexpectedErr(itm, itemOption, itemExpressionClose, itemAttribute))
 		case itemOption:
 			option, err := p.parseOption()
 			if err != nil {
-				return Function{}, fmt.Errorf("parse option: %w", err)
+				return errorf("%w", err)
 			}
 
 			function.Options = append(function.Options, option)
@@ -437,11 +462,14 @@ func (p *parser) parseFunction() (Function, error) {
 
 func (p *parser) parsePrivateUseAnnotation() (PrivateUseAnnotation, error) {
 	annotation := PrivateUseAnnotation{Start: rune(p.current().val[0])}
+	errorf := func(format string, args ...any) (PrivateUseAnnotation, error) {
+		return PrivateUseAnnotation{}, fmt.Errorf("private use annotation: "+format, args...)
+	}
 
 	switch itm := p.next(); itm.typ {
 	default:
-		return PrivateUseAnnotation{},
-			unexpectedErr(itm, itemWhitespace, itemReservedText, itemQuotedLiteral, itemExpressionClose)
+		err := unexpectedErr(itm, itemWhitespace, itemReservedText, itemQuotedLiteral, itemExpressionClose)
+		return errorf("%w", err)
 	case itemWhitespace: // noop
 	case itemReservedText, itemQuotedLiteral:
 		p.backup()
@@ -454,7 +482,7 @@ func (p *parser) parsePrivateUseAnnotation() (PrivateUseAnnotation, error) {
 	var err error
 
 	if annotation.ReservedBody, err = p.parseReservedBody(); err != nil {
-		return PrivateUseAnnotation{}, fmt.Errorf("parse reserve body: %w", err)
+		return errorf("%w", err)
 	}
 
 	return annotation, nil
@@ -462,10 +490,13 @@ func (p *parser) parsePrivateUseAnnotation() (PrivateUseAnnotation, error) {
 
 func (p *parser) parseReservedAnnotation() (ReservedAnnotation, error) {
 	annotation := ReservedAnnotation{Start: rune(p.current().val[0])}
+	errorf := func(format string, args ...any) (ReservedAnnotation, error) {
+		return ReservedAnnotation{}, fmt.Errorf("reserved annotation: "+format, args...)
+	}
 
 	switch itm := p.next(); itm.typ {
 	default:
-		return ReservedAnnotation{}, unexpectedErr(itm, itemWhitespace, itemExpressionClose)
+		return errorf("%w", unexpectedErr(itm, itemWhitespace, itemExpressionClose))
 	case itemWhitespace: // noop
 	case itemReservedText, itemQuotedLiteral:
 		p.backup()
@@ -478,7 +509,7 @@ func (p *parser) parseReservedAnnotation() (ReservedAnnotation, error) {
 	var err error
 
 	if annotation.ReservedBody, err = p.parseReservedBody(); err != nil {
-		return ReservedAnnotation{}, fmt.Errorf("parse reserve body: %w", err)
+		return errorf("%w", err)
 	}
 
 	return annotation, nil
@@ -490,8 +521,8 @@ func (p *parser) parseReservedBody() ([]ReservedBody, error) {
 	for {
 		switch itm := p.next(); itm.typ {
 		default:
-			return nil,
-				unexpectedErr(itm, itemWhitespace, itemReservedText, itemQuotedLiteral, itemAttribute, itemExpressionClose)
+			err := unexpectedErr(itm, itemWhitespace, itemReservedText, itemQuotedLiteral, itemAttribute, itemExpressionClose)
+			return nil, fmt.Errorf("reserved body: %w", err)
 		case itemWhitespace: // noop
 		case itemReservedText:
 			parts = append(parts, ReservedText(itm.val))
@@ -513,28 +544,32 @@ func (p *parser) parseReservedBody() ([]ReservedBody, error) {
 // ------------------------------Declaration------------------------------
 
 func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
+	errorf := func(err error) (LocalDeclaration, error) {
+		return LocalDeclaration{}, fmt.Errorf("local declaration: %w", err)
+	}
+
 	next := p.next()
 	if next.typ != itemWhitespace {
-		return LocalDeclaration{}, unexpectedErr(next, itemWhitespace)
+		return errorf(unexpectedErr(next, itemWhitespace))
 	}
 
 	if next = p.next(); next.typ != itemVariable {
-		return LocalDeclaration{}, unexpectedErr(next, itemVariable)
+		return errorf(unexpectedErr(next, itemVariable))
 	}
 
 	declaration := LocalDeclaration{Variable: Variable(next.val)}
 
 	if next = p.nextNonWS(); next.typ != itemOperator {
-		return LocalDeclaration{}, unexpectedErr(next, itemOperator)
+		return errorf(unexpectedErr(next, itemOperator))
 	}
 
 	if next = p.nextNonWS(); next.typ != itemExpressionOpen {
-		return LocalDeclaration{}, unexpectedErr(next, itemExpressionOpen)
+		return errorf(unexpectedErr(next, itemExpressionOpen))
 	}
 
 	expression, err := p.parseExpression()
 	if err != nil {
-		return LocalDeclaration{}, fmt.Errorf("parse expression: %w", err)
+		return errorf(err)
 	}
 
 	declaration.Expression = expression
@@ -543,18 +578,22 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 }
 
 func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
+	errorf := func(format string, args ...any) (InputDeclaration, error) {
+		return InputDeclaration{}, fmt.Errorf("input declaration: "+format, args...)
+	}
+
 	next := p.nextNonWS()
 	if next.typ != itemExpressionOpen {
-		return InputDeclaration{}, unexpectedErr(next, itemExpressionOpen)
+		return errorf("%w", unexpectedErr(next, itemExpressionOpen))
 	}
 
 	expression, err := p.parseExpression()
 	if err != nil {
-		return InputDeclaration{}, fmt.Errorf("parse expression: %w", err)
+		return errorf("%w", err)
 	}
 
 	if _, ok := expression.Operand.(Variable); !ok {
-		return InputDeclaration{}, fmt.Errorf("input declaration must have a variable as operand, got %T", expression.Operand)
+		return errorf("want operand as variable, got %T", expression.Operand)
 	}
 
 	return InputDeclaration(expression), nil
@@ -562,14 +601,17 @@ func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
 
 func (p *parser) parseReservedStatement() (ReservedStatement, error) {
 	statement := ReservedStatement{Keyword: p.current().val}
+	errorf := func(format string, args ...any) (ReservedStatement, error) {
+		return ReservedStatement{}, fmt.Errorf("reserved statement: "+format, args...)
+	}
 
 	for {
 		switch itm := p.nextNonWS(); itm.typ {
 		// Ending tokens
 		default:
-			return ReservedStatement{}, unexpectedErr(itm, itemReservedText, itemQuotedLiteral, itemExpressionOpen)
+			return errorf("%w", unexpectedErr(itm, itemReservedText, itemQuotedLiteral, itemExpressionOpen))
 		case itemError:
-			return ReservedStatement{}, fmt.Errorf("got error token: '%s'", itm.val)
+			return errorf("%s", itm)
 		case itemReservedKeyword, itemInputKeyword, itemLocalKeyword, // Another declaration
 			itemQuotedPatternOpen, itemMatchKeyword: // End of declarations
 			p.backup()
@@ -582,7 +624,7 @@ func (p *parser) parseReservedStatement() (ReservedStatement, error) {
 		case itemExpressionOpen:
 			expression, err := p.parseExpression()
 			if err != nil {
-				return ReservedStatement{}, fmt.Errorf("parse expression: %w", err)
+				return errorf("%w", err)
 			}
 
 			statement.Expressions = append(statement.Expressions, expression)
@@ -595,36 +637,40 @@ func (p *parser) parseReservedStatement() (ReservedStatement, error) {
 func (p *parser) parseMatcher() (Matcher, error) {
 	var matcher Matcher
 
+	errorf := func(format string, args ...any) (Matcher, error) {
+		return Matcher{}, fmt.Errorf("matcher: "+format, args...)
+	}
+
 	for itm := p.next(); itm.typ != itemEOF; itm = p.next() {
 		switch itm.typ {
 		case itemError:
-			return Matcher{}, fmt.Errorf("got error token: '%s'", itm.val)
+			return errorf("%s", itm)
 		case itemWhitespace:
 			continue
 		case itemExpressionOpen:
 			expression, err := p.parseExpression()
 			if err != nil {
-				return Matcher{}, fmt.Errorf("parse expression: %w", err)
+				return errorf("%w", err)
 			}
 
 			matcher.MatchStatements = append(matcher.MatchStatements, expression)
 		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			keys, err := p.parseVariantKeys()
 			if err != nil {
-				return Matcher{}, fmt.Errorf("parse variant keys: %w", err)
+				return errorf("%w", err)
 			}
 
 			pattern, err := p.parsePattern()
 			if err != nil {
-				return Matcher{}, fmt.Errorf("parse pattern: %w", err)
+				return errorf("%w", err)
 			}
 
 			matcher.Variants = append(matcher.Variants, Variant{Keys: keys, QuotedPattern: QuotedPattern(pattern)})
 		// bad tokens
 		default:
-			return Matcher{},
-				unexpectedErr(itm,
-					itemWhitespace, itemExpressionOpen, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+			err := unexpectedErr(itm, itemWhitespace, itemExpressionOpen, itemCatchAllKey,
+				itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+			return errorf("%w", err)
 		}
 	}
 
@@ -639,36 +685,40 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 		spaced bool // all keys must be separated by space
 	)
 
+	errorf := func(format string, args ...any) ([]VariantKey, error) {
+		return nil, fmt.Errorf("variant keys: "+format, args...)
+	}
+
 	for itm := p.current(); itm.typ != itemQuotedPatternOpen; itm = p.next() {
 		switch itm.typ {
 		case itemError:
-			return nil, fmt.Errorf("got error token: %s", itm.val)
+			return errorf("%s", itm)
 		case itemWhitespace:
 			spaced = true
 			continue
 		case itemCatchAllKey:
 			if !spaced && len(keys) > 0 {
-				return nil, fmt.Errorf("missing space between keys %v and *", keys[len(keys)-1])
+				return errorf("missing space between keys %v and *", keys[len(keys)-1])
 			}
 
 			keys = append(keys, CatchAllKey{})
 			spaced = false
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			if !spaced && len(keys) > 0 {
-				return nil, fmt.Errorf("missing space between keys %v and %s", keys[len(keys)-1], itm.val)
+				return errorf("missing space between keys %v and %s", keys[len(keys)-1], itm.val)
 			}
 
 			literal, err := p.parseLiteral()
 			if err != nil {
-				return nil, fmt.Errorf("parse literal: %w", err)
+				return errorf("%w", err)
 			}
 
 			keys = append(keys, literal)
 			spaced = false
 		// bad tokens
 		default:
-			return nil,
-				unexpectedErr(itm, itemWhitespace, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+			err := unexpectedErr(itm, itemWhitespace, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+			return errorf("%w", err)
 		}
 	}
 
@@ -677,46 +727,55 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 
 func (p *parser) parseOption() (Option, error) {
 	option := Option{Identifier: p.parseIdentifier()}
+	errorf := func(format string, args ...any) (Option, error) {
+		return Option{}, fmt.Errorf("option: "+format, args...)
+	}
 
 	// Next token must be an operator.
 	if next := p.nextNonWS(); next.typ != itemOperator {
-		return Option{}, unexpectedErr(next, itemOperator)
+		return errorf("%w", unexpectedErr(next, itemOperator))
 	}
-
-	var err error
 
 	// Next after operator must be a variable or literal.
 	switch next := p.nextNonWS(); next.typ {
 	default:
-		err = unexpectedErr(next, itemVariable, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral)
+		err := unexpectedErr(next, itemVariable, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral)
+		return errorf("%w", err)
 	case itemError:
-		err = fmt.Errorf("got error token: '%s'", next.val)
+		return errorf("%s", next)
 	case itemVariable:
 		option.Value = Variable(next.val)
 	case itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral:
-		option.Value, err = p.parseLiteral()
+		var err error
+		if option.Value, err = p.parseLiteral(); err != nil {
+			return errorf("%w", err)
+		}
 	}
 
-	return option, err
+	return option, nil
 }
 
 func (p *parser) parseAttributes() ([]Attribute, error) {
 	var attributes []Attribute
 
+	errorf := func(format string, args ...any) ([]Attribute, error) {
+		return nil, fmt.Errorf("attribute at %d: "+format, append([]any{len(attributes)}, args)...)
+	}
+
 	for {
 		if len(attributes) > 0 {
 			if itm := p.next(); itm.typ != itemWhitespace {
-				return nil, unexpectedErr(itm, itemWhitespace)
+				return errorf("%w", unexpectedErr(itm, itemWhitespace))
 			}
 		}
 
 		switch itm := p.next(); itm.typ {
 		default:
-			return nil, unexpectedErr(itm, itemAttribute, itemExpressionClose)
+			return errorf("%w", unexpectedErr(itm, itemAttribute, itemExpressionClose))
 		case itemAttribute:
 			attribute, err := p.parseAttribute()
 			if err != nil {
-				return nil, fmt.Errorf("parse attribute: %w", err)
+				return errorf("%w", err)
 			}
 
 			attributes = append(attributes, attribute)
@@ -730,10 +789,13 @@ func (p *parser) parseAttributes() ([]Attribute, error) {
 
 func (p *parser) parseAttribute() (Attribute, error) {
 	attribute := Attribute{Identifier: p.parseIdentifier()}
+	errorf := func(format string, args ...any) (Attribute, error) {
+		return Attribute{}, fmt.Errorf("attribute: "+format, args...)
+	}
 
 	switch itm := p.peekNonWS(); itm.typ {
 	default:
-		return Attribute{}, unexpectedErr(itm, itemAttribute, itemOperator, itemExpressionClose)
+		return errorf("%w", unexpectedErr(itm, itemAttribute, itemOperator, itemExpressionClose))
 	case itemOperator:
 		p.nextNonWS() // skip it
 	case itemExpressionClose, itemAttribute:
@@ -744,12 +806,12 @@ func (p *parser) parseAttribute() (Attribute, error) {
 
 	switch itm := p.nextNonWS(); itm.typ {
 	default:
-		return Attribute{}, unexpectedErr(itm, itemVariable, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral)
+		return errorf("%w", unexpectedErr(itm, itemVariable, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral))
 	case itemVariable:
 		attribute.Value = Variable(itm.val)
 	case itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral:
 		if attribute.Value, err = p.parseLiteral(); err != nil {
-			return Attribute{}, fmt.Errorf("parse literal: %w", err)
+			return errorf("%w", err)
 		}
 	}
 
@@ -759,11 +821,12 @@ func (p *parser) parseAttribute() (Attribute, error) {
 func (p *parser) parseLiteral() (Literal, error) {
 	switch itm := p.current(); itm.typ {
 	default:
-		return nil, unexpectedErr(itm, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+		err := unexpectedErr(itm, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+		return nil, fmt.Errorf("literal: %w", err)
 	case itemNumberLiteral:
 		var num float64
 		if err := json.Unmarshal([]byte(itm.val), &num); err != nil {
-			return nil, fmt.Errorf("parse number literal: %w", err)
+			return nil, fmt.Errorf("number literal: %w", err)
 		}
 
 		return NumberLiteral(num), nil
@@ -795,7 +858,7 @@ type UnexpectedTokenError struct {
 
 func (u UnexpectedTokenError) Error() string {
 	if len(u.Expected) == 0 {
-		return fmt.Sprintf("expected no items, got '%s'", u.Actual)
+		return fmt.Sprintf("want no items, got %s", u.Actual)
 	}
 
 	r := u.Expected[0].String()
@@ -803,7 +866,7 @@ func (u UnexpectedTokenError) Error() string {
 		r += ", " + typ.String()
 	}
 
-	return fmt.Sprintf("expected item: %s, got %s", r, u.Actual)
+	return fmt.Sprintf("want item %s, got %s", r, u.Actual)
 }
 
 func unexpectedErr(actual item, expected ...itemType) UnexpectedTokenError {
