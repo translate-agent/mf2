@@ -758,11 +758,11 @@ func TestParseErrors(t *testing.T) {
 	}{
 		{
 			in:      ".match {|foo| :x} {|bar| :x} ** {{foo}}",
-			wantErr: "parse message `.match {|foo| :x} {|bar| :x} ** {{foo}}`: parse matcher: parse variant keys: missing space between keys * and *", //nolint:lll
+			wantErr: "parse MF2: complex message: matcher: variant keys: missing space between keys * and *",
 		},
 		{
 			in:      ".match {|foo| :x} {|bar| :x} *1 {{foo}}",
-			wantErr: "parse message `.match {|foo| :x} {|bar| :x} *1 {{foo}}`: parse matcher: parse variant keys: missing space between keys * and 1", //nolint:lll
+			wantErr: "parse MF2: complex message: matcher: variant keys: missing space between keys * and 1",
 		},
 	} {
 		t.Run(test.in, func(t *testing.T) {

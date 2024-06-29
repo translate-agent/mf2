@@ -119,7 +119,7 @@ type item struct {
 }
 
 func (i item) String() string {
-	return fmt.Sprintf(`%s "%s"`, i.typ, i.val)
+	return fmt.Sprintf(`%s token "%s"`, i.typ, i.val)
 }
 
 // mk creates a new item with the given type and value.
