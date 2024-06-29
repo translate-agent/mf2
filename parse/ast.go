@@ -679,11 +679,37 @@ func (m Markup) String() string {
 	default:
 		return ""
 	case Open:
-		return "{ #" + m.Identifier.String() + " " + sliceToString(m.Options, " ") + " " + sliceToString(m.Attributes, " ") + "}"
+		s := "{ #" + m.Identifier.String()
+
+		if len(m.Options) > 0 {
+			s += " " + sliceToString(m.Options, " ")
+		}
+
+		if len(m.Attributes) > 0 {
+			s += " " + sliceToString(m.Attributes, " ")
+		}
+
+		return s + "}"
 	case Close:
-		return "{ /" + m.Identifier.String() + " " + sliceToString(m.Attributes, " ") + " }"
+		s := "{ /" + m.Identifier.String()
+
+		if len(m.Attributes) > 0 {
+			s += " " + sliceToString(m.Attributes, " ")
+		}
+
+		return s + " }"
 	case SelfClose:
-		return "{ #" + m.Identifier.String() + " " + sliceToString(m.Options, " ") + " " + sliceToString(m.Attributes, " ") + " /}"
+		s := "{ #" + m.Identifier.String()
+
+		if len(m.Options) > 0 {
+			s += " " + sliceToString(m.Options, " ")
+		}
+
+		if len(m.Attributes) > 0 {
+			s += " " + sliceToString(m.Attributes, " ")
+		}
+
+		return s + " /}"
 	}
 }
 
