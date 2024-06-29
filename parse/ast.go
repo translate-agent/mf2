@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 )
 
@@ -27,7 +28,7 @@ Example:
 
 	fmt.Print(ast) // Hello, { $variable } World!
 */
-func (a AST) String() string { return fmt.Sprint(a.Message) }
+func (a AST) String() string { return a.Message.String() }
 
 /*
 validate returns an error if the AST is invalid according to the MessageFormat 2.0 specification.
@@ -152,10 +153,10 @@ type ComplexMessage struct {
 
 func (m ComplexMessage) String() string {
 	if len(m.Declarations) == 0 {
-		return fmt.Sprint(m.ComplexBody)
+		return m.ComplexBody.String()
 	}
 
-	return fmt.Sprintf("%s\n%s", sliceToString(m.Declarations, "\n"), m.ComplexBody)
+	return sliceToString(m.Declarations, "\n") + "\n" + m.ComplexBody.String()
 }
 
 func (m ComplexMessage) node()    {}
@@ -206,21 +207,21 @@ type Expression struct {
 }
 
 func (e Expression) String() string {
-	var s string
+	s := "{"
 
 	if e.Operand != nil {
-		s = fmt.Sprintf(" %s", e.Operand)
+		s += " " + e.Operand.String()
 	}
 
 	if e.Annotation != nil {
-		s += fmt.Sprintf(" %s", e.Annotation)
+		s += " " + e.Annotation.String()
 	}
 
 	if len(e.Attributes) > 0 {
 		s += " " + sliceToString(e.Attributes, " ")
 	}
 
-	return fmt.Sprintf("{%s}", s)
+	return s + "}"
 }
 
 func (Expression) node()        {}
@@ -261,7 +262,7 @@ func (l QuotedLiteral) String() string {
 		`|`, `\|`,
 	)
 
-	return fmt.Sprintf("|%s|", r.Replace(string(l)))
+	return "|" + r.Replace(string(l)) + "|"
 }
 
 func (QuotedLiteral) node()         {}
@@ -291,7 +292,7 @@ func (l NameLiteral) validate() error {
 
 type NumberLiteral float64
 
-func (l NumberLiteral) String() string { return fmt.Sprint(float64(l)) }
+func (l NumberLiteral) String() string { return strconv.FormatFloat(float64(l), 'f', -1, 64) }
 
 func (NumberLiteral) node()       {}
 func (NumberLiteral) literal()    {}
@@ -318,10 +319,10 @@ type Function struct {
 
 func (f Function) String() string {
 	if len(f.Options) == 0 {
-		return fmt.Sprintf(":%s", f.Identifier)
+		return ":" + f.Identifier.String()
 	}
 
-	return fmt.Sprintf(":%s %s", f.Identifier, sliceToString(f.Options, " "))
+	return ":" + f.Identifier.String() + " " + sliceToString(f.Options, " ")
 }
 
 func (Function) node()       {}
@@ -345,7 +346,7 @@ type PrivateUseAnnotation struct {
 }
 
 func (p PrivateUseAnnotation) String() string {
-	return fmt.Sprintf("%c%s", p.Start, sliceToString(p.ReservedBody, ""))
+	return string(p.Start) + sliceToString(p.ReservedBody, "")
 }
 
 func (PrivateUseAnnotation) node()       {}
@@ -390,7 +391,7 @@ func (p ReservedAnnotation) validate() error {
 
 type InputDeclaration Expression // Only VariableExpression, i.e. operand is type Variable.
 
-func (d InputDeclaration) String() string { return fmt.Sprintf("%s %s", input, Expression(d)) }
+func (d InputDeclaration) String() string { return input + " " + Expression(d).String() }
 
 func (InputDeclaration) node()        {}
 func (InputDeclaration) declaration() {}
@@ -417,7 +418,7 @@ type LocalDeclaration struct {
 }
 
 func (d LocalDeclaration) String() string {
-	return fmt.Sprintf("%s %s = %s", local, d.Variable, d.Expression)
+	return local + " " + d.Variable.String() + " = " + d.Expression.String()
 }
 
 func (LocalDeclaration) node()        {}
@@ -443,10 +444,10 @@ type ReservedStatement struct {
 
 func (s ReservedStatement) String() string {
 	if len(s.ReservedBody) > 0 {
-		return fmt.Sprintf(".%s %s %s", s.Keyword, sliceToString(s.ReservedBody, " "), sliceToString(s.Expressions, " "))
+		return "." + s.Keyword + " " + sliceToString(s.ReservedBody, " ") + " " + sliceToString(s.Expressions, " ")
 	}
 
-	return fmt.Sprintf(".%s %s", s.Keyword, sliceToString(s.Expressions, " "))
+	return "." + s.Keyword + " " + sliceToString(s.Expressions, " ")
 }
 
 func (ReservedStatement) node()        {}
@@ -493,7 +494,7 @@ func (k CatchAllKey) validate() error { return nil }
 
 type QuotedPattern []PatternPart
 
-func (p QuotedPattern) String() string { return fmt.Sprintf("{{%s}}", sliceToString(p, "")) }
+func (p QuotedPattern) String() string { return "{{" + sliceToString(p, "") + "}}" }
 
 func (QuotedPattern) node()        {}
 func (QuotedPattern) complexBody() {}
@@ -515,7 +516,7 @@ func (m Matcher) String() string {
 	matchStr := sliceToString(m.MatchStatements, " ")
 	variantsStr := sliceToString(m.Variants, "\n")
 
-	return fmt.Sprintf("%s %s\n%s", match, matchStr, variantsStr)
+	return match + " " + matchStr + "\n" + variantsStr
 }
 
 func (Matcher) node()        {}
@@ -545,7 +546,7 @@ func (m Matcher) validate() error {
 
 type Variable string
 
-func (v Variable) String() string { return fmt.Sprintf("%c%s", variablePrefix, string(v)) }
+func (v Variable) String() string { return string(variablePrefix) + string(v) }
 
 func (Variable) node()  {}
 func (Variable) value() {}
@@ -592,7 +593,7 @@ func (i Identifier) String() string {
 		return i.Name
 	}
 
-	return fmt.Sprintf("%s:%s", i.Namespace, i.Name)
+	return i.Namespace + ":" + i.Name
 }
 
 func (i Identifier) validate() error {
@@ -611,7 +612,7 @@ type Variant struct {
 }
 
 func (v Variant) String() string {
-	return fmt.Sprintf("%s %s", sliceToString(v.Keys, " "), v.QuotedPattern)
+	return sliceToString(v.Keys, " ") + " " + v.QuotedPattern.String()
 }
 
 func (v Variant) validate() error {
@@ -637,7 +638,7 @@ type Option struct {
 	Identifier Identifier
 }
 
-func (o Option) String() string { return fmt.Sprintf("%s = %s", o.Identifier, o.Value) }
+func (o Option) String() string { return o.Identifier.String() + " = " + o.Value.String() }
 
 func (o Option) validate() error {
 	if err := o.Identifier.validate(); err != nil {
@@ -678,11 +679,11 @@ func (m Markup) String() string {
 	default:
 		return ""
 	case Open:
-		return fmt.Sprintf("{ #%s %s %s }", m.Identifier, sliceToString(m.Options, " "), sliceToString(m.Attributes, " "))
+		return "{ #" + m.Identifier.String() + " " + sliceToString(m.Options, " ") + " " + sliceToString(m.Attributes, " ") + "}"
 	case Close:
-		return fmt.Sprintf("{ /%s %s }", m.Identifier, sliceToString(m.Attributes, " "))
+		return "{ /" + m.Identifier.String() + " " + sliceToString(m.Attributes, " ") + " }"
 	case SelfClose:
-		return fmt.Sprintf("{ #%s %s %s /}", m.Identifier, sliceToString(m.Options, " "), sliceToString(m.Attributes, " "))
+		return "{ #" + m.Identifier.String() + " " + sliceToString(m.Options, " ") + " " + sliceToString(m.Attributes, " ") + " /}"
 	}
 }
 
@@ -711,10 +712,10 @@ type Attribute struct {
 
 func (a Attribute) String() string {
 	if a.Value == nil {
-		return fmt.Sprintf("@%s", a.Identifier)
+		return "@" + a.Identifier.String()
 	}
 
-	return fmt.Sprintf("@%s = %s", a.Identifier, a.Value)
+	return "@" + a.Identifier.String() + " = " + a.Value.String()
 }
 
 func (a Attribute) validate() error {
@@ -770,7 +771,7 @@ func isZeroValue[T comparable](v T) bool {
 func validateSlice[T Node](s []T) error {
 	for _, v := range s {
 		if err := v.validate(); err != nil {
-			return fmt.Errorf("%w '%s'", err, fmt.Sprint(v))
+			return fmt.Errorf("%w '%s'", err, v.String())
 		}
 	}
 
