@@ -133,7 +133,10 @@ type ReservedBody interface {
 
 type SimpleMessage []PatternPart
 
-func (m SimpleMessage) String() string { return sliceToString(m, "") }
+// String returns MF2 formatted string.
+func (m SimpleMessage) String() string {
+	return sliceToString(m, "")
+}
 
 func (m SimpleMessage) node()    {}
 func (m SimpleMessage) message() {}
@@ -151,6 +154,7 @@ type ComplexMessage struct {
 	Declarations []Declaration // Optional: InputDeclaration, LocalDeclaration or ReservedStatement
 }
 
+// String returns MF2 formatted string.
 func (m ComplexMessage) String() string {
 	if len(m.Declarations) == 0 {
 		return m.ComplexBody.String()
@@ -182,6 +186,7 @@ func (m ComplexMessage) validate() error {
 
 type Text string
 
+// String returns MF2 formatted string.
 func (t Text) String() string {
 	// text-escape = backslash ( backslash / "{" / "}" )
 	r := strings.NewReplacer(
@@ -206,6 +211,7 @@ type Expression struct {
 	Attributes []Attribute // Optional
 }
 
+// String returns MF2 formatted string.
 func (e Expression) String() string {
 	s := "{"
 
@@ -255,6 +261,7 @@ func (e Expression) validate() error {
 
 type QuotedLiteral string
 
+// String returns MF2 formatted string.
 func (l QuotedLiteral) String() string {
 	// quoted-escape = backslash ( backslash / "|" )
 	r := strings.NewReplacer(
@@ -275,7 +282,10 @@ func (l QuotedLiteral) validate() error { return nil }
 
 type NameLiteral string
 
-func (l NameLiteral) String() string { return string(l) }
+// String returns MF2 formatted string.
+func (l NameLiteral) String() string {
+	return string(l)
+}
 
 func (NameLiteral) node()       {}
 func (NameLiteral) literal()    {}
@@ -292,6 +302,7 @@ func (l NameLiteral) validate() error {
 
 type NumberLiteral float64
 
+// String returns MF2 formatted string.
 func (l NumberLiteral) String() string { return strconv.FormatFloat(float64(l), 'f', -1, 64) }
 
 func (NumberLiteral) node()       {}
@@ -317,6 +328,7 @@ type Function struct {
 	Options    []Option // Optional
 }
 
+// String returns MF2 formatted string.
 func (f Function) String() string {
 	if len(f.Options) == 0 {
 		return ":" + f.Identifier.String()
@@ -345,6 +357,7 @@ type PrivateUseAnnotation struct {
 	Start        rune
 }
 
+// String returns MF2 formatted string.
 func (p PrivateUseAnnotation) String() string {
 	return string(p.Start) + sliceToString(p.ReservedBody, "")
 }
@@ -368,7 +381,10 @@ func (p PrivateUseAnnotation) validate() error {
 
 type ReservedAnnotation PrivateUseAnnotation
 
-func (p ReservedAnnotation) String() string { return PrivateUseAnnotation(p).String() }
+// String returns MF2 formatted string.
+func (p ReservedAnnotation) String() string {
+	return PrivateUseAnnotation(p).String()
+}
 
 func (ReservedAnnotation) node()       {}
 func (ReservedAnnotation) annotation() {}
@@ -391,7 +407,10 @@ func (p ReservedAnnotation) validate() error {
 
 type InputDeclaration Expression // Only VariableExpression, i.e. operand is type Variable.
 
-func (d InputDeclaration) String() string { return input + " " + Expression(d).String() }
+// String returns MF2 formatted string.
+func (d InputDeclaration) String() string {
+	return input + " " + Expression(d).String()
+}
 
 func (InputDeclaration) node()        {}
 func (InputDeclaration) declaration() {}
@@ -417,6 +436,7 @@ type LocalDeclaration struct {
 	Expression Expression
 }
 
+// String returns MF2 formatted string.
 func (d LocalDeclaration) String() string {
 	return local + " " + d.Variable.String() + " = " + d.Expression.String()
 }
@@ -442,6 +462,7 @@ type ReservedStatement struct {
 	Expressions  []Expression   // At least one
 }
 
+// String returns MF2 formatted string.
 func (s ReservedStatement) String() string {
 	if len(s.ReservedBody) > 0 {
 		return "." + s.Keyword + " " + sliceToString(s.ReservedBody, " ") + " " + sliceToString(s.Expressions, " ")
@@ -483,7 +504,10 @@ func (s ReservedStatement) validate() error {
 // CatchAllKey is a special key, that matches any value.
 type CatchAllKey struct{}
 
-func (k CatchAllKey) String() string { return catchAllSymbol }
+// String returns MF2 formatted string.
+func (k CatchAllKey) String() string {
+	return catchAllSymbol
+}
 
 func (CatchAllKey) node()       {}
 func (CatchAllKey) variantKey() {}
@@ -494,7 +518,10 @@ func (k CatchAllKey) validate() error { return nil }
 
 type QuotedPattern []PatternPart
 
-func (p QuotedPattern) String() string { return "{{" + sliceToString(p, "") + "}}" }
+// String returns MF2 formatted string.
+func (p QuotedPattern) String() string {
+	return "{{" + sliceToString(p, "") + "}}"
+}
 
 func (QuotedPattern) node()        {}
 func (QuotedPattern) complexBody() {}
@@ -512,6 +539,7 @@ type Matcher struct {
 	Variants        []Variant    // At least one
 }
 
+// String returns MF2 formatted string.
 func (m Matcher) String() string {
 	matchStr := sliceToString(m.MatchStatements, " ")
 	variantsStr := sliceToString(m.Variants, "\n")
@@ -546,7 +574,10 @@ func (m Matcher) validate() error {
 
 type Variable string
 
-func (v Variable) String() string { return string(variablePrefix) + string(v) }
+// String returns MF2 formatted string.
+func (v Variable) String() string {
+	return string(variablePrefix) + string(v)
+}
 
 func (Variable) node()  {}
 func (Variable) value() {}
@@ -561,6 +592,7 @@ func (v Variable) validate() error {
 
 type ReservedText string
 
+// String returns MF2 formatted string.
 func (t ReservedText) String() string {
 	return strings.NewReplacer(
 		`\`, `\\`,
@@ -588,6 +620,7 @@ type Identifier struct {
 	Name      string
 }
 
+// String returns MF2 formatted string.
 func (i Identifier) String() string {
 	if i.Namespace == "" {
 		return i.Name
@@ -611,6 +644,7 @@ type Variant struct {
 	QuotedPattern QuotedPattern
 }
 
+// String returns MF2 formatted string.
 func (v Variant) String() string {
 	return sliceToString(v.Keys, " ") + " " + v.QuotedPattern.String()
 }
@@ -638,7 +672,10 @@ type Option struct {
 	Identifier Identifier
 }
 
-func (o Option) String() string { return o.Identifier.String() + " = " + o.Value.String() }
+// String returns MF2 formatted string.
+func (o Option) String() string {
+	return o.Identifier.String() + " = " + o.Value.String()
+}
 
 func (o Option) validate() error {
 	if err := o.Identifier.validate(); err != nil {
@@ -674,6 +711,7 @@ type Markup struct {
 	Typ        MarkupType
 }
 
+// String returns MF2 formatted string.
 func (m Markup) String() string {
 	switch m.Typ {
 	default:
@@ -736,6 +774,7 @@ type Attribute struct {
 	Identifier Identifier
 }
 
+// String returns MF2 formatted string.
 func (a Attribute) String() string {
 	if a.Value == nil {
 		return "@" + a.Identifier.String()
