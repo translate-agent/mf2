@@ -451,8 +451,8 @@ func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 				switch key := vKey.(type) {
 				case ast.CatchAllKey:
 					continue
-				case *ast.QuotedLiteral:
-					keys = append(keys, string(*key))
+				case ast.QuotedLiteral:
+					keys = append(keys, string(key))
 				case ast.NameLiteral, ast.NumberLiteral:
 					keys = append(keys, key.String())
 				}
@@ -483,8 +483,8 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 			switch key := key.(type) {
 			case ast.CatchAllKey:
 				continue
-			case *ast.QuotedLiteral:
-				ks = string(*key)
+			case ast.QuotedLiteral:
+				ks = string(key)
 			case ast.NameLiteral, ast.NumberLiteral:
 				ks = key.String()
 			}
