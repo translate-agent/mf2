@@ -119,7 +119,7 @@ type item struct {
 }
 
 func (i item) String() string {
-	return fmt.Sprintf(`%s token "%s"`, i.typ, i.val)
+	return i.typ.String() + ` token "` + i.val + `"`
 }
 
 // mk creates a new item with the given type and value.
@@ -327,7 +327,7 @@ func lexComplexMessage(l *lexer) stateFn {
 		case l.isReservedBody:
 			l.backup()
 			return lexReservedBody(l)
-		case r == '$':
+		case r == variablePrefix:
 			l.backup()
 			return lexName(l)
 		case isWhitespace(r):
@@ -383,7 +383,7 @@ func lexExpr(l *lexer) stateFn {
 		return lexReservedBody(l)
 	case v == eof:
 		return l.emitErrorf("unexpected eof in expression")
-	case v == '$': // variable
+	case v == variablePrefix: // variable
 		l.backup()
 
 		return lexName(l)

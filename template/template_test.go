@@ -200,7 +200,7 @@ func Test_Matcher(t *testing.T) {
 					}
 
 					if test.want[i] != got {
-						t.Errorf("want %s at %d, got %s", test.want[i], i, got)
+						t.Errorf(`want "%s" at %d, got "%s"`, test.want[i], i, got)
 					}
 				})
 			}
@@ -307,7 +307,7 @@ func Test_ExecuteErrors(t *testing.T) {
 			}
 
 			if test.want.text != text {
-				t.Errorf("want %s, got %s", test.want.text, text)
+				t.Errorf(`want "%s", got "%s"`, test.want.text, text)
 			}
 		})
 	}

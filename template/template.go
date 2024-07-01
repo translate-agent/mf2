@@ -347,7 +347,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.Variable:
 		val, ok := e.variables[string(v)]
 		if !ok {
-			return fmt.Sprintf("{%s}", v), fmt.Errorf("%w '%s'", mf2.ErrUnresolvedVariable, v)
+			return "{" + v.String() + "}", fmt.Errorf("%w '%s'", mf2.ErrUnresolvedVariable, v)
 		}
 
 		return val, nil
@@ -451,10 +451,8 @@ func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 				switch key := vKey.(type) {
 				case ast.CatchAllKey:
 					continue
-				case ast.NameLiteral, ast.QuotedLiteral:
+				case ast.NameLiteral, ast.QuotedLiteral, ast.NumberLiteral:
 					keys = append(keys, key.String())
-				case ast.NumberLiteral:
-					keys = append(keys, fmt.Sprint(key))
 				}
 			}
 		}
@@ -483,10 +481,8 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 			switch key := key.(type) {
 			case ast.CatchAllKey:
 				continue
-			case ast.NameLiteral, ast.QuotedLiteral:
+			case ast.NameLiteral, ast.QuotedLiteral, ast.NumberLiteral:
 				ks = key.String()
-			case ast.NumberLiteral:
-				ks = fmt.Sprint(key)
 			}
 
 			if !slices.Contains(keyOrder, ks) {
@@ -524,10 +520,8 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 			case ast.CatchAllKey:
 				sortable[tupleIndex].Score = currentScore
 				continue
-			case ast.NameLiteral, ast.QuotedLiteral:
+			case ast.NameLiteral, ast.QuotedLiteral, ast.NumberLiteral:
 				ks = key.String()
-			case ast.NumberLiteral:
-				ks = fmt.Sprint(key)
 			}
 
 			currentScore = slices.Index(matches, ks)

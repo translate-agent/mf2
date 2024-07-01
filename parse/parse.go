@@ -858,7 +858,7 @@ type UnexpectedTokenError struct {
 
 func (u UnexpectedTokenError) Error() string {
 	if len(u.Expected) == 0 {
-		return fmt.Sprintf("want no items, got %s", u.Actual)
+		return "want no items, got " + u.Actual.String()
 	}
 
 	r := u.Expected[0].String()
@@ -866,7 +866,7 @@ func (u UnexpectedTokenError) Error() string {
 		r += ", " + typ.String()
 	}
 
-	return fmt.Sprintf("want item %s, got %s", r, u.Actual)
+	return "want item " + r + ", got " + u.Actual.String()
 }
 
 func unexpectedErr(actual item, expected ...itemType) UnexpectedTokenError {
