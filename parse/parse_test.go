@@ -375,6 +375,18 @@ func TestParseComplexMessage(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:  "trailing whitespace",
+			input: "{{Hello, { |literal| } World!}}\n\t ",
+			want: ComplexMessage{
+				Declarations: nil,
+				ComplexBody: QuotedPattern{
+					Text("Hello, "),
+					Expression{Operand: QuotedLiteral("literal")},
+					Text(" World!"),
+				},
+			},
+		},
 		//nolint:dupword
 		{
 			name: "all declarations",
