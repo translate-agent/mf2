@@ -448,15 +448,17 @@ func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 
 		for _, variant := range m.Variants {
 			for _, vKey := range variant.Keys {
+				// NOTE(mvilks): since collected keys will be compared to the selector,
+				//	we need the keys's raw string value, not the representation of it
+				//  e.g. the `1` should be equal to `|1|`
 				switch key := vKey.(type) {
 				case ast.CatchAllKey:
 					continue
 				case ast.QuotedLiteral:
-					// NOTE(mvilks): since collected keys will be compared to the selector,
-					//	we need the QuotedLiteral's raw value, not the representation of it
-					//  e.g. the `1` should be equal to `|1|`
 					keys = append(keys, string(key))
-				case ast.NameLiteral, ast.NumberLiteral:
+				case ast.NameLiteral:
+					keys = append(keys, string(key))
+				case ast.NumberLiteral:
 					keys = append(keys, key.String())
 				}
 			}
@@ -483,15 +485,17 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 
 			var ks string
 
+			// NOTE(mvilks): since collected keys will be compared to the selector,
+			//	we need the keys's raw string value, not the representation of it
+			//  e.g. the `1` should be equal to `|1|`
 			switch key := key.(type) {
 			case ast.CatchAllKey:
 				continue
 			case ast.QuotedLiteral:
-				// NOTE(mvilks): since collected keys will be compared to the selector,
-				//	we need the QuotedLiteral's raw value, not the representation of it
-				//  e.g. the `1` should be equal to `|1|`
 				ks = string(key)
-			case ast.NameLiteral, ast.NumberLiteral:
+			case ast.NameLiteral:
+				ks = string(key)
+			case ast.NumberLiteral:
 				ks = key.String()
 			}
 
@@ -526,12 +530,18 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 
 			var ks string
 
+			// NOTE(mvilks): since collected keys will be compared to the selector,
+			//	we need the keys's raw string value, not the representation of it
+			//  e.g. the `1` should be equal to `|1|`
 			switch key := key.(type) {
 			case ast.CatchAllKey:
 				sortable[tupleIndex].Score = currentScore
 				continue
-			// TODO(mvilks): do we need to separate the QuotedLiteral like above?
-			case ast.NameLiteral, ast.QuotedLiteral, ast.NumberLiteral:
+			case ast.QuotedLiteral:
+				ks = string(key)
+			case ast.NameLiteral:
+				ks = string(key)
+			case ast.NumberLiteral:
 				ks = key.String()
 			}
 
