@@ -452,6 +452,9 @@ func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
 				case ast.CatchAllKey:
 					continue
 				case ast.QuotedLiteral:
+					// NOTE(mvilks): since collected keys will be compared to the selector,
+					//	we need the QuotedLiteral's raw value, not the representation of it
+					//  e.g. the `1` should be equal to `|1|`
 					keys = append(keys, string(key))
 				case ast.NameLiteral, ast.NumberLiteral:
 					keys = append(keys, key.String())
@@ -484,6 +487,9 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 			case ast.CatchAllKey:
 				continue
 			case ast.QuotedLiteral:
+				// NOTE(mvilks): since collected keys will be compared to the selector,
+				//	we need the QuotedLiteral's raw value, not the representation of it
+				//  e.g. the `1` should be equal to `|1|`
 				ks = string(key)
 			case ast.NameLiteral, ast.NumberLiteral:
 				ks = key.String()
@@ -524,6 +530,7 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 			case ast.CatchAllKey:
 				sortable[tupleIndex].Score = currentScore
 				continue
+			// TODO(mvilks): do we need to separate the QuotedLiteral like above?
 			case ast.NameLiteral, ast.QuotedLiteral, ast.NumberLiteral:
 				ks = key.String()
 			}
