@@ -112,16 +112,11 @@ type executer struct {
 	template  *Template
 	w         io.Writer
 	variables map[string]any
-	err       error
+	err       []error
 }
 
 func (e *executer) addError(err error) {
-	if e.err == nil {
-		e.err = err
-		return
-	}
-
-	e.err = fmt.Errorf("%w: %s", err, e.err.Error())
+	e.err = append(e.err, err)
 }
 
 func (e *executer) write(s string) error {
@@ -148,7 +143,7 @@ func (e *executer) execute() error {
 		}
 	}
 
-	return e.err
+	return errors.Join(e.err...)
 }
 
 func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
