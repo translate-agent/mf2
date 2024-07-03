@@ -112,6 +112,16 @@ type executer struct {
 	template  *Template
 	w         io.Writer
 	variables map[string]any
+	err       error
+}
+
+func (e *executer) addError(err error) {
+	if e.err == nil {
+		e.err = err
+		return
+	}
+
+	e.err = fmt.Errorf("%w: %s", err, e.err.Error())
 }
 
 func (e *executer) write(s string) error {
@@ -133,10 +143,12 @@ func (e *executer) execute() error {
 			return fmt.Errorf("resolve pattern: %w", err)
 		}
 	case ast.ComplexMessage:
-		return e.resolveComplexMessage(message)
+		if err := e.resolveComplexMessage(message); err != nil {
+			return fmt.Errorf("resolve complex message: %w", err)
+		}
 	}
 
-	return nil
+	return e.err
 }
 
 func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
@@ -424,7 +436,11 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 		}
 
 		input, err := e.resolveValue(selectExpr.Operand)
-		if err != nil {
+		if errors.Is(err, mf2.ErrUnresolvedVariable) {
+			input = nil
+
+			e.addError(err)
+		} else if err != nil {
 			return nil, fmt.Errorf("resolve value: %w", err)
 		}
 

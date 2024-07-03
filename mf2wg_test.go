@@ -54,8 +54,6 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/hello_{4.2_:integer}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/hello_{-4.20_:integer}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.match_{$foo_:string}_1_{{one}}_*_{{other}}#02",
-
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$d_=_{|2006-01-02T15:04:06|_:date}_{{{$d_:time}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{|2006-01-02T15:04:06|_:time}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{:time}",
@@ -281,7 +279,7 @@ func assertErr(t *testing.T, want Errors, err error) {
 
 	wantErr := func(want error) {
 		if !errors.Is(err, want) {
-			t.Errorf("want %s, got %s", want, err)
+			t.Errorf("want error %s, got %s", want, err)
 		}
 	}
 
