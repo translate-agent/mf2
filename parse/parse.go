@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"go.expect.digital/mf2"
 )
 
 type parser struct {
@@ -127,8 +129,13 @@ Examples:
 	}
 */
 func Parse(input string) (AST, error) {
-	errorf := func(format string, a ...any) (AST, error) {
-		return AST{}, fmt.Errorf("parse MF2: "+format, a...)
+	errorf := func(format string, err error) (AST, error) {
+		if errors.Is(err, mf2.ErrDuplicateDeclaration) {
+			return AST{}, fmt.Errorf("parse MF2: "+format, err)
+		}
+
+		// fallback to syntax error unless one of MF2 errors is returned
+		return AST{}, fmt.Errorf("parse MF2: %w: "+format, mf2.ErrSyntax, err)
 	}
 
 	p := &parser{lexer: lex(input), pos: -1}
@@ -189,7 +196,7 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 			return message, nil
 		// Non-ending tokens
 		case itemInputKeyword:
-			declaration, err := p.parseInputDeclaration()
+			declaration, err := p.parseInputDeclaration(message.Declarations)
 			if err != nil {
 				return errorf("%w", err)
 			}
@@ -577,7 +584,7 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 	return declaration, nil
 }
 
-func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
+func (p *parser) parseInputDeclaration(declarations []Declaration) (InputDeclaration, error) {
 	errorf := func(format string, args ...any) (InputDeclaration, error) {
 		return InputDeclaration{}, fmt.Errorf("input declaration: "+format, args...)
 	}
@@ -592,8 +599,18 @@ func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
 		return errorf("%w", err)
 	}
 
-	if _, ok := expression.Operand.(Variable); !ok {
+	variable, ok := expression.Operand.(Variable)
+	if !ok {
 		return errorf("want operand as variable, got %T", expression.Operand)
+	}
+
+	// no duplicate declarations allowed
+	for _, declaration := range declarations {
+		if inputDeclaration, ok := declaration.(InputDeclaration); ok {
+			if v, ok := inputDeclaration.Operand.(Variable); ok && v == variable {
+				return errorf(`%w: variable "%s"`, mf2.ErrDuplicateDeclaration, variable)
+			}
+		}
 	}
 
 	return InputDeclaration(expression), nil

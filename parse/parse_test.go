@@ -758,11 +758,15 @@ func TestParseErrors(t *testing.T) {
 	}{
 		{
 			in:      ".match {|foo| :x} {|bar| :x} ** {{foo}}",
-			wantErr: "parse MF2: complex message: matcher: variant keys: missing space between keys * and *",
+			wantErr: "parse MF2: syntax error: complex message: matcher: variant keys: missing space between keys * and *",
 		},
 		{
 			in:      ".match {|foo| :x} {|bar| :x} *1 {{foo}}",
-			wantErr: "parse MF2: complex message: matcher: variant keys: missing space between keys * and 1",
+			wantErr: "parse MF2: syntax error: complex message: matcher: variant keys: missing space between keys * and 1",
+		},
+		{
+			in:      ".input {$foo} .input {$foo} {{ }}",
+			wantErr: `parse MF2: complex message: input declaration: duplicate declaration: variable "$foo"`,
 		},
 	} {
 		t.Run(test.in, func(t *testing.T) {

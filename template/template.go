@@ -74,7 +74,7 @@ func WithLocale(locale language.Tag) Option {
 func (t *Template) Parse(input string) (*Template, error) {
 	ast, err := ast.Parse(input)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", mf2.ErrSyntax, err.Error())
+		return nil, err //nolint:wrapcheck
 	}
 
 	t.ast = &ast
