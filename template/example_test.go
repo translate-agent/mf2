@@ -52,12 +52,12 @@ func ExampleTemplate_complexMessage() {
 
 	color := func(value any, options template.Options, locale language.Tag) (any, error) {
 		if value == nil {
-			return "", fmt.Errorf("input is required: %w", mf2.ErrOperandMismatch)
+			return "", fmt.Errorf("input is required: %w", mf2.ErrBadOperand)
 		}
 
 		color, ok := value.(string)
 		if !ok {
-			return nil, fmt.Errorf("input is not a string: %w", mf2.ErrOperandMismatch)
+			return nil, fmt.Errorf("input is not a string: %w", mf2.ErrBadOperand)
 		}
 
 		if options == nil {

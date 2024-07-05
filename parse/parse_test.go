@@ -736,7 +736,7 @@ no no {{Hello!}}`,
 
 			// Check that AST message is equal to expected one.
 			if test.want.String() != got.Message.String() {
-				t.Errorf("want %s, got %s", test.want, test.want)
+				t.Errorf("want '%s', got '%s'", test.want, test.want)
 			}
 
 			// Check that AST message converted back to string is equal to input.
@@ -769,7 +769,7 @@ func TestParseErrors(t *testing.T) {
 			t.Parallel()
 
 			if _, err := Parse(test.in); err == nil || err.Error() != test.wantErr {
-				t.Errorf("want %s, got %s", test.wantErr, err)
+				t.Errorf("want '%s', got '%s'", test.wantErr, err)
 			}
 		})
 	}
@@ -933,7 +933,7 @@ func TestValidate(t *testing.T) {
 
 			err := test.ast.validate()
 			if !strings.Contains(err.Error(), test.errorPath) {
-				t.Errorf("want %s, got %s", test.errorPath, err)
+				t.Errorf("want '%s', got '%s'", test.errorPath, err)
 			}
 		})
 	}
@@ -952,6 +952,6 @@ func requireEqualMF2String(t *testing.T, want, got string) {
 	)
 
 	if r.Replace(want) != r.Replace(got) {
-		t.Errorf("want %s, got %s", want, got)
+		t.Errorf("want '%s', got '%s'", want, got)
 	}
 }
