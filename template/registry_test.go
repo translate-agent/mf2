@@ -16,7 +16,7 @@ func assertFormat(t *testing.T, f RegistryFunc, options map[string]any, locale l
 		}
 
 		if want != result {
-			t.Errorf("want %s, got %s", want, result)
+			t.Errorf("want '%s', got '%s'", want, result)
 		}
 	}
 }

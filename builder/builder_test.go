@@ -228,7 +228,7 @@ func Test_Builder(t *testing.T) {
 			}
 
 			if test.want != got {
-				t.Errorf("want %s, got %s", test.want, got)
+				t.Errorf("want '%s', got '%s'", test.want, got)
 			}
 		})
 	}

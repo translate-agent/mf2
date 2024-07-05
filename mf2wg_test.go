@@ -182,7 +182,7 @@ func run(t *testing.T, test Test) {
 	// Expected is optional. The built-in formatters is implementation
 	// specific across programming languages and libraries.
 	if test.Exp != nil && *test.Exp != got {
-		t.Errorf("want %s, got %s", *test.Exp, got)
+		t.Errorf("want '%s', got '%s'", *test.Exp, got)
 	}
 }
 
@@ -281,7 +281,7 @@ func assertErr(t *testing.T, want Errors, err error) {
 
 	wantErr := func(want error) {
 		if !errors.Is(err, want) {
-			t.Errorf("want %s, got %s", want, err)
+			t.Errorf("want '%s', got '%s'", want, err)
 		}
 	}
 

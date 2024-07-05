@@ -322,7 +322,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	result, err := f.Format(value, options, e.template.locale)
 	if err != nil {
-		return fmtErroredExpr(), errors.Join(resolutionErr, mf2.ErrFormatting, err)
+		return fmtErroredExpr(), errors.Join(resolutionErr, err)
 	}
 
 	return fmt.Sprint(result), resolutionErr
@@ -430,7 +430,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		rslt, err := f.Match(input, opts, e.template.locale)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s", mf2.ErrSelection, err.Error())
+			return nil, err
 		}
 
 		res = append(res, rslt)

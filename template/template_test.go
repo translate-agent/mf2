@@ -67,7 +67,7 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 			}
 
 			if test.want != got {
-				t.Errorf("want %s, got %s", test.want, got)
+				t.Errorf("want '%s', got '%s'", test.want, got)
 			}
 		})
 	}
@@ -129,7 +129,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 			}
 
 			if test.want != got {
-				t.Errorf("want %s, got %s", test.want, got)
+				t.Errorf("want '%s', got '%s'", test.want, got)
 			}
 		})
 	}
@@ -200,7 +200,7 @@ func Test_Matcher(t *testing.T) {
 					}
 
 					if test.want[i] != got {
-						t.Errorf(`want "%s" at %d, got "%s"`, test.want[i], i, got)
+						t.Errorf("want '%s' at %d, got '%s'", test.want[i], i, got)
 					}
 				})
 			}
@@ -248,16 +248,6 @@ func Test_ExecuteErrors(t *testing.T) {
 			want: want{execErr: mf2.ErrUnsupportedExpression, text: "Hello, 12!"},
 		},
 		{
-			name: "formatting error",
-			text: "Hello, { :error }!",
-			want: want{execErr: mf2.ErrFormatting, text: "Hello, {:error}!"},
-			funcs: Registry{
-				"error": {
-					Format: func(any, Options, language.Tag) (any, error) { return nil, errors.New("error") },
-				},
-			},
-		},
-		{
 			name: "unsupported declaration",
 			text: ".reserved { name } {{Hello!}}",
 			want: want{execErr: mf2.ErrUnsupportedStatement, text: "Hello!"},
@@ -295,7 +285,7 @@ func Test_ExecuteErrors(t *testing.T) {
 			template, err := New(WithFuncs(test.funcs)).Parse(test.text)
 			if test.want.parseErr != nil {
 				if !errors.Is(err, test.want.parseErr) {
-					t.Errorf("want %s, got %s", test.want.parseErr, err)
+					t.Errorf("want '%s', got '%s'", test.want.parseErr, err)
 				}
 
 				return
@@ -303,11 +293,11 @@ func Test_ExecuteErrors(t *testing.T) {
 
 			text, err := template.Sprint(test.input)
 			if !errors.Is(err, test.want.execErr) {
-				t.Errorf("want %s, got %s", test.want.execErr, err)
+				t.Errorf("want '%s', got '%s'", test.want.execErr, err)
 			}
 
 			if test.want.text != text {
-				t.Errorf(`want "%s", got "%s"`, test.want.text, text)
+				t.Errorf("want '%s', got '%s'", test.want.text, text)
 			}
 		})
 	}
