@@ -621,7 +621,7 @@ func hasDuplicateDeclaration(variable Variable, declarations []Declaration) bool
 	for _, declaration := range declarations {
 		switch v := declaration.(type) {
 		case InputDeclaration:
-			if vari, ok := v.Operand.(Variable); ok && vari == variable {
+			if operand, ok := v.Operand.(Variable); ok && operand == variable {
 				return true
 			}
 		case LocalDeclaration:
