@@ -171,10 +171,6 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 		case ast.ReservedStatement:
 			return fmt.Errorf("%w: '%s'", mf2.ErrUnsupportedStatement, "reserved statement")
 		case ast.LocalDeclaration:
-			if _, ok := m[d.Variable]; ok {
-				return fmt.Errorf("%w '%s'", mf2.ErrDuplicateDeclaration, d)
-			}
-
 			m[d.Variable] = struct{}{}
 
 			resolved, err := e.resolveExpression(d.Expression)
@@ -184,10 +180,6 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 
 			e.variables[string(d.Variable)] = resolved
 		case ast.InputDeclaration:
-			if _, ok := m[d.Operand]; ok {
-				return fmt.Errorf("%w '%s'", mf2.ErrDuplicateDeclaration, d)
-			}
-
 			m[d.Operand] = struct{}{}
 
 			resolved, err := e.resolveExpression(ast.Expression(d))
