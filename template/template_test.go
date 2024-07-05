@@ -262,7 +262,7 @@ func Test_ExecuteErrors(t *testing.T) {
 			name:  "duplicate declaration",
 			text:  ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
 			input: map[string]any{"ext": "22"},
-			want:  want{execErr: mf2.ErrDuplicateDeclaration},
+			want:  want{parseErr: mf2.ErrDuplicateDeclaration},
 		},
 		{
 			name:  "Selection Error No Annotation",
