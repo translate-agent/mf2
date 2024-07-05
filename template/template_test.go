@@ -256,7 +256,7 @@ func Test_ExecuteErrors(t *testing.T) {
 			name:  "duplicate declaration",
 			text:  ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
 			input: map[string]any{"var": "22"},
-			want:  want{execErr: mf2.ErrDuplicateDeclaration},
+			want:  want{parseErr: mf2.ErrDuplicateDeclaration},
 		},
 		{
 			name:  "duplicate declaration",
