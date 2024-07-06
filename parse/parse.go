@@ -621,17 +621,17 @@ func (p *parser) parseReservedBody() ([]ReservedBody, error) {
 // ------------------------------Declaration------------------------------
 
 func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
-	errorf := func(format string, args ...any) (LocalDeclaration, error) {
-		return LocalDeclaration{}, fmt.Errorf("local declaration: "+format, args...)
+	errorf := func(err error) (LocalDeclaration, error) {
+		return LocalDeclaration{}, fmt.Errorf("local declaration: %w", err)
 	}
 
 	next := p.next()
 	if next.typ != itemWhitespace {
-		return errorf("%w", unexpectedErr(next, itemWhitespace))
+		return errorf(unexpectedErr(next, itemWhitespace))
 	}
 
 	if next = p.next(); next.typ != itemVariable {
-		return errorf("%w", unexpectedErr(next, itemVariable))
+		return errorf(unexpectedErr(next, itemVariable))
 	}
 
 	variable := Variable(next.val)
@@ -639,16 +639,16 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 	declaration := LocalDeclaration{Variable: variable}
 
 	if next = p.nextNonWS(); next.typ != itemOperator {
-		return errorf("%w", unexpectedErr(next, itemOperator))
+		return errorf(unexpectedErr(next, itemOperator))
 	}
 
 	if next = p.nextNonWS(); next.typ != itemExpressionOpen {
-		return errorf("%w", unexpectedErr(next, itemExpressionOpen))
+		return errorf(unexpectedErr(next, itemExpressionOpen))
 	}
 
 	expression, err := p.parseExpression()
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	declaration.Expression = expression
