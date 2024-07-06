@@ -220,8 +220,14 @@ func (d *variableDeclarations) add(variable Variable, variables []Variable) erro
 		}
 	}
 
-	*d = append(*d, variable)     // add a declared variable
-	*d = append(*d, variables...) // add all expression variables implicitly
+	*d = append(*d, variable) // add a declared variable
+
+	// add expression variable implicitly
+	for _, v := range variables {
+		if !slices.Contains(*d, v) {
+			*d = append(*d, variables...)
+		}
+	}
 
 	return nil
 }
