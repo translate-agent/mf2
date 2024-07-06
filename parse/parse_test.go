@@ -766,7 +766,7 @@ func TestParseErrors(t *testing.T) {
 		},
 		{
 			in:      ".input {$foo} .input {$foo} {{ }}",
-			wantErr: `parse MF2: complex message: duplicate declaration: $foo`,
+			wantErr: `parse MF2: complex message: input declaration: expression: duplicate declaration: $foo`,
 		},
 	} {
 		t.Run(test.in, func(t *testing.T) {
