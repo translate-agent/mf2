@@ -4,15 +4,33 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"go.expect.digital/mf2"
 )
 
 type parser struct {
-	lexer *lexer
-	items []item
-	pos   int
+	reservedVariable Variable // reservedVariable is a variable that cannot be re-declared within an expression
+	declaration      string   // input or local or empty
+	lexer            *lexer
+	items            []item
+	variables        []Variable
+	pos              int
+}
+
+func (p *parser) duplicateVariable(variable Variable) error {
+	if slices.Contains(p.variables, variable) {
+		return fmt.Errorf("%w: %s", mf2.ErrDuplicateDeclaration, variable)
+	}
+
+	return nil
+}
+
+func (p *parser) declareVariable(variable Variable) {
+	if !slices.Contains(p.variables, variable) {
+		p.variables = append(p.variables, variable)
+	}
 }
 
 // next returns next token if any otherwise returns error token.
@@ -196,14 +214,14 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 			return message, nil
 		// Non-ending tokens
 		case itemInputKeyword:
-			declaration, err := p.parseInputDeclaration(message.Declarations)
+			declaration, err := p.parseInputDeclaration()
 			if err != nil {
 				return errorf("%w", err)
 			}
 
 			message.Declarations = append(message.Declarations, declaration)
 		case itemLocalKeyword:
-			declaration, err := p.parseLocalDeclaration(message.Declarations)
+			declaration, err := p.parseLocalDeclaration()
 			if err != nil {
 				return errorf("%w", err)
 			}
@@ -352,7 +370,26 @@ func (p *parser) parseExpression() (Expression, error) {
 
 		return errorf("%w", err)
 	case itemVariable:
-		expr.Operand = Variable(itm.val)
+		variable := Variable(itm.val)
+
+		switch p.declaration {
+		case "local":
+			// .local $foo = {$foo}
+			if variable == p.reservedVariable {
+				return errorf("%w: %s", mf2.ErrDuplicateDeclaration, variable)
+			}
+		case "input":
+			// .input {$foo} .input {$foo}
+			if err = p.duplicateVariable(variable); err != nil {
+				return errorf("%w", err)
+			}
+
+			p.reservedVariable = variable
+			defer func() { p.reservedVariable = "" }()
+		}
+
+		p.declareVariable(variable)
+		expr.Operand = variable
 	case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 		if expr.Operand, err = p.parseLiteral(); err != nil {
 			return errorf("%w", err)
@@ -550,39 +587,46 @@ func (p *parser) parseReservedBody() ([]ReservedBody, error) {
 
 // ------------------------------Declaration------------------------------
 
-func (p *parser) parseLocalDeclaration(declarations []Declaration) (LocalDeclaration, error) {
-	errorf := func(format string, args ...any) (LocalDeclaration, error) {
-		return LocalDeclaration{}, fmt.Errorf("local declaration: "+format, args...)
+func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
+	errorf := func(err error) (LocalDeclaration, error) {
+		return LocalDeclaration{}, fmt.Errorf("local declaration: %w", err)
 	}
+
+	p.declaration = "local"
+	defer func() { p.declaration = "" }()
 
 	next := p.next()
 	if next.typ != itemWhitespace {
-		return errorf("%w", unexpectedErr(next, itemWhitespace))
+		return errorf(unexpectedErr(next, itemWhitespace))
 	}
 
 	if next = p.next(); next.typ != itemVariable {
-		return errorf("%w", unexpectedErr(next, itemVariable))
+		return errorf(unexpectedErr(next, itemVariable))
 	}
 
 	variable := Variable(next.val)
-
-	if hasDuplicateDeclaration(variable, declarations) {
-		return errorf(`%w: variable "%s"`, mf2.ErrDuplicateDeclaration, variable)
+	if err := p.duplicateVariable(variable); err != nil {
+		return errorf(err)
 	}
+
+	p.reservedVariable = variable
+	defer func() { p.reservedVariable = "" }()
+
+	p.declareVariable(variable)
 
 	declaration := LocalDeclaration{Variable: variable}
 
 	if next = p.nextNonWS(); next.typ != itemOperator {
-		return errorf("%w", unexpectedErr(next, itemOperator))
+		return errorf(unexpectedErr(next, itemOperator))
 	}
 
 	if next = p.nextNonWS(); next.typ != itemExpressionOpen {
-		return errorf("%w", unexpectedErr(next, itemExpressionOpen))
+		return errorf(unexpectedErr(next, itemExpressionOpen))
 	}
 
 	expression, err := p.parseExpression()
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	declaration.Expression = expression
@@ -590,10 +634,13 @@ func (p *parser) parseLocalDeclaration(declarations []Declaration) (LocalDeclara
 	return declaration, nil
 }
 
-func (p *parser) parseInputDeclaration(declarations []Declaration) (InputDeclaration, error) {
+func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
 	errorf := func(format string, args ...any) (InputDeclaration, error) {
 		return InputDeclaration{}, fmt.Errorf("input declaration: "+format, args...)
 	}
+
+	p.declaration = "input"
+	defer func() { p.declaration = "" }()
 
 	next := p.nextNonWS()
 	if next.typ != itemExpressionOpen {
@@ -605,33 +652,7 @@ func (p *parser) parseInputDeclaration(declarations []Declaration) (InputDeclara
 		return errorf("%w", err)
 	}
 
-	variable, ok := expression.Operand.(Variable)
-	if !ok {
-		return errorf("want operand as variable, got %T", expression.Operand)
-	}
-
-	if hasDuplicateDeclaration(variable, declarations) {
-		return errorf(`%w: variable "%s"`, mf2.ErrDuplicateDeclaration, variable)
-	}
-
 	return InputDeclaration(expression), nil
-}
-
-func hasDuplicateDeclaration(variable Variable, declarations []Declaration) bool {
-	for _, declaration := range declarations {
-		switch v := declaration.(type) {
-		case InputDeclaration:
-			if operand, ok := v.Operand.(Variable); ok && operand == variable {
-				return true
-			}
-		case LocalDeclaration:
-			if variable == v.Variable {
-				return true
-			}
-		}
-	}
-
-	return false
 }
 
 func (p *parser) parseReservedStatement() (ReservedStatement, error) {
@@ -779,7 +800,13 @@ func (p *parser) parseOption() (Option, error) {
 	case itemError:
 		return errorf("%s", next)
 	case itemVariable:
-		option.Value = Variable(next.val)
+		variable := Variable(next.val)
+		if variable == p.reservedVariable {
+			return errorf("%w: %s", mf2.ErrDuplicateDeclaration, variable)
+		}
+
+		p.declareVariable(variable)
+		option.Value = variable
 	case itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral:
 		var err error
 		if option.Value, err = p.parseLiteral(); err != nil {
@@ -843,7 +870,9 @@ func (p *parser) parseAttribute() (Attribute, error) {
 	default:
 		return errorf("%w", unexpectedErr(itm, itemVariable, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral))
 	case itemVariable:
-		attribute.Value = Variable(itm.val)
+		variable := Variable(itm.val)
+		p.declareVariable(variable)
+		attribute.Value = variable
 	case itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral:
 		if attribute.Value, err = p.parseLiteral(); err != nil {
 			return errorf("%w", err)
