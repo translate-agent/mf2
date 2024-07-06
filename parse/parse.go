@@ -356,7 +356,7 @@ func (p *parser) parseExpression() (Expression, error) {
 		err  error
 	)
 
-	errorf := func(format string, args ...any) (Expression, error) {
+	errorf := func(format string, args ...any) (Expression, error) { //nolint:unparam
 		return Expression{}, fmt.Errorf("expression: "+format, args...)
 	}
 
@@ -588,7 +588,7 @@ func (p *parser) parseReservedBody() ([]ReservedBody, error) {
 // ------------------------------Declaration------------------------------
 
 func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
-	errorf := func(err error) (LocalDeclaration, error) {
+	errorf := func(err error) (LocalDeclaration, error) { //nolint:unparam
 		return LocalDeclaration{}, fmt.Errorf("local declaration: %w", err)
 	}
 
@@ -635,7 +635,7 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 }
 
 func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
-	errorf := func(format string, args ...any) (InputDeclaration, error) {
+	errorf := func(format string, args ...any) (InputDeclaration, error) { //nolint:unparam
 		return InputDeclaration{}, fmt.Errorf("input declaration: "+format, args...)
 	}
 
