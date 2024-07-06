@@ -253,13 +253,13 @@ func Test_ExecuteErrors(t *testing.T) {
 			want: want{execErr: mf2.ErrUnsupportedStatement, text: "Hello!"},
 		},
 		{
-			name:  "duplicate declaration",
+			name:  "duplicate input declaration",
 			text:  ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
 			input: map[string]any{"var": "22"},
 			want:  want{parseErr: mf2.ErrDuplicateDeclaration},
 		},
 		{
-			name:  "duplicate declaration",
+			name:  "duplicate input and local declaration",
 			text:  ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
 			input: map[string]any{"ext": "22"},
 			want:  want{parseErr: mf2.ErrDuplicateDeclaration},

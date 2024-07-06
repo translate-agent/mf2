@@ -21,13 +21,6 @@ var failing []string
 func init() {
 	//nolint:lll
 	failing = []string{
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{:unknown}_.local_$foo_=_{42}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$foo}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{42_:func_opt=$foo}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar}_.local_$bar_=_{42}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar}_.local_$bar_=_{$baz}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{42_:func_opt=$bar}_.local_$bar_=_{42}_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$foo_=_{$bar_:func}_.local_$bar_=_{$baz}_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{$foo_:x}_*_*_{{foo}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_{:bar}_*_1_{{_}}_1_*_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_1_{{_}}",
@@ -274,7 +267,7 @@ func assertErr(t *testing.T, want Errors, err error) {
 	}
 
 	if len(want.Errors) == 0 && err != nil {
-		t.Errorf("want no error, got %s", err)
+		t.Errorf("want no error, got '%s'", err)
 	}
 
 	wantErr := func(want error) {
@@ -286,7 +279,7 @@ func assertErr(t *testing.T, want Errors, err error) {
 	for _, v := range want.Errors {
 		switch v.Type {
 		default:
-			t.Errorf("asserting error %s is not implemented", v)
+			t.Errorf("asserting error '%s' is not implemented", v)
 		case "bad-operand":
 			wantErr(mf2.ErrBadOperand)
 		case "duplicate-declaration":

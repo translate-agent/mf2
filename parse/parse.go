@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"go.expect.digital/mf2"
@@ -176,8 +177,60 @@ func (p *parser) parseSimpleMessage() (SimpleMessage, error) {
 	return SimpleMessage(pattern), nil
 }
 
+// getVariables returns all variables used in the given expression.
+func getVariables(e Expression, includeOperand bool) []Variable {
+	var variables []Variable
+
+	if includeOperand {
+		if variable, ok := e.Operand.(Variable); ok {
+			variables = append(variables, variable)
+		}
+	}
+
+	if function, ok := e.Annotation.(Function); ok {
+		for _, option := range function.Options {
+			if value, ok := option.Value.(Variable); ok {
+				variables = append(variables, value)
+			}
+		}
+	}
+
+	for _, a := range e.Attributes {
+		if variable, ok := a.Value.(Variable); ok {
+			variables = append(variables, variable)
+		}
+	}
+
+	return variables
+}
+
+type variableDeclarations []Variable
+
+// add adds a declared variable and implicitly declares variables if they never were declared before.
+func (d *variableDeclarations) add(variable Variable, variables []Variable) error {
+	// a declared variable is NOT available for use in the expression variables
+	if slices.Contains(variables, variable) {
+		return fmt.Errorf(`%w: %s`, mf2.ErrDuplicateDeclaration, variable)
+	}
+
+	// ensure a declared variable has not been declared previously
+	for _, v := range *d {
+		if v == variable {
+			return fmt.Errorf(`%w: %s`, mf2.ErrDuplicateDeclaration, variable)
+		}
+	}
+
+	*d = append(*d, variable)     // add a declared variable
+	*d = append(*d, variables...) // add all expression variables implicitly
+
+	return nil
+}
+
 func (p *parser) parseComplexMessage() (ComplexMessage, error) {
-	var message ComplexMessage
+	var (
+		message   ComplexMessage
+		variables variableDeclarations
+	)
 
 	errorf := func(format string, args ...any) (ComplexMessage, error) {
 		return ComplexMessage{}, fmt.Errorf("complex message: "+format, args...)
@@ -196,15 +249,26 @@ func (p *parser) parseComplexMessage() (ComplexMessage, error) {
 			return message, nil
 		// Non-ending tokens
 		case itemInputKeyword:
-			declaration, err := p.parseInputDeclaration(message.Declarations)
+			declaration, err := p.parseInputDeclaration()
 			if err != nil {
+				return errorf("%w", err)
+			}
+
+			if err = variables.add( //nolint:forcetypeassert
+				declaration.Operand.(Variable), // Operand is always Variable for InputDeclaration
+				getVariables(Expression(declaration), false),
+			); err != nil {
 				return errorf("%w", err)
 			}
 
 			message.Declarations = append(message.Declarations, declaration)
 		case itemLocalKeyword:
-			declaration, err := p.parseLocalDeclaration(message.Declarations)
+			declaration, err := p.parseLocalDeclaration()
 			if err != nil {
+				return errorf("%w", err)
+			}
+
+			if err = variables.add(declaration.Variable, getVariables(declaration.Expression, true)); err != nil {
 				return errorf("%w", err)
 			}
 
@@ -550,7 +614,7 @@ func (p *parser) parseReservedBody() ([]ReservedBody, error) {
 
 // ------------------------------Declaration------------------------------
 
-func (p *parser) parseLocalDeclaration(declarations []Declaration) (LocalDeclaration, error) {
+func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 	errorf := func(format string, args ...any) (LocalDeclaration, error) {
 		return LocalDeclaration{}, fmt.Errorf("local declaration: "+format, args...)
 	}
@@ -565,10 +629,6 @@ func (p *parser) parseLocalDeclaration(declarations []Declaration) (LocalDeclara
 	}
 
 	variable := Variable(next.val)
-
-	if hasDuplicateDeclaration(variable, declarations) {
-		return errorf(`%w: variable "%s"`, mf2.ErrDuplicateDeclaration, variable)
-	}
 
 	declaration := LocalDeclaration{Variable: variable}
 
@@ -590,7 +650,7 @@ func (p *parser) parseLocalDeclaration(declarations []Declaration) (LocalDeclara
 	return declaration, nil
 }
 
-func (p *parser) parseInputDeclaration(declarations []Declaration) (InputDeclaration, error) {
+func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
 	errorf := func(format string, args ...any) (InputDeclaration, error) {
 		return InputDeclaration{}, fmt.Errorf("input declaration: "+format, args...)
 	}
@@ -605,33 +665,7 @@ func (p *parser) parseInputDeclaration(declarations []Declaration) (InputDeclara
 		return errorf("%w", err)
 	}
 
-	variable, ok := expression.Operand.(Variable)
-	if !ok {
-		return errorf("want operand as variable, got %T", expression.Operand)
-	}
-
-	if hasDuplicateDeclaration(variable, declarations) {
-		return errorf(`%w: variable "%s"`, mf2.ErrDuplicateDeclaration, variable)
-	}
-
 	return InputDeclaration(expression), nil
-}
-
-func hasDuplicateDeclaration(variable Variable, declarations []Declaration) bool {
-	for _, declaration := range declarations {
-		switch v := declaration.(type) {
-		case InputDeclaration:
-			if operand, ok := v.Operand.(Variable); ok && operand == variable {
-				return true
-			}
-		case LocalDeclaration:
-			if variable == v.Variable {
-				return true
-			}
-		}
-	}
-
-	return false
 }
 
 func (p *parser) parseReservedStatement() (ReservedStatement, error) {
