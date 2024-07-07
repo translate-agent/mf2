@@ -716,6 +716,10 @@ func (p *parser) parseMatcher() (Matcher, error) {
 				return errorf("%w", err)
 			}
 
+			if len(keys) != len(matcher.MatchStatements) {
+				return errorf("%w: ", mf2.ErrVariantKeyMismatch)
+			}
+
 			pattern, err := p.parsePattern()
 			if err != nil {
 				return errorf("%w", err)
