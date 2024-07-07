@@ -387,9 +387,9 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 }
 
 func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
-	res := make([]any, 0, len(matcher.MatchStatements))
+	res := make([]any, 0, len(matcher.Selectors))
 
-	for _, selectExpr := range matcher.MatchStatements {
+	for _, selectExpr := range matcher.Selectors {
 		var function ast.Function
 
 		switch annotation := selectExpr.Annotation.(type) {

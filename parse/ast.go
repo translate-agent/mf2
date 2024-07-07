@@ -535,31 +535,31 @@ func (p QuotedPattern) validate() error {
 }
 
 type Matcher struct {
-	MatchStatements []Expression // At least one
-	Variants        []Variant    // At least one
+	Selectors []Expression // At least one
+	Variants  []Variant    // At least one
 }
 
 // String returns MF2 formatted string.
 func (m Matcher) String() string {
-	matchStr := sliceToString(m.MatchStatements, " ")
-	variantsStr := sliceToString(m.Variants, "\n")
+	selectors := sliceToString(m.Selectors, " ")
+	variants := sliceToString(m.Variants, "\n")
 
-	return match + " " + matchStr + "\n" + variantsStr
+	return match + " " + selectors + "\n" + variants
 }
 
 func (Matcher) node()        {}
 func (Matcher) complexBody() {}
 
 func (m Matcher) validate() error {
-	if len(m.MatchStatements) == 0 {
-		return errors.New("matcher: at least one match statement is required")
+	if len(m.Selectors) == 0 {
+		return errors.New("matcher: at least one selector is required")
 	}
 
 	if len(m.Variants) == 0 {
 		return errors.New("matcher: at least one variant is required")
 	}
 
-	if err := validateSlice(m.MatchStatements); err != nil {
+	if err := validateSlice(m.Selectors); err != nil {
 		return fmt.Errorf("matcher.%w", err)
 	}
 

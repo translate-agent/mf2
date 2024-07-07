@@ -507,7 +507,7 @@ func TestParseComplexMessage(t *testing.T) {
 			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
-					MatchStatements: []Expression{
+					Selectors: []Expression{
 						{
 							Operand: Variable("variable"),
 							Annotation: Function{
@@ -544,7 +544,7 @@ func TestParseComplexMessage(t *testing.T) {
 			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
-					MatchStatements: []Expression{
+					Selectors: []Expression{
 						{
 							Operand: Variable("variable"),
 							Annotation: Function{
@@ -581,7 +581,7 @@ func TestParseComplexMessage(t *testing.T) {
 			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
-					MatchStatements: []Expression{
+					Selectors: []Expression{
 						{
 							Operand: Variable("variable"),
 							Annotation: Function{
@@ -630,7 +630,7 @@ male {{Hello sir!}}
 					},
 				},
 				ComplexBody: Matcher{
-					MatchStatements: []Expression{
+					Selectors: []Expression{
 						{
 							Annotation: Function{
 								Identifier: Identifier{
@@ -678,7 +678,7 @@ no no {{Hello!}}`,
 			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
-					MatchStatements: []Expression{
+					Selectors: []Expression{
 						{Operand: Variable("var1")},
 						{Operand: Variable("var2")},
 					},
@@ -875,7 +875,7 @@ func TestValidate(t *testing.T) {
 				Message: ComplexMessage{
 					Declarations: nil,
 					ComplexBody: Matcher{
-						MatchStatements: nil,
+						Selectors: nil,
 						Variants: []Variant{
 							{
 								Keys: []VariantKey{NumberLiteral(1)},
@@ -896,7 +896,7 @@ func TestValidate(t *testing.T) {
 				Message: ComplexMessage{
 					Declarations: nil,
 					ComplexBody: Matcher{
-						MatchStatements: []Expression{
+						Selectors: []Expression{
 							{Operand: Variable("variable")},
 						},
 						Variants: nil,
@@ -911,7 +911,7 @@ func TestValidate(t *testing.T) {
 			ast: AST{
 				Message: ComplexMessage{
 					ComplexBody: Matcher{
-						MatchStatements: []Expression{
+						Selectors: []Expression{
 							{Operand: Variable("variable")},
 						},
 						Variants: []Variant{
