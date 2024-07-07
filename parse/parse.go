@@ -704,16 +704,20 @@ func (p *parser) parseMatcher() (Matcher, error) {
 		case itemWhitespace:
 			continue
 		case itemExpressionOpen:
-			expression, err := p.parseExpression()
+			selector, err := p.parseExpression()
 			if err != nil {
 				return errorf("%w", err)
 			}
 
-			matcher.MatchStatements = append(matcher.MatchStatements, expression)
+			matcher.Selectors = append(matcher.Selectors, selector)
 		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			keys, err := p.parseVariantKeys()
 			if err != nil {
 				return errorf("%w", err)
+			}
+
+			if len(keys) != len(matcher.Selectors) {
+				return errorf("%w: %d selectors and %d keys", mf2.ErrVariantKeyMismatch, len(matcher.Selectors), len(keys))
 			}
 
 			pattern, err := p.parsePattern()

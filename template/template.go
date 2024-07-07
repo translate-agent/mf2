@@ -387,12 +387,12 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 }
 
 func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
-	res := make([]any, 0, len(matcher.MatchStatements))
+	res := make([]any, 0, len(matcher.Selectors))
 
-	for _, selectExpr := range matcher.MatchStatements {
+	for _, selector := range matcher.Selectors {
 		var function ast.Function
 
-		switch annotation := selectExpr.Annotation.(type) {
+		switch annotation := selector.Annotation.(type) {
 		case nil:
 			return nil, mf2.ErrMissingSelectorAnnotation
 		case ast.ReservedAnnotation, ast.PrivateUseAnnotation:
@@ -415,7 +415,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			return nil, fmt.Errorf("resolve options: %w", err)
 		}
 
-		input, err := e.resolveValue(selectExpr.Operand)
+		input, err := e.resolveValue(selector.Operand)
 		if err != nil {
 			return nil, fmt.Errorf("resolve value: %w", err)
 		}

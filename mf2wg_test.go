@@ -21,11 +21,9 @@ var failing []string
 func init() {
 	//nolint:lll
 	failing = []string{
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{$foo_:x}_*_*_{{foo}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_{:bar}_*_1_{{_}}_1_*_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_1_{{_}}",
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{:foo}_other_{{_}}",
-		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.match_{$foo_:x}_{$bar_:x}_*_{{foo}}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{horse_:date}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{:date}",
