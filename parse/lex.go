@@ -555,6 +555,10 @@ func lexIdentifier(l *lexer) stateFn {
 
 		switch {
 		default:
+			if strings.HasSuffix(s, ":") {
+				return l.emitErrorf(`invalid identifier "%s"`, s)
+			}
+
 			l.backup()
 
 			return l.emitItem(mk(typ, s))

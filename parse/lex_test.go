@@ -65,6 +65,14 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
+			name:  "function syntax error",
+			input: "{:func:}",
+			want: []item{
+				mk(itemExpressionOpen, "{"),
+				mk(itemError, `invalid identifier "func:"`),
+			},
+		},
+		{
 			name:  "variable",
 			input: "{$count :math:round}",
 			want: []item{
