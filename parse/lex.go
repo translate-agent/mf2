@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	"go.expect.digital/mf2"
 )
 
 // eof is the end of file item.
@@ -114,17 +116,28 @@ const (
 
 // item is an item returned by the lexer.
 type item struct {
+	err error
 	val string
 	typ itemType
 }
 
 func (i item) String() string {
-	return i.typ.String() + ` token "` + i.val + `"`
+	v := i.val
+	if i.typ == itemError {
+		v = i.err.Error()
+	}
+
+	return i.typ.String() + ` token "` + v + `"`
 }
 
 // mk creates a new item with the given type and value.
 func mk(typ itemType, val string) item {
 	return item{typ: typ, val: val}
+}
+
+// mkErr creates a new error item with the given format and args.
+func mkErr(format string, args ...any) item {
+	return item{typ: itemError, err: fmt.Errorf(format, args...)}
 }
 
 // lex creates a new lexer for the given input string.
@@ -226,7 +239,7 @@ func (l *lexer) emitItem(i item) stateFn {
 
 // emitErrorf emits the error and returns the next state function.
 func (l *lexer) emitErrorf(s string, args ...any) stateFn {
-	return l.emitItem(item{typ: itemError, val: fmt.Sprintf(s, args...)})
+	return l.emitItem(mkErr(s, args...))
 }
 
 // stateFn is a function that returns the next state function.
@@ -510,7 +523,7 @@ func lexLiteral(l *lexer) stateFn {
 				var number float64
 
 				if err := json.Unmarshal([]byte(s), &number); err != nil {
-					return l.emitErrorf("invalid number literal: %s", s)
+					return l.emitErrorf("%w: %s", mf2.ErrBadOperand, s)
 				}
 
 				l.backup()

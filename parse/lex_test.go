@@ -1,6 +1,8 @@
 package parse
 
-import "testing"
+import (
+	"testing"
+)
 
 func Test_lex(t *testing.T) {
 	t.Parallel()
@@ -27,7 +29,7 @@ func Test_lex(t *testing.T) {
 			name:  "unescaped }",
 			input: `}`,
 			want: []item{
-				mk(itemError, "unescaped } in pattern"),
+				mkErr("unescaped } in pattern"),
 			},
 		},
 		{
@@ -69,7 +71,7 @@ func Test_lex(t *testing.T) {
 			input: "{:func:}",
 			want: []item{
 				mk(itemExpressionOpen, "{"),
-				mk(itemError, `invalid function name "func:"`),
+				mkErr(`invalid function name "func:"`),
 			},
 		},
 		{
@@ -77,7 +79,7 @@ func Test_lex(t *testing.T) {
 			input: "{:}",
 			want: []item{
 				mk(itemExpressionOpen, "{"),
-				mk(itemError, "missing function name"),
+				mkErr("missing function name"),
 			},
 		},
 		{
@@ -429,7 +431,7 @@ func Test_lex(t *testing.T) {
 			want: []item{
 				mk(itemQuotedPatternOpen, "{{"),
 				mk(itemQuotedPatternClose, "}}"),
-				mk(itemError, "unexpected } in complex message"),
+				mkErr("unexpected } in complex message"),
 			},
 		},
 		{
@@ -545,8 +547,16 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 
 		logItems = append(logItems, logItem(t, wantItem, *l))
 
+		if wantItem.typ == itemError {
+			if wantItem.err == nil || got.err == nil || wantItem.err.Error() != got.err.Error() {
+				t.Errorf(`want error '%v', got '%v'`, wantItem.err, got.err)
+			}
+
+			return
+		}
+
 		if wantItem != got {
-			t.Errorf("want %v, got %v", wantItem, got)
+			t.Errorf(`want '%v', got '%v'`, wantItem, got)
 
 			for _, f := range logItems {
 				f()
@@ -555,7 +565,7 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 	}
 }
 
-func logItem(t *testing.T, expected item, l lexer) func() {
+func logItem(t *testing.T, want item, l lexer) func() {
 	t.Helper()
 
 	return func() {
@@ -567,8 +577,18 @@ func logItem(t *testing.T, expected item, l lexer) func() {
 			return " "
 		}
 
+		wantVal := want.val
+		if want.typ == itemError {
+			wantVal = want.err.Error()
+		}
+
+		val := l.item.val
+		if l.item.typ == itemError {
+			val = l.item.err.Error()
+		}
+
 		t.Logf("c%s p%s e%s f%s r%s m%s %-30s e%s(%s) a%s(%s)\n",
 			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody), f(l.isMarkup),
-			"'"+l.input[l.pos:]+"'", "'"+expected.val+"'", expected.typ, "'"+l.item.val+"'", l.item.typ)
+			"'"+l.input[l.pos:]+"'", "'"+wantVal+"'", want.typ, "'"+val+"'", l.item.typ)
 	}
 }
