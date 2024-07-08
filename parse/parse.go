@@ -363,7 +363,7 @@ func (p *parser) parseExpression() (Expression, error) {
 			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
 			itemFunction, itemPrivateStart, itemReservedStart, itemExpressionClose)
 
-		return errorf("%w", err)
+		return errorf("%w: %w", mf2.ErrBadOperand, err)
 	case itemVariable:
 		variable := Variable(itm.val)
 
