@@ -149,7 +149,7 @@ Examples:
 func Parse(input string) (AST, error) {
 	errorf := func(format string, err error) (AST, error) {
 		// TODO(jhorsts): improve error handling, add MF2 syntax error as early as possible.
-		if errors.Is(err, mf2.ErrDuplicateDeclaration) || errors.Is(err, mf2.ErrBadOperand) {
+		if errors.Is(err, mf2.ErrDuplicateDeclaration) {
 			return AST{}, fmt.Errorf("parse MF2: "+format, err)
 		}
 
