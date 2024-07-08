@@ -685,6 +685,19 @@ func (p *parser) parseReservedStatement() (ReservedStatement, error) {
 
 // ---------------------------------------------------------------------
 
+// isFallback returns true if all keys are "*".
+func isFallback(keys []VariantKey) bool {
+	fallbackVariant := CatchAllKey{}
+
+	for _, key := range keys {
+		if key != fallbackVariant {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (p *parser) parseMatcher() (Matcher, error) {
 	var matcher Matcher
 
@@ -723,7 +736,15 @@ done:
 			return errorf("%w", err)
 		case itemEOF:
 			p.backup()
-			return matcher, nil
+
+			// fallback variant is required
+			for i := range matcher.Variants {
+				if isFallback(matcher.Variants[i].Keys) {
+					return matcher, nil
+				}
+			}
+
+			return errorf("%w", mf2.ErrMissingFallbackVariant)
 		case itemError:
 			return errorf("%s", itm)
 		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
