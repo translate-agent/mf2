@@ -73,6 +73,14 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
+			name:  "bad placeholder",
+			input: "{:}",
+			want: []item{
+				mk(itemExpressionOpen, "{"),
+				mk(itemError, "missing function name"),
+			},
+		},
+		{
 			name:  "variable",
 			input: "{$count :math:round}",
 			want: []item{
