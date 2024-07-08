@@ -77,7 +77,7 @@ func (p *parser) collect() error {
 	for range 1000 {
 		itm := p.lexer.nextItem()
 		if itm.typ == itemError {
-			return errors.New(itm.String())
+			return itm.err
 		}
 
 		p.items = append(p.items, itm)

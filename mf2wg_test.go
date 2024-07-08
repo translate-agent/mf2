@@ -48,7 +48,6 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$t_=_{|2006-01-02T15:04:06|_:time_style=medium}_{{{$t_:time}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{|2006-01-02T15:04:06|_:time_style=medium}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{01_:number}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#03",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{0x1_:number}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number_minimumFractionDigits=foo}_{{bar_{$foo}}}",
@@ -63,10 +62,8 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$none}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{.1_:number}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{|+1|_:number}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/hello_{foo_:number}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number}_.local_$bar_=_{$foo}_.match_{$bar}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{1._:number}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_{$bar_:number}_one_one_{{one_one}}_one_*_{{one_other}}_*_*_{{other}}#02",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_one_{{one}}_1_{{=1}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar_:number}_.match_{$bar}_one_{{one}}_*_{{other}}",
