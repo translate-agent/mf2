@@ -674,7 +674,7 @@ male {{Hello sir!}}
 yes yes {{Hello beautiful world!}}
 yes no {{Hello beautiful!}}
 no yes {{Hello world!}}
-no no {{Hello!}}`,
+* * {{Hello!}}`,
 			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
@@ -712,8 +712,8 @@ no no {{Hello!}}`,
 						},
 						{
 							Keys: []VariantKey{
-								NameLiteral("no"),
-								NameLiteral("no"),
+								CatchAllKey{},
+								CatchAllKey{},
 							},
 							QuotedPattern: QuotedPattern{
 								Text("Hello!"),

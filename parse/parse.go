@@ -723,7 +723,24 @@ done:
 			return errorf("%w", err)
 		case itemEOF:
 			p.backup()
-			return matcher, nil
+
+			// fallback variant is required
+			for i := range matcher.Variants {
+				hasFallback := true
+
+				for _, key := range matcher.Variants[i].Keys {
+					if _, ok := key.(CatchAllKey); !ok {
+						hasFallback = false
+						break
+					}
+				}
+
+				if hasFallback {
+					return matcher, nil
+				}
+			}
+
+			return errorf("%w", mf2.ErrMissingFallbackVariant)
 		case itemError:
 			return errorf("%s", itm)
 		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
