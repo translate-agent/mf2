@@ -720,6 +720,7 @@ done:
 			err := unexpectedErr(itm, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
 			return errorf("%w", err)
 		case itemEOF:
+			p.backup()
 			return matcher, nil
 		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			keys, err := p.parseVariantKeys()
