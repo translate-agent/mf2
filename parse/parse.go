@@ -453,6 +453,10 @@ func (p *parser) parseExpression() (Expression, error) {
 		return errorf("%w", unexpectedErr(itm, itemExpressionClose))
 	}
 
+	if expr.Operand == nil && expr.Annotation == nil {
+		return errorf("%w: missing operand or annotation", mf2.ErrSyntax)
+	}
+
 	return expr, nil
 }
 
