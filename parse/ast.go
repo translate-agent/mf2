@@ -506,10 +506,3 @@ func sliceToString[T Node](s []T, sep string) string {
 
 	return r
 }
-
-// isZeroValue returns true if v is the zero value of its type.
-func isZeroValue[T comparable](v T) bool {
-	var zero T
-
-	return v == zero
-}
