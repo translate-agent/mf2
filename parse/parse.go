@@ -392,7 +392,7 @@ func (p *parser) parseExpression() (Expression, error) {
 	case itemFunction, itemPrivateStart, itemReservedStart:
 		p.backup()
 	case itemExpressionClose: // empty expression
-		return errorf("%w: missing operand or annotation", mf2.ErrSyntax)
+		return errorf("missing operand or annotation")
 	}
 
 	if p.peekNonWS().typ == itemExpressionClose { // expression with operand only
@@ -700,6 +700,8 @@ done:
 		default:
 			p.backup()
 			break done
+		case itemEOF:
+			return errorf("%w", unexpectedErr(itm))
 		case itemError:
 			return errorf("%s", itm)
 		case itemExpressionOpen:

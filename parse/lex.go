@@ -560,7 +560,7 @@ func lexIdentifier(l *lexer) stateFn {
 			}
 
 			if strings.HasSuffix(s, ":") {
-				return l.emitErrorf(`invalid identifier "%s"`, s)
+				return l.emitErrorf(`invalid %s name "%s"`, typ, s)
 			}
 
 			l.backup()

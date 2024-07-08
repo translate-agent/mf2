@@ -379,15 +379,15 @@ func TestParseComplexMessage(t *testing.T) {
 		{
 			name: "all declarations",
 			input: `.input{$input :number @a}
-		.input { $input2 ^|quot| @b=c}
-		.input { $input3 ! hey hey @c=1 @d=2}
-		.local $local1={1}
-		.local $local2={|2| ^private @a @b=2}
-		.local $local3 = { > reserved}
-		.reserved1 {$reserved1}
-		.reserved2 hey |quot| hey { |reserved| :func }
-		.reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
-		{{Text}}`,
+.input { $input2 ^|quot| @b=c}
+.input { $input3 ! hey hey @c=1 @d=2}
+.local $local1={1}
+.local $local2={|2| ^private @a @b=2}
+.local $local3 = { > reserved}
+.reserved1 {$reserved1}
+.reserved2 hey |quot| hey { |reserved| :func }
+.reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
+{{Text}}`,
 			want: ComplexMessage{
 				ComplexBody: QuotedPattern{Text("Text")},
 				Declarations: []Declaration{

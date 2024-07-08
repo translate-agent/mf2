@@ -69,7 +69,7 @@ func Test_lex(t *testing.T) {
 			input: "{:func:}",
 			want: []item{
 				mk(itemExpressionOpen, "{"),
-				mk(itemError, `invalid identifier "func:"`),
+				mk(itemError, `invalid function name "func:"`),
 			},
 		},
 		{
