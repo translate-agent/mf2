@@ -555,6 +555,14 @@ func lexIdentifier(l *lexer) stateFn {
 
 		switch {
 		default:
+			if len(s) == 0 && typ != itemMarkupClose {
+				return l.emitErrorf("missing %s name", typ)
+			}
+
+			if strings.HasSuffix(s, ":") {
+				return l.emitErrorf(`invalid %s name "%s"`, typ, s)
+			}
+
 			l.backup()
 
 			return l.emitItem(mk(typ, s))
