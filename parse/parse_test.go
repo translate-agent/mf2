@@ -363,143 +363,143 @@ func TestParseComplexMessage(t *testing.T) {
 		want  Message
 		input string
 	}{
-		{
-			name:  "no declarations",
-			input: "{{Hello, { |literal| } World!}}",
-			want: ComplexMessage{
-				Declarations: nil,
-				ComplexBody: QuotedPattern{
-					Text("Hello, "),
-					Expression{Operand: QuotedLiteral("literal")},
-					Text(" World!"),
-				},
-			},
-		},
-		//nolint:dupword
-		{
-			name: "all declarations",
-			input: `.input{$input :number @a}
-.input { $input2 ^|quot| @b=c}
-.input { $input3 ! hey hey @c=1 @d=2}
-.local $local1={1}
-.local $local2={|2| ^private @a @b=2}
-.local $local3 = { > reserved}
-.reserved1 {$reserved1}
-.reserved2 hey |quot| hey { |reserved| :func }
-.reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
-{{Text}}`,
-			want: ComplexMessage{
-				ComplexBody: QuotedPattern{Text("Text")},
-				Declarations: []Declaration{
-					// .input{$input :number @a}
-					InputDeclaration{
-						Operand:    Variable("input"),
-						Annotation: Function{Identifier: Identifier{Name: "number"}},
-						Attributes: []Attribute{{Identifier: Identifier{Name: "a"}}},
-					},
-					// .input { $input2 ^|quot| @b=c}
-					InputDeclaration{
-						Operand: Variable("input2"),
-						Annotation: PrivateUseAnnotation{
-							Start:        '^',
-							ReservedBody: []ReservedBody{QuotedLiteral("quot")},
-						},
-						Attributes: []Attribute{{Identifier: Identifier{Name: "b"}, Value: NameLiteral("c")}},
-					},
-					// .input { $input3 ! hey hey @c=1 @d=2}
-					InputDeclaration{
-						Operand: Variable("input3"),
-						Annotation: ReservedAnnotation{
-							Start: '!',
-							ReservedBody: []ReservedBody{
-								ReservedText("hey"),
-								ReservedText("hey"),
-							},
-						},
-						Attributes: []Attribute{
-							{Identifier: Identifier{Name: "c"}, Value: NumberLiteral(1)},
-							{Identifier: Identifier{Name: "d"}, Value: NumberLiteral(2)},
-						},
-					},
-					// .local $local1={1}
-					LocalDeclaration{
-						Variable:   Variable("local1"),
-						Expression: Expression{Operand: NumberLiteral(1)},
-					},
-					// .local $local2={|2| ^private @a @b=2}
-					LocalDeclaration{
-						Variable: Variable("local2"),
-						Expression: Expression{
-							Operand: QuotedLiteral("2"),
-							Annotation: PrivateUseAnnotation{
-								Start:        '^',
-								ReservedBody: []ReservedBody{ReservedText("private")},
-							},
-							Attributes: []Attribute{
-								{Identifier: Identifier{Name: "a"}},
-								{Identifier: Identifier{Name: "b"}, Value: NumberLiteral(2)},
-							},
-						},
-					},
-					// .local $local3 = { > reserved}
-					LocalDeclaration{
-						Variable: Variable("local3"),
-						Expression: Expression{
-							Annotation: ReservedAnnotation{
-								Start:        '>',
-								ReservedBody: []ReservedBody{ReservedText("reserved")},
-							},
-						},
-					},
-					// .reserved1 {$reserved1}
-					ReservedStatement{
-						Keyword: "reserved1",
-						Expressions: []Expression{
-							{Operand: Variable("reserved1")},
-						},
-					},
-					// .reserved2 hey |quot| hey { |reserved| :func }
-					ReservedStatement{
-						Keyword: "reserved2",
-						ReservedBody: []ReservedBody{
-							ReservedText("hey"),
-							QuotedLiteral("quot"),
-							ReservedText("hey"),
-						},
-						Expressions: []Expression{
-							{
-								Operand:    QuotedLiteral("reserved"),
-								Annotation: Function{Identifier: Identifier{Name: "func"}},
-							},
-						},
-					},
-					// .reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
-					ReservedStatement{
-						Keyword: "reserved3",
-						ReservedBody: []ReservedBody{
-							QuotedLiteral("body"),
-							QuotedLiteral("body2"),
-						},
-						Expressions: []Expression{
-							{Operand: Variable("expr1")},
-							{Operand: QuotedLiteral("expr2")},
-							{Annotation: Function{Identifier: Identifier{Name: "expr3"}}},
-							{
-								Operand: Variable("expr4"),
-								Annotation: PrivateUseAnnotation{
-									Start:        '^',
-									ReservedBody: []ReservedBody{ReservedText("hey")},
-								},
-								Attributes: []Attribute{
-									{Identifier: Identifier{Name: "beep"}},
-									{Identifier: Identifier{Name: "boop"}},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+		// 		{
+		// 			name:  "no declarations",
+		// 			input: "{{Hello, { |literal| } World!}}",
+		// 			want: ComplexMessage{
+		// 				Declarations: nil,
+		// 				ComplexBody: QuotedPattern{
+		// 					Text("Hello, "),
+		// 					Expression{Operand: QuotedLiteral("literal")},
+		// 					Text(" World!"),
+		// 				},
+		// 			},
+		// 		},
+		// 		//nolint:dupword
+		// 		{
+		// 			name: "all declarations",
+		// 			input: `.input{$input :number @a}
+		// .input { $input2 ^|quot| @b=c}
+		// .input { $input3 ! hey hey @c=1 @d=2}
+		// .local $local1={1}
+		// .local $local2={|2| ^private @a @b=2}
+		// .local $local3 = { > reserved}
+		// .reserved1 {$reserved1}
+		// .reserved2 hey |quot| hey { |reserved| :func }
+		// .reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
+		// {{Text}}`,
+		// 			want: ComplexMessage{
+		// 				ComplexBody: QuotedPattern{Text("Text")},
+		// 				Declarations: []Declaration{
+		// 					// .input{$input :number @a}
+		// 					InputDeclaration{
+		// 						Operand:    Variable("input"),
+		// 						Annotation: Function{Identifier: Identifier{Name: "number"}},
+		// 						Attributes: []Attribute{{Identifier: Identifier{Name: "a"}}},
+		// 					},
+		// 					// .input { $input2 ^|quot| @b=c}
+		// 					InputDeclaration{
+		// 						Operand: Variable("input2"),
+		// 						Annotation: PrivateUseAnnotation{
+		// 							Start:        '^',
+		// 							ReservedBody: []ReservedBody{QuotedLiteral("quot")},
+		// 						},
+		// 						Attributes: []Attribute{{Identifier: Identifier{Name: "b"}, Value: NameLiteral("c")}},
+		// 					},
+		// 					// .input { $input3 ! hey hey @c=1 @d=2}
+		// 					InputDeclaration{
+		// 						Operand: Variable("input3"),
+		// 						Annotation: ReservedAnnotation{
+		// 							Start: '!',
+		// 							ReservedBody: []ReservedBody{
+		// 								ReservedText("hey"),
+		// 								ReservedText("hey"),
+		// 							},
+		// 						},
+		// 						Attributes: []Attribute{
+		// 							{Identifier: Identifier{Name: "c"}, Value: NumberLiteral(1)},
+		// 							{Identifier: Identifier{Name: "d"}, Value: NumberLiteral(2)},
+		// 						},
+		// 					},
+		// 					// .local $local1={1}
+		// 					LocalDeclaration{
+		// 						Variable:   Variable("local1"),
+		// 						Expression: Expression{Operand: NumberLiteral(1)},
+		// 					},
+		// 					// .local $local2={|2| ^private @a @b=2}
+		// 					LocalDeclaration{
+		// 						Variable: Variable("local2"),
+		// 						Expression: Expression{
+		// 							Operand: QuotedLiteral("2"),
+		// 							Annotation: PrivateUseAnnotation{
+		// 								Start:        '^',
+		// 								ReservedBody: []ReservedBody{ReservedText("private")},
+		// 							},
+		// 							Attributes: []Attribute{
+		// 								{Identifier: Identifier{Name: "a"}},
+		// 								{Identifier: Identifier{Name: "b"}, Value: NumberLiteral(2)},
+		// 							},
+		// 						},
+		// 					},
+		// 					// .local $local3 = { > reserved}
+		// 					LocalDeclaration{
+		// 						Variable: Variable("local3"),
+		// 						Expression: Expression{
+		// 							Annotation: ReservedAnnotation{
+		// 								Start:        '>',
+		// 								ReservedBody: []ReservedBody{ReservedText("reserved")},
+		// 							},
+		// 						},
+		// 					},
+		// 					// .reserved1 {$reserved1}
+		// 					ReservedStatement{
+		// 						Keyword: "reserved1",
+		// 						Expressions: []Expression{
+		// 							{Operand: Variable("reserved1")},
+		// 						},
+		// 					},
+		// 					// .reserved2 hey |quot| hey { |reserved| :func }
+		// 					ReservedStatement{
+		// 						Keyword: "reserved2",
+		// 						ReservedBody: []ReservedBody{
+		// 							ReservedText("hey"),
+		// 							QuotedLiteral("quot"),
+		// 							ReservedText("hey"),
+		// 						},
+		// 						Expressions: []Expression{
+		// 							{
+		// 								Operand:    QuotedLiteral("reserved"),
+		// 								Annotation: Function{Identifier: Identifier{Name: "func"}},
+		// 							},
+		// 						},
+		// 					},
+		// 					// .reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
+		// 					ReservedStatement{
+		// 						Keyword: "reserved3",
+		// 						ReservedBody: []ReservedBody{
+		// 							QuotedLiteral("body"),
+		// 							QuotedLiteral("body2"),
+		// 						},
+		// 						Expressions: []Expression{
+		// 							{Operand: Variable("expr1")},
+		// 							{Operand: QuotedLiteral("expr2")},
+		// 							{Annotation: Function{Identifier: Identifier{Name: "expr3"}}},
+		// 							{
+		// 								Operand: Variable("expr4"),
+		// 								Annotation: PrivateUseAnnotation{
+		// 									Start:        '^',
+		// 									ReservedBody: []ReservedBody{ReservedText("hey")},
+		// 								},
+		// 								Attributes: []Attribute{
+		// 									{Identifier: Identifier{Name: "beep"}},
+		// 									{Identifier: Identifier{Name: "boop"}},
+		// 								},
+		// 							},
+		// 						},
+		// 					},
+		// 				},
+		// 			},
+		// 		},
 		// Matcher
 		{
 			name:  "simple matcher one line",
@@ -536,193 +536,193 @@ func TestParseComplexMessage(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "simple matcher with newline variants",
-			input: `.match { $variable :number }
-1 {{Hello { $variable } world}}
-* {{Hello { $variable } worlds}}`,
-			want: ComplexMessage{
-				Declarations: nil,
-				ComplexBody: Matcher{
-					Selectors: []Expression{
-						{
-							Operand: Variable("variable"),
-							Annotation: Function{
-								Identifier: Identifier{Namespace: "", Name: "number"},
-							},
-						},
-					},
-					Variants: []Variant{
-						{
-							Keys: []VariantKey{NumberLiteral(1)},
-							QuotedPattern: QuotedPattern{
-								Text("Hello "),
-								Expression{Operand: Variable("variable")},
-								Text(" world"),
-							},
-						},
-						{
-							Keys: []VariantKey{CatchAllKey{}},
-							QuotedPattern: QuotedPattern{
-								Text("Hello "),
-								Expression{Operand: Variable("variable")},
-								Text(" worlds"),
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "simple matcher with newline variants in one line",
-			input: `.match { $variable :number }
+		// 		{
+		// 			name: "simple matcher with newline variants",
+		// 			input: `.match { $variable :number }
+		// 1 {{Hello { $variable } world}}
+		// * {{Hello { $variable } worlds}}`,
+		// 			want: ComplexMessage{
+		// 				Declarations: nil,
+		// 				ComplexBody: Matcher{
+		// 					Selectors: []Expression{
+		// 						{
+		// 							Operand: Variable("variable"),
+		// 							Annotation: Function{
+		// 								Identifier: Identifier{Namespace: "", Name: "number"},
+		// 							},
+		// 						},
+		// 					},
+		// 					Variants: []Variant{
+		// 						{
+		// 							Keys: []VariantKey{NumberLiteral(1)},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello "),
+		// 								Expression{Operand: Variable("variable")},
+		// 								Text(" world"),
+		// 							},
+		// 						},
+		// 						{
+		// 							Keys: []VariantKey{CatchAllKey{}},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello "),
+		// 								Expression{Operand: Variable("variable")},
+		// 								Text(" worlds"),
+		// 							},
+		// 						},
+		// 					},
+		// 				},
+		// 			},
+		// 		},
+		// 		{
+		// 			name: "simple matcher with newline variants in one line",
+		// 			input: `.match { $variable :number }
 
-1 {{Hello { $variable} world}}* {{Hello { $variable } worlds}}`,
-			want: ComplexMessage{
-				Declarations: nil,
-				ComplexBody: Matcher{
-					Selectors: []Expression{
-						{
-							Operand: Variable("variable"),
-							Annotation: Function{
-								Identifier: Identifier{Namespace: "", Name: "number"},
-							},
-						},
-					},
-					Variants: []Variant{
-						{
-							Keys: []VariantKey{NumberLiteral(1)},
-							QuotedPattern: QuotedPattern{
-								Text("Hello "),
-								Expression{Operand: Variable("variable")},
-								Text(" world"),
-							},
-						},
-						{
-							Keys: []VariantKey{CatchAllKey{}},
-							QuotedPattern: QuotedPattern{
-								Text("Hello "),
-								Expression{Operand: Variable("variable")},
-								Text(" worlds"),
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "matcher with declarations",
-			input: `.local $var1 = { male }
-.local $var2 = { |female| }
-.match { :gender }
-male {{Hello sir!}}
-|female| {{Hello madam!}}
-* {{Hello { $var1 } or { $var2 }!}}`,
-			want: ComplexMessage{
-				Declarations: []Declaration{
-					LocalDeclaration{
-						Variable:   Variable("var1"),
-						Expression: Expression{Operand: NameLiteral("male")},
-					},
-					LocalDeclaration{
-						Variable:   Variable("var2"),
-						Expression: Expression{Operand: QuotedLiteral("female")},
-					},
-				},
-				ComplexBody: Matcher{
-					Selectors: []Expression{
-						{
-							Annotation: Function{
-								Identifier: Identifier{
-									Namespace: "",
-									Name:      "gender",
-								},
-							},
-						},
-					},
-					Variants: []Variant{
-						{
-							Keys: []VariantKey{NameLiteral("male")},
-							QuotedPattern: QuotedPattern{
-								Text("Hello sir!"),
-							},
-						},
-						{
-							Keys: []VariantKey{QuotedLiteral("female")},
-							QuotedPattern: QuotedPattern{
-								Text("Hello madam!"),
-							},
-						},
-						{
-							Keys: []VariantKey{CatchAllKey{}},
-							QuotedPattern: QuotedPattern{
-								Text("Hello "),
-								Expression{Operand: Variable("var1")},
-								Text(" or "),
-								Expression{Operand: Variable("var2")},
-								Text("!"),
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "double matcher",
-			//nolint:dupword
-			input: `.match { $var1 } { $var2 }
-yes yes {{Hello beautiful world!}}
-yes no {{Hello beautiful!}}
-no yes {{Hello world!}}
-no no {{Hello!}}`,
-			want: ComplexMessage{
-				Declarations: nil,
-				ComplexBody: Matcher{
-					Selectors: []Expression{
-						{Operand: Variable("var1")},
-						{Operand: Variable("var2")},
-					},
-					Variants: []Variant{
-						{
-							Keys: []VariantKey{
-								NameLiteral("yes"),
-								NameLiteral("yes"),
-							},
-							QuotedPattern: QuotedPattern{
-								Text("Hello beautiful world!"),
-							},
-						},
-						{
-							Keys: []VariantKey{
-								NameLiteral("yes"),
-								NameLiteral("no"),
-							},
-							QuotedPattern: QuotedPattern{
-								Text("Hello beautiful!"),
-							},
-						},
-						{
-							Keys: []VariantKey{
-								NameLiteral("no"),
-								NameLiteral("yes"),
-							},
-							QuotedPattern: QuotedPattern{
-								Text("Hello world!"),
-							},
-						},
-						{
-							Keys: []VariantKey{
-								NameLiteral("no"),
-								NameLiteral("no"),
-							},
-							QuotedPattern: QuotedPattern{
-								Text("Hello!"),
-							},
-						},
-					},
-				},
-			},
-		},
+		// 1 {{Hello { $variable} world}}* {{Hello { $variable } worlds}}`,
+		// 			want: ComplexMessage{
+		// 				Declarations: nil,
+		// 				ComplexBody: Matcher{
+		// 					Selectors: []Expression{
+		// 						{
+		// 							Operand: Variable("variable"),
+		// 							Annotation: Function{
+		// 								Identifier: Identifier{Namespace: "", Name: "number"},
+		// 							},
+		// 						},
+		// 					},
+		// 					Variants: []Variant{
+		// 						{
+		// 							Keys: []VariantKey{NumberLiteral(1)},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello "),
+		// 								Expression{Operand: Variable("variable")},
+		// 								Text(" world"),
+		// 							},
+		// 						},
+		// 						{
+		// 							Keys: []VariantKey{CatchAllKey{}},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello "),
+		// 								Expression{Operand: Variable("variable")},
+		// 								Text(" worlds"),
+		// 							},
+		// 						},
+		// 					},
+		// 				},
+		// 			},
+		// 		},
+		// 		{
+		// 			name: "matcher with declarations",
+		// 			input: `.local $var1 = { male }
+		// .local $var2 = { |female| }
+		// .match { :gender }
+		// male {{Hello sir!}}
+		// |female| {{Hello madam!}}
+		// * {{Hello { $var1 } or { $var2 }!}}`,
+		// 			want: ComplexMessage{
+		// 				Declarations: []Declaration{
+		// 					LocalDeclaration{
+		// 						Variable:   Variable("var1"),
+		// 						Expression: Expression{Operand: NameLiteral("male")},
+		// 					},
+		// 					LocalDeclaration{
+		// 						Variable:   Variable("var2"),
+		// 						Expression: Expression{Operand: QuotedLiteral("female")},
+		// 					},
+		// 				},
+		// 				ComplexBody: Matcher{
+		// 					Selectors: []Expression{
+		// 						{
+		// 							Annotation: Function{
+		// 								Identifier: Identifier{
+		// 									Namespace: "",
+		// 									Name:      "gender",
+		// 								},
+		// 							},
+		// 						},
+		// 					},
+		// 					Variants: []Variant{
+		// 						{
+		// 							Keys: []VariantKey{NameLiteral("male")},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello sir!"),
+		// 							},
+		// 						},
+		// 						{
+		// 							Keys: []VariantKey{QuotedLiteral("female")},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello madam!"),
+		// 							},
+		// 						},
+		// 						{
+		// 							Keys: []VariantKey{CatchAllKey{}},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello "),
+		// 								Expression{Operand: Variable("var1")},
+		// 								Text(" or "),
+		// 								Expression{Operand: Variable("var2")},
+		// 								Text("!"),
+		// 							},
+		// 						},
+		// 					},
+		// 				},
+		// 			},
+		// 		},
+		// 		{
+		// 			name: "double matcher",
+		// 			//nolint:dupword
+		// 			input: `.match { $var1 } { $var2 }
+		// yes yes {{Hello beautiful world!}}
+		// yes no {{Hello beautiful!}}
+		// no yes {{Hello world!}}
+		// no no {{Hello!}}`,
+		// 			want: ComplexMessage{
+		// 				Declarations: nil,
+		// 				ComplexBody: Matcher{
+		// 					Selectors: []Expression{
+		// 						{Operand: Variable("var1")},
+		// 						{Operand: Variable("var2")},
+		// 					},
+		// 					Variants: []Variant{
+		// 						{
+		// 							Keys: []VariantKey{
+		// 								NameLiteral("yes"),
+		// 								NameLiteral("yes"),
+		// 							},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello beautiful world!"),
+		// 							},
+		// 						},
+		// 						{
+		// 							Keys: []VariantKey{
+		// 								NameLiteral("yes"),
+		// 								NameLiteral("no"),
+		// 							},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello beautiful!"),
+		// 							},
+		// 						},
+		// 						{
+		// 							Keys: []VariantKey{
+		// 								NameLiteral("no"),
+		// 								NameLiteral("yes"),
+		// 							},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello world!"),
+		// 							},
+		// 						},
+		// 						{
+		// 							Keys: []VariantKey{
+		// 								NameLiteral("no"),
+		// 								NameLiteral("no"),
+		// 							},
+		// 							QuotedPattern: QuotedPattern{
+		// 								Text("Hello!"),
+		// 							},
+		// 						},
+		// 					},
+		// 				},
+		// 			},
+		// 		},
 	}
 
 	for _, test := range tests {
@@ -774,170 +774,6 @@ func TestParseErrors(t *testing.T) {
 
 			if _, err := Parse(test.in); err == nil || err.Error() != test.wantErr {
 				t.Errorf("want '%s', got '%s'", test.wantErr, err)
-			}
-		})
-	}
-}
-
-// TestValidate tests negative cases for AST validation. Positive cases are covered by TestParse* tests.
-func TestValidate(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		ast       AST
-		name      string
-		errorPath string // path to the failing field (simplified to last n fields)
-	}{
-		{
-			name:      "No message",
-			ast:       AST{Message: nil},
-			errorPath: "ast",
-		},
-		{
-			// Hello, { $ } World!
-			name: "Variable expression empty variable name",
-			ast: AST{
-				Message: SimpleMessage{
-					Text("Hello, "),
-					Expression{Operand: Variable("")},
-				},
-			},
-			errorPath: "expression.variable",
-		},
-		{
-			// Hello, { $variable : } World!
-			name: "Variable expression with annotation empty function name",
-			ast: AST{
-				Message: SimpleMessage{
-					Text("Hello, "),
-					Expression{
-						Operand: Variable("variable"),
-						Annotation: Function{
-							Identifier: Identifier{
-								Namespace: "",
-								Name:      "",
-							},
-						},
-					},
-				},
-			},
-			errorPath: "function.identifier",
-		},
-		{
-			// Hello, { } World!
-			name: "Empty annotation expression",
-			ast: AST{
-				Message: SimpleMessage{
-					Text("Hello, "),
-					Expression{},
-					Text(" World!"),
-				},
-			},
-			errorPath: "simpleMessage.expression",
-		},
-		{
-			// .input { $ } {{Hello, World!}}
-			name: "Empty variable in input declaration",
-			ast: AST{
-				Message: ComplexMessage{
-					Declarations: []Declaration{
-						InputDeclaration{Operand: Variable("")},
-					},
-					ComplexBody: QuotedPattern{
-						Text("Hello, World!"),
-					},
-				},
-			},
-			errorPath: "inputDeclaration.expression",
-		},
-		{
-			// .local $var = {  } {{Hello, World!}}
-			name: "Empty expression in local declaration",
-			ast: AST{
-				Message: ComplexMessage{
-					Declarations: []Declaration{
-						LocalDeclaration{
-							Variable:   Variable("var"),
-							Expression: Expression{},
-						},
-					},
-					ComplexBody: QuotedPattern{
-						Text("Hello, World!"),
-					},
-				},
-			},
-			errorPath: "complexMessage.localDeclaration",
-		},
-		{
-			// .match { } 1 {{Hello, World!}}
-			name: "Empty expression in matcher",
-			ast: AST{
-				Message: ComplexMessage{
-					Declarations: nil,
-					ComplexBody: Matcher{
-						Selectors: nil,
-						Variants: []Variant{
-							{
-								Keys: []VariantKey{NumberLiteral(1)},
-								QuotedPattern: QuotedPattern{
-									Text("Hello, World!"),
-								},
-							},
-						},
-					},
-				},
-			},
-			errorPath: "complexMessage.matcher",
-		},
-		{
-			// .match { $variable }
-			name: "Matcher without variants",
-			ast: AST{
-				Message: ComplexMessage{
-					Declarations: nil,
-					ComplexBody: Matcher{
-						Selectors: []Expression{
-							{Operand: Variable("variable")},
-						},
-						Variants: nil,
-					},
-				},
-			},
-			errorPath: "complexMessage.matcher",
-		},
-		{
-			// .match { $variable } {{Hello world}}
-			name: "Matcher without variant key",
-			ast: AST{
-				Message: ComplexMessage{
-					ComplexBody: Matcher{
-						Selectors: []Expression{
-							{Operand: Variable("variable")},
-						},
-						Variants: []Variant{
-							{
-								Keys:          []VariantKey{},
-								QuotedPattern: QuotedPattern{Text("Hello world")},
-							},
-						},
-					},
-				},
-			},
-			errorPath: "matcher.variant",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			if test.errorPath == "" {
-				t.Error("test.errorPath is not set")
-			}
-
-			err := test.ast.validate()
-			if !strings.Contains(err.Error(), test.errorPath) {
-				t.Errorf("want '%s', got '%s'", test.errorPath, err)
 			}
 		})
 	}

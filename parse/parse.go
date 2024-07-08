@@ -175,12 +175,7 @@ func Parse(input string) (AST, error) {
 		return errorf("%w", err)
 	}
 
-	ast := AST{Message: message}
-	if err := ast.validate(); err != nil {
-		return errorf("validate: %w", err)
-	}
-
-	return ast, nil
+	return AST{Message: message}, nil
 }
 
 // ------------------------------Message------------------------------
@@ -697,12 +692,16 @@ func (p *parser) parseMatcher() (Matcher, error) {
 		return Matcher{}, fmt.Errorf("matcher: "+format, args...)
 	}
 
-	for itm := p.next(); itm.typ != itemEOF; itm = p.next() {
-		switch itm.typ {
+	// parse one or more selectors
+
+done:
+	for {
+		switch itm := p.nextNonWS(); itm.typ {
+		default:
+			p.backup()
+			break done
 		case itemError:
 			return errorf("%s", itm)
-		case itemWhitespace:
-			continue
 		case itemExpressionOpen:
 			selector, err := p.parseExpression()
 			if err != nil {
@@ -710,6 +709,18 @@ func (p *parser) parseMatcher() (Matcher, error) {
 			}
 
 			matcher.Selectors = append(matcher.Selectors, selector)
+		}
+	}
+
+	// parse one or more variants
+
+	for {
+		switch itm := p.nextNonWS(); itm.typ {
+		default:
+			err := unexpectedErr(itm, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+			return errorf("%w", err)
+		case itemEOF:
+			return matcher, nil
 		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			keys, err := p.parseVariantKeys()
 			if err != nil {
@@ -726,17 +737,8 @@ func (p *parser) parseMatcher() (Matcher, error) {
 			}
 
 			matcher.Variants = append(matcher.Variants, Variant{Keys: keys, QuotedPattern: QuotedPattern(pattern)})
-		// bad tokens
-		default:
-			err := unexpectedErr(itm, itemWhitespace, itemExpressionOpen, itemCatchAllKey,
-				itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
-			return errorf("%w", err)
 		}
 	}
-
-	p.backup()
-
-	return matcher, nil
 }
 
 func (p *parser) parseVariantKeys() ([]VariantKey, error) {
