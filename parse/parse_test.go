@@ -539,8 +539,8 @@ func TestParseComplexMessage(t *testing.T) {
 		{
 			name: "simple matcher with newline variants",
 			input: `.match { $variable :number }
-		1 {{Hello { $variable } world}}
-		* {{Hello { $variable } worlds}}`,
+1 {{Hello { $variable } world}}
+* {{Hello { $variable } worlds}}`,
 			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
@@ -577,7 +577,7 @@ func TestParseComplexMessage(t *testing.T) {
 			name: "simple matcher with newline variants in one line",
 			input: `.match { $variable :number }
 
-		1 {{Hello { $variable} world}}* {{Hello { $variable } worlds}}`,
+1 {{Hello { $variable} world}}* {{Hello { $variable } worlds}}`,
 			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
@@ -613,11 +613,11 @@ func TestParseComplexMessage(t *testing.T) {
 		{
 			name: "matcher with declarations",
 			input: `.local $var1 = { male }
-		.local $var2 = { |female| }
-		.match { :gender }
-		male {{Hello sir!}}
-		|female| {{Hello madam!}}
-		* {{Hello { $var1 } or { $var2 }!}}`,
+.local $var2 = { |female| }
+.match { :gender }
+male {{Hello sir!}}
+|female| {{Hello madam!}}
+* {{Hello { $var1 } or { $var2 }!}}`,
 			want: ComplexMessage{
 				Declarations: []Declaration{
 					LocalDeclaration{
@@ -671,10 +671,10 @@ func TestParseComplexMessage(t *testing.T) {
 			name: "double matcher",
 			//nolint:dupword
 			input: `.match { $var1 } { $var2 }
-		yes yes {{Hello beautiful world!}}
-		yes no {{Hello beautiful!}}
-		no yes {{Hello world!}}
-		no no {{Hello!}}`,
+yes yes {{Hello beautiful world!}}
+yes no {{Hello beautiful!}}
+no yes {{Hello world!}}
+no no {{Hello!}}`,
 			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{

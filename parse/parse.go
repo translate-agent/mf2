@@ -724,6 +724,8 @@ done:
 		case itemEOF:
 			p.backup()
 			return matcher, nil
+		case itemError:
+			return errorf("%s", itm)
 		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			keys, err := p.parseVariantKeys()
 			if err != nil {
