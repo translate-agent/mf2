@@ -392,7 +392,7 @@ func (p *parser) parseExpression() (Expression, error) {
 	case itemFunction, itemPrivateStart, itemReservedStart:
 		p.backup()
 	case itemExpressionClose: // empty expression
-		return expr, nil
+		return errorf("%w: missing operand or annotation", mf2.ErrSyntax)
 	}
 
 	if p.peekNonWS().typ == itemExpressionClose { // expression with operand only
@@ -451,10 +451,6 @@ func (p *parser) parseExpression() (Expression, error) {
 
 	if itm := p.nextNonWS(); itm.typ != itemExpressionClose {
 		return errorf("%w", unexpectedErr(itm, itemExpressionClose))
-	}
-
-	if expr.Operand == nil && expr.Annotation == nil {
-		return errorf("%w: missing operand or annotation", mf2.ErrSyntax)
 	}
 
 	return expr, nil
