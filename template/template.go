@@ -423,11 +423,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 		}
 
 		input, err := e.resolveValue(selector.Operand)
-		if errors.Is(err, mf2.ErrUnresolvedVariable) {
-			input = nil
-
-			e.addError(err)
-		} else if err != nil {
+		if err != nil {
 			return nil, fmt.Errorf("resolve value: %w", err)
 		}
 
