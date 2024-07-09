@@ -419,12 +419,20 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		opts, err := e.resolveOptions(function.Options)
 		if err != nil {
-			return nil, fmt.Errorf("resolve options: %w", err)
+			e.addError(fmt.Errorf("resolve options: %w", err))
+
+			res = append(res, ast.CatchAllKey{})
+
+			continue
 		}
 
 		input, err := e.resolveValue(selector.Operand)
 		if err != nil {
-			return nil, fmt.Errorf("resolve value: %w", err)
+			e.addError(fmt.Errorf("resolve value: %w", err))
+
+			res = append(res, ast.CatchAllKey{})
+
+			continue
 		}
 
 		rslt, err := f.Match(input, opts, e.template.locale)
