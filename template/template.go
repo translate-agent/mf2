@@ -112,11 +112,6 @@ type executer struct {
 	template  *Template
 	w         io.Writer
 	variables map[string]any
-	errs      []error
-}
-
-func (e *executer) addError(err error) {
-	e.errs = append(e.errs, err)
 }
 
 func (e *executer) write(s string) error {
@@ -143,7 +138,7 @@ func (e *executer) execute() error {
 		}
 	}
 
-	return errors.Join(e.errs...)
+	return nil
 }
 
 func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
@@ -333,7 +328,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 //   - If the operand is a variable, it returns the value of the variable from the input map.
 func (e *executer) resolveValue(v ast.Value) (any, error) {
 	switch v := v.(type) {
-	default:
+	default: // this should never happen, should be cought by lexer/parser.
 		return nil, fmt.Errorf("unknown value type: '%T'", v)
 	case nil:
 		return v, nil // nil is also a valid value.
@@ -364,7 +359,7 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 
 		value, err := e.resolveValue(opt.Value)
 		if err != nil {
-			return nil, fmt.Errorf("resolve value: %w", err)
+			return nil, fmt.Errorf("resolve option: %w", err)
 		}
 
 		m[name] = value
@@ -374,27 +369,34 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 }
 
 func (e *executer) resolveMatcher(m ast.Matcher) error {
-	res, err := e.resolveSelector(m)
-	if err != nil {
-		return fmt.Errorf("resolve selector: %w", err)
+	res, matcherErr := e.resolveSelector(m)
+
+	switch {
+	case errors.Is(matcherErr, mf2.ErrUnknownFunction),
+		errors.Is(matcherErr, mf2.ErrUnresolvedVariable): // noop
+	case matcherErr != nil:
+		return fmt.Errorf("resolve selector: %w", matcherErr)
 	}
 
 	pref := e.resolvePreferences(m, res)
 
 	filteredVariants := e.filterVariants(m, pref)
 
-	sortable := e.sortVariants(filteredVariants, pref)
+	err := e.resolvePattern(e.bestMatchedPattern(filteredVariants, pref))
 
-	err = e.selectBestVariant(sortable)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return errors.Join(matcherErr, err)
 }
 
 func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
-	res := make([]any, 0, len(matcher.Selectors))
+	var selectorErr error
+
+	selectors := make([]any, 0, len(matcher.Selectors))
+
+	addErr := func(err error) {
+		selectorErr = errors.Join(selectorErr, err)
+
+		selectors = append(selectors, ast.CatchAllKey{})
+	}
 
 	for _, selector := range matcher.Selectors {
 		var function ast.Function
@@ -410,40 +412,37 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		f, ok := e.template.registry[function.Identifier.Name]
 		if !ok {
-			return nil, fmt.Errorf("%w '%s'", mf2.ErrUnknownFunction, function.Identifier.Name)
+			addErr(fmt.Errorf("%w '%s'", mf2.ErrUnknownFunction, function.Identifier.Name))
+			continue
 		}
 
+		// TODO(jhorsts): what is match and format context? Does MF2 still have it?
 		if f.Match == nil {
 			return nil, fmt.Errorf("function '%s' not allowed in selector context", function.Identifier.Name)
 		}
 
 		opts, err := e.resolveOptions(function.Options)
 		if err != nil {
-			e.addError(fmt.Errorf("resolve options: %w", err))
-
-			res = append(res, ast.CatchAllKey{})
-
+			addErr(err)
 			continue
 		}
 
 		input, err := e.resolveValue(selector.Operand)
 		if err != nil {
-			e.addError(fmt.Errorf("resolve value: %w", err))
-
-			res = append(res, ast.CatchAllKey{})
-
+			addErr(err)
 			continue
 		}
 
 		rslt, err := f.Match(input, opts, e.template.locale)
 		if err != nil {
-			return nil, err
+			addErr(err)
+			continue
 		}
 
-		res = append(res, rslt)
+		selectors = append(selectors, rslt)
 	}
 
-	return res, nil
+	return selectors, selectorErr
 }
 
 func (e *executer) resolvePreferences(m ast.Matcher, res []any) [][]string {
@@ -520,7 +519,7 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 	return filteredVariants
 }
 
-func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string) []SortableVariant {
+func (e *executer) bestMatchedPattern(filteredVariants []ast.Variant, pref [][]string) ast.QuotedPattern {
 	// Step 4: Sort Variants
 	sortable := make([]SortableVariant, 0, len(filteredVariants))
 
@@ -560,16 +559,7 @@ func (e *executer) sortVariants(filteredVariants []ast.Variant, pref [][]string)
 		sort.Sort(SortableVariants(sortable))
 	}
 
-	return sortable
-}
-
-func (e *executer) selectBestVariant(sortable []SortableVariant) error {
-	// Select the best variant
-	if err := e.resolvePattern(sortable[0].Variant.QuotedPattern); err != nil {
-		return fmt.Errorf("resolve pattern: %w", err)
-	}
-
-	return nil
+	return sortable[0].Variant.QuotedPattern
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {
