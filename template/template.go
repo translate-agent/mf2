@@ -102,7 +102,7 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 	sb := new(strings.Builder)
 
 	if err := t.Execute(sb, input); err != nil {
-		return sb.String(), fmt.Errorf("execute: %w", err)
+		return sb.String(), err
 	}
 
 	return sb.String(), nil
@@ -116,17 +116,17 @@ type executer struct {
 
 func (e *executer) execute() error {
 	switch message := e.template.ast.Message.(type) {
-	default:
-		return fmt.Errorf("unknown message type: '%T'", message)
+	default: // this should never happen, AST must be valid.
+		return fmt.Errorf("execute: unknown message type: '%T'", message)
 	case nil:
 		return nil
 	case ast.SimpleMessage:
 		if err := e.resolvePattern(message); err != nil {
-			return fmt.Errorf("resolve pattern: %w", err)
+			return fmt.Errorf("execute: %w", err)
 		}
 	case ast.ComplexMessage:
 		if err := e.resolveComplexMessage(message); err != nil {
-			return fmt.Errorf("resolve complex message: %w", err)
+			return fmt.Errorf("execute: %w", err)
 		}
 	}
 
@@ -140,18 +140,18 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 
 	switch {
 	case errors.Is(err, mf2.ErrUnsupportedStatement), errors.Is(err, mf2.ErrUnresolvedVariable):
-		resolutionErr = fmt.Errorf("resolve declarations: %w", err)
+		resolutionErr = fmt.Errorf("complex message: %w", err)
 	case err != nil:
-		return fmt.Errorf("resolve declarations: %w", err)
+		return fmt.Errorf("complex message: %w", err)
 	}
 
 	err = e.resolveComplexBody(message.ComplexBody)
 
 	switch {
 	case errors.Is(err, mf2.ErrUnresolvedVariable):
-		resolutionErr = fmt.Errorf("resolve complex body: %w", err)
+		resolutionErr = fmt.Errorf("complex message: %w", err)
 	case err != nil:
-		return fmt.Errorf("resolve complex body: %w", err)
+		return fmt.Errorf("complex message: %w", err)
 	}
 
 	return resolutionErr
@@ -206,20 +206,24 @@ func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
 func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 	var resolutionErr error
 
+	errorf := func(format string, args ...any) error {
+		return errors.Join(resolutionErr, fmt.Errorf("resolve pattern: "+format, args...))
+	}
+
 	for _, part := range pattern {
 		switch v := part.(type) {
 		case ast.Text:
 			if _, err := e.w.Write([]byte(v)); err != nil {
-				return errors.Join(resolutionErr, fmt.Errorf("write text: %w", err))
+				return errorf("write text: %w", err)
 			}
 		case ast.Expression:
 			resolved, err := e.resolveExpression(v)
 			if err != nil {
-				resolutionErr = errors.Join(resolutionErr, fmt.Errorf("resolve expression: %w", err))
+				resolutionErr = errors.Join(resolutionErr, err)
 			}
 
 			if _, err := e.w.Write([]byte(resolved)); err != nil {
-				return errors.Join(resolutionErr, fmt.Errorf("write expression: %w", err))
+				return errorf("write resolved expression: %w", err)
 			}
 		// When formatting to a string, markup placeholders format to an empty string by default.
 		// See ".message-format-wg/exploration/open-close-placeholders.md#formatting-to-a-string"
