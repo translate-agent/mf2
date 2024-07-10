@@ -258,7 +258,7 @@ func assertErr(t *testing.T, want Errors, err error) {
 
 	wantErr := func(want error) {
 		if !errors.Is(err, want) {
-			t.Errorf("want error %s, got %s", want, err)
+			t.Errorf("want error '%s', got '%s'", want, err)
 		}
 	}
 
