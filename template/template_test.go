@@ -310,7 +310,7 @@ func BenchmarkTemplate_Sprint(b *testing.B) {
 		b.Error(err)
 	}
 
-	_, err = tmpl.Sprint(map[string]any{"foo": 1, "bar": 1})
+	_, err = tmpl.Sprint(map[string]any{"foo": "foo", "bar": "bar"})
 	if err != nil {
 		b.Error(err)
 	}
