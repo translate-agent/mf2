@@ -285,7 +285,8 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	f, ok := e.template.registry[funcName] // TODO(jhorsts): lookup by namespace and name
 	if !ok {
-		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf(`expression: %w "%s"`, mf2.ErrUnknownFunction, funcName))
+		err = fmt.Errorf(`expression: %w "%s"`, mf2.ErrUnknownFunction, funcName)
+		return fmtErroredExpr(), errors.Join(resolutionErr, err)
 	}
 
 	if f.Format == nil {
