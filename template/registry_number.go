@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
@@ -24,7 +25,17 @@ func parseNumberInput(input any) (float64, error) {
 		return 0, fmt.Errorf("input is required: %w", mf2.ErrBadOperand)
 	}
 
-	v, err := castAs[float64](input)
+	var (
+		v   float64
+		err error
+	)
+
+	if s, ok := input.(string); ok {
+		v, err = strconv.ParseFloat(s, 64)
+	} else {
+		v, err = castAs[float64](input)
+	}
+
 	if err != nil {
 		return 0, fmt.Errorf("unsupported type %T: %w: %w", input, err, mf2.ErrBadOperand)
 	}
