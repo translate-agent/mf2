@@ -10,8 +10,6 @@ import (
 	"golang.org/x/text/number"
 )
 
-// See ".message-format-wg/spec/registry.xml".
-
 // numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
 var numberRegistryFunc = RegistryFunc{
 	Format: numberFunc,

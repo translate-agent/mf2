@@ -8,8 +8,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// See ".message-format-wg/spec/registry.xml".
-
 // datetimeFunc is the implementation of the datetime function. Locale-sensitive date and time formatting.
 var datetimeRegistryFunc = RegistryFunc{
 	Format: datetimeFunc,
