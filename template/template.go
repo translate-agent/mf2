@@ -74,7 +74,7 @@ func WithLocale(locale language.Tag) Option {
 func (t *Template) Parse(input string) (*Template, error) {
 	ast, err := ast.Parse(input)
 	if err != nil {
-		return nil, fmt.Errorf("parse template: %w", err)
+		return nil, err //nolint:wrapcheck
 	}
 
 	t.ast = &ast
@@ -104,12 +104,9 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 // Sprint wraps Execute and returns the result as a string.
 func (t *Template) Sprint(input map[string]any) (string, error) {
 	sb := new(strings.Builder)
+	err := t.Execute(sb, input)
 
-	if err := t.Execute(sb, input); err != nil {
-		return sb.String(), err
-	}
-
-	return sb.String(), nil
+	return sb.String(), err
 }
 
 type executer struct {
@@ -150,11 +147,8 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 		err = e.resolvePattern(b)
 	}
 
-	switch {
-	case errors.Is(err, mf2.ErrUnresolvedVariable):
-		resolutionErr = fmt.Errorf("complex message: %w", err)
-	case err != nil:
-		return fmt.Errorf("complex message: %w", err)
+	if err != nil {
+		return errors.Join(resolutionErr, fmt.Errorf("complex message: %w", err))
 	}
 
 	return resolutionErr
@@ -166,13 +160,13 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 	for _, decl := range declarations {
 		switch d := decl.(type) {
 		case ast.ReservedStatement:
-			return fmt.Errorf("%w: '%s'", mf2.ErrUnsupportedStatement, "reserved statement")
+			return fmt.Errorf("%w", mf2.ErrUnsupportedStatement)
 		case ast.LocalDeclaration:
 			m[d.Variable] = struct{}{}
 
 			resolved, err := e.resolveExpression(d.Expression)
 			if err != nil {
-				return err
+				return fmt.Errorf("local declaration: %w", err)
 			}
 
 			e.variables[string(d.Variable)] = resolved
@@ -181,7 +175,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 
 			resolved, err := e.resolveExpression(ast.Expression(d))
 			if err != nil {
-				return err
+				return fmt.Errorf("input declaration: %w", err)
 			}
 
 			e.variables[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // Will always be a variable.
@@ -195,7 +189,7 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 	var resolutionErr error
 
 	errorf := func(format string, args ...any) error {
-		return errors.Join(resolutionErr, fmt.Errorf("resolve pattern: "+format, args...))
+		return errors.Join(resolutionErr, fmt.Errorf("pattern: "+format, args...))
 	}
 
 	for _, part := range pattern {
@@ -236,12 +230,12 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	switch v := expr.Annotation.(type) {
 	default:
-		return "", fmt.Errorf("expression: %w with %T annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
+		return "", fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnsupportedExpression)
 	case ast.Function:
 		funcName = v.Identifier.Name
 
 		if options, err = e.resolveOptions(v.Options); err != nil {
-			return "", fmt.Errorf("epxression: %w", err)
+			return "", fmt.Errorf("expression: %w", err)
 		}
 	case ast.PrivateUseAnnotation:
 		// See ".message-format-wg/spec/formatting.md".
@@ -249,13 +243,13 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 		// Supported private-use annotation with no operand: the annotation starting sigil, optionally followed by
 		// implementation-defined details conforming with patterns in the other cases (such as quoting literals).
 		// If details are provided, they SHOULD NOT leak potentially private information.
-		resolutionErr = fmt.Errorf("expression: %w with %T private use annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
+		resolutionErr = fmt.Errorf(`expression: private use annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
 
 		if value == nil {
 			return "{" + string(v.Start) + "}", resolutionErr
 		}
 	case ast.ReservedAnnotation:
-		resolutionErr = fmt.Errorf("expression: %w with %T reserved annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
+		resolutionErr = fmt.Errorf(`expression: reserved annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
 
 		if value == nil {
 			return "{" + string(v.Start) + "}", resolutionErr
@@ -300,7 +294,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	result, err := f.Format(value, options, e.template.locale)
 	if err != nil {
-		return fmtErroredExpr(), errors.Join(resolutionErr, err)
+		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
 	}
 
 	return fmt.Sprint(result), resolutionErr
@@ -338,7 +332,7 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 	for _, opt := range options {
 		name := opt.Identifier.Name
 		if _, ok := m[name]; ok {
-			return nil, fmt.Errorf("%w '%s'", mf2.ErrDuplicateOptionName, name)
+			return nil, fmt.Errorf(`%w "%s"`, mf2.ErrDuplicateOptionName, name)
 		}
 
 		value, err := e.resolveValue(opt.Value)
@@ -368,10 +362,10 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 
 	err := e.resolvePattern(e.bestMatchedPattern(filteredVariants, pref))
 	if err != nil {
-		err = fmt.Errorf("matcher: %w", err)
+		return errors.Join(matcherErr, fmt.Errorf("matcher: %w", err))
 	}
 
-	return errors.Join(matcherErr, err)
+	return matcherErr
 }
 
 func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
@@ -399,13 +393,13 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		f, ok := e.template.registry[function.Identifier.Name]
 		if !ok {
-			addErr(fmt.Errorf("%w '%s'", mf2.ErrUnknownFunction, function.Identifier.Name))
+			addErr(fmt.Errorf(`%w "%s"`, mf2.ErrUnknownFunction, function.Identifier.Name))
 			continue
 		}
 
 		// TODO(jhorsts): what is match and format context? Does MF2 still have it?
 		if f.Match == nil {
-			return nil, fmt.Errorf("selector: function '%s' not allowed", function.Identifier.Name)
+			return nil, fmt.Errorf(`selector: function "%s" not allowed`, function.Identifier.Name)
 		}
 
 		opts, err := e.resolveOptions(function.Options)

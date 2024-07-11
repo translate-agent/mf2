@@ -15,12 +15,12 @@ var stringRegistryFunc = RegistryFunc{
 	Match:  stringFunc,
 }
 
-func stringFunc(input any, options Options, locale language.Tag) (any, error) {
+func stringFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
-		return nil, fmt.Errorf("exec string function:"+format, args...)
+		return nil, fmt.Errorf("exec string function: "+format, args...)
 	}
 
-	if input == nil {
+	if operand == nil {
 		return "", nil
 	}
 
@@ -28,11 +28,11 @@ func stringFunc(input any, options Options, locale language.Tag) (any, error) {
 		return errorf("want no options")
 	}
 
-	switch value := input.(type) {
+	switch value := operand.(type) {
 	default:
-		s, err := castAs[string](input) // if underlying type is not string, return error
+		s, err := castAs[string](operand) // if underlying type is not string, return error
 		if err != nil {
-			return errorf("unsupported operand type: %T: %w", input, err)
+			return errorf("unsupported operand type: %T: %w", operand, err)
 		}
 
 		return s, nil

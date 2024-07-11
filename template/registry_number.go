@@ -2,7 +2,6 @@ package template
 
 import (
 	"fmt"
-	"reflect"
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
@@ -18,18 +17,19 @@ var numberRegistryFunc = RegistryFunc{
 	Format: numberFunc,
 }
 
-func parseNumberInput(input any) (float64, error) {
+// parseNumberOperand parses resolved operand value.
+func parseNumberOperand(operand any) (float64, error) {
 	errorf := func(format string, args ...any) (float64, error) {
-		return 0, fmt.Errorf("parse number: "+format+": %w", append(args, mf2.ErrBadOperand)...)
+		return 0, fmt.Errorf(format+": %w", append(args, mf2.ErrBadOperand)...)
 	}
 
-	if input == nil {
-		return errorf("input is required")
+	if operand == nil {
+		return errorf("operand is required")
 	}
 
-	v, err := castAs[float64](input)
+	v, err := castAs[float64](operand)
 	if err != nil {
-		return errorf("unsupported operand type %T: %w", input, err)
+		return errorf("unsupported operand type %T: %w", operand, err)
 	}
 
 	return v, nil
@@ -117,7 +117,7 @@ type numberOptions struct {
 
 func parseNumberOptions(opts Options) (*numberOptions, error) {
 	errorf := func(format string, args ...any) (*numberOptions, error) {
-		return nil, fmt.Errorf("parse number options: "+format, args...)
+		return nil, fmt.Errorf("parse options: "+format, args...)
 	}
 
 	for k := range opts {
@@ -240,12 +240,12 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	return &options, nil
 }
 
-func numberFunc(input any, options Options, locale language.Tag) (any, error) {
+func numberFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
 		return nil, fmt.Errorf("exec number function: "+format, args...)
 	}
 
-	value, err := parseNumberInput(input)
+	value, err := parseNumberOperand(operand)
 	if err != nil {
 		return errorf("%w", err)
 	}
@@ -267,7 +267,7 @@ func numberFunc(input any, options Options, locale language.Tag) (any, error) {
 
 	switch opts.Style {
 	default:
-		return errorf(`style "%s" is not implemented`, opts.Style)
+		return errorf(`option style "%s" is not implemented`, opts.Style)
 	case "decimal":
 		result = p.Sprint(number.Decimal(value, numberOpts...))
 	case "percent":
@@ -292,21 +292,4 @@ func numberFunc(input any, options Options, locale language.Tag) (any, error) {
 	}
 
 	return result, nil
-}
-
-// helpers
-
-// castAs tries to cast any value to the given type.
-func castAs[T any](val any) (T, error) {
-	var zeroVal T
-	typ := reflect.TypeOf(zeroVal)
-
-	v := (reflect.ValueOf(val))
-	if !v.Type().ConvertibleTo(typ) {
-		return zeroVal, fmt.Errorf("convert %v to %T", v.Type(), zeroVal)
-	}
-
-	v = v.Convert(typ)
-
-	return v.Interface().(T), nil //nolint:forcetypeassert
 }

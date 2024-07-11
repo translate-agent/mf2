@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 
 	"golang.org/x/exp/constraints"
@@ -33,7 +34,7 @@ func (o Options) GetString(name, fallback string, validate ...Validate[string]) 
 
 	s, ok := v.(string)
 	if !ok {
-		return errorf("got %T", name, v)
+		return errorf("got %T", v)
 	}
 
 	for _, f := range validate {
@@ -105,4 +106,19 @@ func eqOrGreaterThan[T constraints.Ordered](min T) func(T) error {
 
 		return nil
 	}
+}
+
+// castAs tries to cast any value to the given type.
+func castAs[T any](val any) (T, error) {
+	var zeroVal T
+	typ := reflect.TypeOf(zeroVal)
+
+	v := (reflect.ValueOf(val))
+	if !v.Type().ConvertibleTo(typ) {
+		return zeroVal, fmt.Errorf("convert %v to %T", v.Type(), zeroVal)
+	}
+
+	v = v.Convert(typ)
+
+	return v.Interface().(T), nil //nolint:forcetypeassert
 }

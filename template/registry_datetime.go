@@ -56,23 +56,24 @@ type datetimeOptions struct {
 	FractionalSecondDigits int
 }
 
-func parseDatetimeInput(input any) (time.Time, error) {
+// parseDatetimeOperand parses resolved operand value.
+func parseDatetimeOperand(operand any) (time.Time, error) {
 	errorf := func(format string, args ...any) (time.Time, error) {
-		return time.Time{}, fmt.Errorf("parse datetime: "+format+": %w", append(args, mf2.ErrBadOperand)...)
+		return time.Time{}, fmt.Errorf(format+": %w", append(args, mf2.ErrBadOperand)...)
 	}
 
-	if input == nil {
-		return errorf("input is required")
+	if operand == nil {
+		return errorf("operand is required")
 	}
 
-	switch v := input.(type) {
+	switch v := operand.(type) {
 	default:
-		return errorf("unsupported operand type %T", input)
+		return errorf("unsupported operand type %T", operand)
 	case string:
 		// layout is quick and dirty, does not conform with ISO 8601 fully as required
 		t, err := time.Parse(time.RFC3339[:len(v)], v)
 		if err != nil {
-			return errorf(`parse "%s"`, v)
+			return errorf(`parse operand "%s"`, v)
 		}
 
 		return t, nil
@@ -84,7 +85,7 @@ func parseDatetimeInput(input any) (time.Time, error) {
 // parseDatetimeOptions parses :datetime options.
 func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 	errorf := func(format string, args ...any) (*datetimeOptions, error) {
-		return nil, fmt.Errorf("parse datetime options: "+format, args...)
+		return nil, fmt.Errorf("parse options: "+format, args...)
 	}
 
 	for opt := range options {
@@ -188,19 +189,19 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 	return &opts, nil
 }
 
-func datetimeFunc(input any, options Options, locale language.Tag) (any, error) {
-	value, err := parseDatetimeInput(input)
+func datetimeFunc(operand any, options Options, locale language.Tag) (any, error) {
+	value, err := parseDatetimeOperand(operand)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("exec datetime func: %w", err)
 	}
 
 	if len(options) == 0 {
-		return fmt.Sprint(input), nil
+		return fmt.Sprint(operand), nil
 	}
 
 	opts, err := parseDatetimeOptions(options)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("exec datetime func: %w", err)
 	}
 
 	var layout string
