@@ -68,7 +68,8 @@ List of the default functions registered in the function registry. The functions
 | number                 | match     | maximumSignificantDigits                      |   ❌   |
 | number                 | match     | minimumFractionDigits                         |   ❌   |
 | number                 | match     | minimumFractionDigits                         |   ❌   |
-| integer (number alias) |           |                                               |   ❌   |
+| integer (number alias) | format    |                                               |  ✅︎   |
+| integer (number alias) | match     |                                               |   ❌   |
 | ordinal (number alias) |           |                                               |   ❌   |
 | plural (number alias)  |           |                                               |   ❌   |
 | string                 |           |                                               |   ❌   |

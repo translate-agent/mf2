@@ -9,6 +9,8 @@ import (
 	"golang.org/x/text/language"
 )
 
+// See ".message-format-wg/spec/registry.xml".
+
 type RegistryFunc struct {
 	Match  func(input any, options Options, locale language.Tag) (output any, err error)
 	Format func(input any, options Options, locale language.Tag) (output any, err error)
@@ -76,9 +78,10 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 // NewRegistry returns a new registry with default functions.
 func NewRegistry() Registry {
 	return Registry{
-		"string":   stringRegistryFunc,
-		"number":   numberRegistryFunc,
 		"datetime": datetimeRegistryFunc,
+		"integer":  integerRegistryFunc,
+		"number":   numberRegistryFunc,
+		"string":   stringRegistryFunc,
 	}
 }
 

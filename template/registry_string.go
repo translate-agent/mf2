@@ -6,8 +6,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// See ".messager-format-wg/spec/registry.xml".
-
 // stringRegistryFunc is the implementation of the string function.
 // Formatting of strings as a literal and selection based on string equality.
 var stringRegistryFunc = RegistryFunc{
