@@ -114,14 +114,6 @@ type executer struct {
 	variables map[string]any
 }
 
-func (e *executer) write(s string) error {
-	if _, err := e.w.Write([]byte(s)); err != nil {
-		return fmt.Errorf("write: %w", err)
-	}
-
-	return nil
-}
-
 func (e *executer) execute() error {
 	switch message := e.template.ast.Message.(type) {
 	default:
@@ -217,7 +209,7 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 	for _, part := range pattern {
 		switch v := part.(type) {
 		case ast.Text:
-			if err := e.write(string(v)); err != nil {
+			if _, err := e.w.Write([]byte(v)); err != nil {
 				return errors.Join(resolutionErr, fmt.Errorf("write text: %w", err))
 			}
 		case ast.Expression:
@@ -226,7 +218,7 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 				resolutionErr = errors.Join(resolutionErr, fmt.Errorf("resolve expression: %w", err))
 			}
 
-			if err := e.write(resolved); err != nil {
+			if _, err := e.w.Write([]byte(resolved)); err != nil {
 				return errors.Join(resolutionErr, fmt.Errorf("write expression: %w", err))
 			}
 		// When formatting to a string, markup placeholders format to an empty string by default.
