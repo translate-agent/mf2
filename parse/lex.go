@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
-
-	"go.expect.digital/mf2"
 )
 
 // eof is the end of file item.
@@ -453,7 +451,13 @@ func lexName(l *lexer) stateFn {
 	case '$':
 		typ = itemVariable
 	case '.':
-		typ = itemReservedKeyword
+		if l.isReservedBody {
+			typ = itemReservedKeyword
+		} else {
+			typ = itemUnquotedLiteral
+
+			l.backup()
+		}
 	default:
 		typ = itemUnquotedLiteral
 
@@ -465,12 +469,18 @@ func lexName(l *lexer) stateFn {
 		r rune   // current rune
 	)
 
-	for r = l.next(); isName(r); r = l.next() {
+	for r = l.next(); isName(r) || r == '+'; r = l.next() {
 		s += string(r)
 	}
 
 	if r == eof {
 		return l.emitErrorf("unexpected eof in name")
+	}
+
+	var nl float64
+
+	if err := json.Unmarshal([]byte(s), &nl); err == nil {
+		typ = itemNumberLiteral
 	}
 
 	l.backup()
@@ -512,25 +522,6 @@ func lexLiteral(l *lexer) stateFn {
 				case eof:
 					return l.emitErrorf("unexpected eof in quoted literal")
 				}
-			}
-		}
-	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9': // number literal
-		for {
-			r := l.next()
-
-			switch r {
-			default:
-				var number float64
-
-				if err := json.Unmarshal([]byte(s), &number); err != nil {
-					return l.emitErrorf("%w: %s", mf2.ErrBadOperand, s)
-				}
-
-				l.backup()
-
-				return l.emitItem(mk(itemNumberLiteral, s))
-			case '-', '+', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'e', 'E':
-				s += string(r)
 			}
 		}
 	}
