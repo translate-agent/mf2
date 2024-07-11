@@ -481,6 +481,8 @@ func lexName(l *lexer) stateFn {
 
 	if err := json.Unmarshal([]byte(s), &nl); err == nil {
 		typ = itemNumberLiteral
+	} else if strings.Contains(s, "+") {
+		return l.emitErrorf("invalid unquoted literal")
 	}
 
 	l.backup()
