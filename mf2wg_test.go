@@ -29,10 +29,7 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/.local_$d_=_{|2006-01-02|_:date_style=long}_{{{$d_:date}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{|2006-01-02|_:date_style=long}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{:datetime}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{horse_:datetime}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{$x_:datetime}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.match_{$foo_:integer}_one_{{one}}_*_{{other}}",
 
