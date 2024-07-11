@@ -74,7 +74,7 @@ func WithLocale(locale language.Tag) Option {
 func (t *Template) Parse(input string) (*Template, error) {
 	ast, err := ast.Parse(input)
 	if err != nil {
-		return nil, err //nolint:wrapcheck
+		return nil, fmt.Errorf("parse template: %w", err)
 	}
 
 	t.ast = &ast
@@ -85,7 +85,7 @@ func (t *Template) Parse(input string) (*Template, error) {
 // Execute writes the result of the template to the given writer.
 func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	if t.ast == nil {
-		return errors.New("AST is nil")
+		return errors.New("execute template: AST is nil")
 	}
 
 	executer := &executer{template: t, w: w, variables: make(map[string]any, len(input))}
@@ -94,7 +94,11 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 		executer.variables[k] = v
 	}
 
-	return executer.execute()
+	if err := executer.execute(); err != nil {
+		return fmt.Errorf("execute template: %w", err)
+	}
+
+	return nil
 }
 
 // Sprint wraps Execute and returns the result as a string.
@@ -117,20 +121,14 @@ type executer struct {
 func (e *executer) execute() error {
 	switch message := e.template.ast.Message.(type) {
 	default: // this should never happen, AST must be valid.
-		return fmt.Errorf("execute: unknown message type: '%T'", message)
+		return fmt.Errorf("unexpected message type: '%T'", message)
 	case nil:
 		return nil
 	case ast.SimpleMessage:
-		if err := e.resolvePattern(message); err != nil {
-			return fmt.Errorf("execute: %w", err)
-		}
+		return e.resolvePattern(message)
 	case ast.ComplexMessage:
-		if err := e.resolveComplexMessage(message); err != nil {
-			return fmt.Errorf("execute: %w", err)
-		}
+		return e.resolveComplexMessage(message)
 	}
-
-	return nil
 }
 
 func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
@@ -145,7 +143,12 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 		return fmt.Errorf("complex message: %w", err)
 	}
 
-	err = e.resolveComplexBody(message.ComplexBody)
+	switch b := message.ComplexBody.(type) {
+	case ast.Matcher:
+		err = e.resolveMatcher(b)
+	case ast.QuotedPattern:
+		err = e.resolvePattern(b)
+	}
 
 	switch {
 	case errors.Is(err, mf2.ErrUnresolvedVariable):
@@ -169,7 +172,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 
 			resolved, err := e.resolveExpression(d.Expression)
 			if err != nil {
-				return fmt.Errorf("resolve expression: %w", err)
+				return err
 			}
 
 			e.variables[string(d.Variable)] = resolved
@@ -178,25 +181,10 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 
 			resolved, err := e.resolveExpression(ast.Expression(d))
 			if err != nil {
-				return fmt.Errorf("resolve expression: %w", err)
+				return err
 			}
 
 			e.variables[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // Will always be a variable.
-		}
-	}
-
-	return nil
-}
-
-func (e *executer) resolveComplexBody(body ast.ComplexBody) error {
-	switch b := body.(type) {
-	case ast.Matcher:
-		if err := e.resolveMatcher(b); err != nil {
-			return fmt.Errorf("resolve matcher: %w", err)
-		}
-	case ast.QuotedPattern:
-		if err := e.resolvePattern(b); err != nil {
-			return fmt.Errorf("resolve pattern: %w", err)
 		}
 	}
 
@@ -237,7 +225,7 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 	value, err := e.resolveValue(expr.Operand)
 	if err != nil {
-		return fmt.Sprint(value), fmt.Errorf("resolve value: %w", err)
+		return fmt.Sprint(value), fmt.Errorf("expression: %w", err)
 	}
 
 	var (
@@ -248,12 +236,12 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	switch v := expr.Annotation.(type) {
 	default:
-		return "", fmt.Errorf("%w with %T annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
+		return "", fmt.Errorf("expression: %w with %T annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
 	case ast.Function:
 		funcName = v.Identifier.Name
 
 		if options, err = e.resolveOptions(v.Options); err != nil {
-			return "", fmt.Errorf("resolve options: %w", err)
+			return "", fmt.Errorf("epxression: %w", err)
 		}
 	case ast.PrivateUseAnnotation:
 		// See ".message-format-wg/spec/formatting.md".
@@ -261,13 +249,13 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 		// Supported private-use annotation with no operand: the annotation starting sigil, optionally followed by
 		// implementation-defined details conforming with patterns in the other cases (such as quoting literals).
 		// If details are provided, they SHOULD NOT leak potentially private information.
-		resolutionErr = fmt.Errorf("%w with %T private use annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
+		resolutionErr = fmt.Errorf("expression: %w with %T private use annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
 
 		if value == nil {
 			return "{" + string(v.Start) + "}", resolutionErr
 		}
 	case ast.ReservedAnnotation:
-		resolutionErr = fmt.Errorf("%w with %T reserved annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
+		resolutionErr = fmt.Errorf("expression: %w with %T reserved annotation: '%s'", mf2.ErrUnsupportedExpression, v, v)
 
 		if value == nil {
 			return "{" + string(v.Start) + "}", resolutionErr
@@ -303,11 +291,11 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	f, ok := e.template.registry[funcName] // TODO(jhorsts): lookup by namespace and name
 	if !ok {
-		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("%w '%s'", mf2.ErrUnknownFunction, funcName))
+		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf(`expression: %w "%s"`, mf2.ErrUnknownFunction, funcName))
 	}
 
 	if f.Format == nil {
-		return "", fmt.Errorf("function '%s' not allowed in formatting context", funcName)
+		return "", fmt.Errorf(`expression: function "%s" not allowed in formatting context`, funcName)
 	}
 
 	result, err := f.Format(value, options, e.template.locale)
@@ -325,7 +313,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 func (e *executer) resolveValue(v ast.Value) (any, error) {
 	switch v := v.(type) {
 	default: // this should never happen, should be cought by lexer/parser.
-		return nil, fmt.Errorf("unknown value type: '%T'", v)
+		return nil, fmt.Errorf(`unknown value type "%T"`, v)
 	case nil:
 		return v, nil // nil is also a valid value.
 	case ast.QuotedLiteral:
@@ -337,7 +325,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.Variable:
 		val, ok := e.variables[string(v)]
 		if !ok {
-			return "{" + v.String() + "}", fmt.Errorf("%w '%s'", mf2.ErrUnresolvedVariable, v)
+			return "{" + v.String() + "}", fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
 
 		return val, nil
@@ -355,7 +343,7 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 
 		value, err := e.resolveValue(opt.Value)
 		if err != nil {
-			return nil, fmt.Errorf("resolve option: %w", err)
+			return nil, fmt.Errorf("option: %w", err)
 		}
 
 		m[name] = value
@@ -371,7 +359,7 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 	case errors.Is(matcherErr, mf2.ErrUnknownFunction),
 		errors.Is(matcherErr, mf2.ErrUnresolvedVariable): // noop
 	case matcherErr != nil:
-		return fmt.Errorf("resolve selector: %w", matcherErr)
+		return fmt.Errorf("matcher: %w", matcherErr)
 	}
 
 	pref := e.resolvePreferences(m, res)
@@ -379,6 +367,9 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 	filteredVariants := e.filterVariants(m, pref)
 
 	err := e.resolvePattern(e.bestMatchedPattern(filteredVariants, pref))
+	if err != nil {
+		err = fmt.Errorf("matcher: %w", err)
+	}
 
 	return errors.Join(matcherErr, err)
 }
@@ -389,7 +380,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 	selectors := make([]any, 0, len(matcher.Selectors))
 
 	addErr := func(err error) {
-		selectorErr = errors.Join(selectorErr, err)
+		selectorErr = errors.Join(selectorErr, fmt.Errorf("selector: %w", err))
 
 		selectors = append(selectors, ast.CatchAllKey{})
 	}
@@ -414,7 +405,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		// TODO(jhorsts): what is match and format context? Does MF2 still have it?
 		if f.Match == nil {
-			return nil, fmt.Errorf("function '%s' not allowed in selector context", function.Identifier.Name)
+			return nil, fmt.Errorf("selector: function '%s' not allowed", function.Identifier.Name)
 		}
 
 		opts, err := e.resolveOptions(function.Options)
