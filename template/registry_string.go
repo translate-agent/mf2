@@ -1,7 +1,6 @@
 package template
 
 import (
-	"errors"
 	"fmt"
 
 	"golang.org/x/text/language"
@@ -16,20 +15,24 @@ var stringRegistryFunc = RegistryFunc{
 	Match:  stringFunc,
 }
 
-func stringFunc(input any, options Options, locale language.Tag) (any, error) {
-	if input == nil {
+func stringFunc(operand any, options Options, locale language.Tag) (any, error) {
+	errorf := func(format string, args ...any) (any, error) {
+		return nil, fmt.Errorf("exec string function: "+format, args...)
+	}
+
+	if operand == nil {
 		return "", nil
 	}
 
 	if len(options) > 0 {
-		return "", errors.New("string function takes no options")
+		return errorf("want no options")
 	}
 
-	switch value := input.(type) {
+	switch value := operand.(type) {
 	default:
-		s, err := castAs[string](input) // if underlying type is not string, return error
+		s, err := castAs[string](operand) // if underlying type is not string, return error
 		if err != nil {
-			return nil, fmt.Errorf("unsupported input type in string function: %T: %w", input, err)
+			return errorf("unsupported operand type: %T: %w", operand, err)
 		}
 
 		return s, nil
