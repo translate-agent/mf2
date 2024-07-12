@@ -504,36 +504,35 @@ func lexReservedKeyword(l *lexer) stateFn {
 func lexLiteral(l *lexer) stateFn {
 	var s string
 
-	switch l.peek() {
-	default: // unquoted or number literal
+	if l.peek() != '|' {
 		return lexUnquotedOrNumberLiteral(l)
-	case '|': // quoted literal
-		var opening bool
+	}
 
-		for {
-			r := l.next()
+	var opening bool
 
-			switch {
+	for {
+		r := l.next()
+
+		switch {
+		default:
+			return l.emitErrorf("unknown character in quoted literal: %s", string(r))
+		case isQuoted(r):
+			s += string(r)
+		case r == '|':
+			opening = !opening
+			if !opening {
+				return l.emitItem(mk(itemQuotedLiteral, s))
+			}
+		case r == '\\':
+			next := l.next()
+
+			switch next {
 			default:
-				return l.emitErrorf("unknown character in quoted literal: %s", string(r))
-			case isQuoted(r):
-				s += string(r)
-			case r == '|':
-				opening = !opening
-				if !opening {
-					return l.emitItem(mk(itemQuotedLiteral, s))
-				}
-			case r == '\\':
-				next := l.next()
-
-				switch next {
-				default:
-					return l.emitErrorf("unexpected escaped character in quoted literal: %s", string(r))
-				case '\\', '|':
-					s += string(next)
-				case eof:
-					return l.emitErrorf("unexpected eof in quoted literal")
-				}
+				return l.emitErrorf("unexpected escaped character in quoted literal: %s", string(r))
+			case '\\', '|':
+				s += string(next)
+			case eof:
+				return l.emitErrorf("unexpected eof in quoted literal")
 			}
 		}
 	}
