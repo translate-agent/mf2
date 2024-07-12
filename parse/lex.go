@@ -447,7 +447,7 @@ func lexQuotedLiteral(l *lexer) stateFn {
 	var s string
 
 	if r := l.next(); r != '|' {
-		return l.emitErrorf("unexpected opening character in quoted literal: %s", string(r))
+		return l.emitErrorf(`unexpected opening character in quoted literal: "%s"`, string(r))
 	}
 
 	for {
@@ -455,7 +455,7 @@ func lexQuotedLiteral(l *lexer) stateFn {
 
 		switch {
 		default:
-			return l.emitErrorf("unknown character in quoted literal: %s", string(r))
+			return l.emitErrorf(`unknown character in quoted literal: "%s"`, string(r))
 		case isQuoted(r):
 			s += string(r)
 		case r == '|': // closing
@@ -465,7 +465,7 @@ func lexQuotedLiteral(l *lexer) stateFn {
 
 			switch next {
 			default:
-				return l.emitErrorf("unexpected escaped character in quoted literal: %s", string(r))
+				return l.emitErrorf(`unexpected escaped character in quoted literal: "%s"`, string(r))
 			case '\\', '|':
 				s += string(next)
 			case eof:
