@@ -373,7 +373,7 @@ func lexComplexMessage(l *lexer) stateFn {
 			l.backup()
 
 			return lexQuotedLiteral(l)
-		case isDigit(r), r == '-' && isDigit(l.peek()), isName(r):
+		case isName(r):
 			l.backup()
 			return lexUnquotedOrNumberLiteral(l)
 		case r == eof:
@@ -442,6 +442,41 @@ func lexExpr(l *lexer) stateFn {
 	}
 }
 
+// lexQuotedLiteral is the state function for lexing quoted literals.
+func lexQuotedLiteral(l *lexer) stateFn {
+	var (
+		s       string
+		opening bool
+	)
+
+	for {
+		r := l.next()
+
+		switch {
+		default:
+			return l.emitErrorf("unknown character in quoted literal: %s", string(r))
+		case isQuoted(r):
+			s += string(r)
+		case r == '|':
+			opening = !opening
+			if !opening {
+				return l.emitItem(mk(itemQuotedLiteral, s))
+			}
+		case r == '\\':
+			next := l.next()
+
+			switch next {
+			default:
+				return l.emitErrorf("unexpected escaped character in quoted literal: %s", string(r))
+			case '\\', '|':
+				s += string(next)
+			case eof:
+				return l.emitErrorf("unexpected eof in quoted literal")
+			}
+		}
+	}
+}
+
 // lexUnquotedOrNumberLiteral is the state function for lexing names.
 func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
 	var s string
@@ -498,41 +533,6 @@ func lexReservedKeyword(l *lexer) stateFn {
 	l.backup()
 
 	return l.emitItem(mk(itemReservedKeyword, s))
-}
-
-// lexQuotedLiteral is the state function for lexing quoted literals.
-func lexQuotedLiteral(l *lexer) stateFn {
-	var (
-		s       string
-		opening bool
-	)
-
-	for {
-		r := l.next()
-
-		switch {
-		default:
-			return l.emitErrorf("unknown character in quoted literal: %s", string(r))
-		case isQuoted(r):
-			s += string(r)
-		case r == '|':
-			opening = !opening
-			if !opening {
-				return l.emitItem(mk(itemQuotedLiteral, s))
-			}
-		case r == '\\':
-			next := l.next()
-
-			switch next {
-			default:
-				return l.emitErrorf("unexpected escaped character in quoted literal: %s", string(r))
-			case '\\', '|':
-				s += string(next)
-			case eof:
-				return l.emitErrorf("unexpected eof in quoted literal")
-			}
-		}
-	}
 }
 
 // lexWhitespace is the state function for lexing whitespace.
