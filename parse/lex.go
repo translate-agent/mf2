@@ -500,7 +500,7 @@ func lexReservedKeyword(l *lexer) stateFn {
 	return l.emitItem(mk(itemReservedKeyword, s))
 }
 
-// lexQuotedLiteral is the state function for lexing literals.
+// lexQuotedLiteral is the state function for lexing quoted literals.
 func lexQuotedLiteral(l *lexer) stateFn {
 	var (
 		s       string
