@@ -157,7 +157,7 @@ func Test_lex(t *testing.T) {
 			input: "{hello+world}",
 			want: []item{
 				mk(itemExpressionOpen, "{"),
-				mkErr("invalid unquoted literal"),
+				mkErr(`invalid unquoted literal "hello+world"`),
 			},
 		},
 		{
