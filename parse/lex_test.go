@@ -153,6 +153,14 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
+			name:  "invalid unquoted literal",
+			input: "{hello+world}",
+			want: []item{
+				mk(itemExpressionOpen, "{"),
+				mkErr(`invalid unquoted literal "hello+world"`),
+			},
+		},
+		{
 			name:  "reserved annotations",
 			input: `{!a}{%b c}{* \{}{+txt |quoted| txt}{ <r }{>}{?a b c}{ ~ a b c }text`,
 			want: []item{
