@@ -369,13 +369,13 @@ func lexComplexMessage(l *lexer) stateFn {
 			return l.emitErrorf("unexpected } in complex message")
 		case r == '*':
 			return l.emitItem(mk(itemCatchAllKey, "*"))
-		case isDigit(r),
-			r == '-' && isDigit(l.peek()),
-			r == '|',
-			isName(r):
+		case r == '|':
 			l.backup()
 
-			return lexLiteral(l)
+			return lexQuotedLiteral(l)
+		case isName(r):
+			l.backup()
+			return lexUnquotedOrNumberLiteral(l)
 		case r == eof:
 			return nil
 		}
@@ -388,7 +388,7 @@ func lexExpr(l *lexer) stateFn {
 	default:
 		l.backup()
 
-		return lexLiteral(l)
+		return lexUnquotedOrNumberLiteral(l)
 	case l.isReservedBody:
 		l.backup()
 		return lexReservedBody(l)
@@ -397,9 +397,9 @@ func lexExpr(l *lexer) stateFn {
 	case v == variablePrefix:
 		l.backup()
 		return lexVariable(l)
-	case v == '|', v == '-' && isDigit(l.peek()): // quoted and number literal
+	case v == '|':
 		l.backup()
-		return lexLiteral(l)
+		return lexQuotedLiteral(l)
 	case v == '#', // markup-open
 		v == '/', // markup-close
 		v == '@', // attribute
@@ -439,6 +439,39 @@ func lexExpr(l *lexer) stateFn {
 		return l.emitItem(mk(itemPrivateStart, string(v)))
 	case v == '=':
 		return l.emitItem(mk(itemOperator, "="))
+	}
+}
+
+// lexQuotedLiteral is the state function for lexing quoted literals.
+func lexQuotedLiteral(l *lexer) stateFn {
+	var s string
+
+	if r := l.next(); r != '|' {
+		return l.emitErrorf(`unexpected opening character in quoted literal: "%s"`, string(r))
+	}
+
+	for {
+		r := l.next()
+
+		switch {
+		default:
+			return l.emitErrorf(`unknown character in quoted literal: "%s"`, string(r))
+		case isQuoted(r):
+			s += string(r)
+		case r == '|': // closing
+			return l.emitItem(mk(itemQuotedLiteral, s))
+		case r == '\\':
+			next := l.next()
+
+			switch next {
+			default:
+				return l.emitErrorf(`unexpected escaped character in quoted literal: "%s"`, string(r))
+			case '\\', '|':
+				s += string(next)
+			case eof:
+				return l.emitErrorf("unexpected eof in quoted literal")
+			}
+		}
 	}
 }
 
@@ -498,44 +531,6 @@ func lexReservedKeyword(l *lexer) stateFn {
 	l.backup()
 
 	return l.emitItem(mk(itemReservedKeyword, s))
-}
-
-// lexLiteral is the state function for lexing literals.
-func lexLiteral(l *lexer) stateFn {
-	var s string
-
-	if l.peek() != '|' {
-		return lexUnquotedOrNumberLiteral(l)
-	}
-
-	var opening bool
-
-	for {
-		r := l.next()
-
-		switch {
-		default:
-			return l.emitErrorf("unknown character in quoted literal: %s", string(r))
-		case isQuoted(r):
-			s += string(r)
-		case r == '|':
-			opening = !opening
-			if !opening {
-				return l.emitItem(mk(itemQuotedLiteral, s))
-			}
-		case r == '\\':
-			next := l.next()
-
-			switch next {
-			default:
-				return l.emitErrorf("unexpected escaped character in quoted literal: %s", string(r))
-			case '\\', '|':
-				s += string(next)
-			case eof:
-				return l.emitErrorf("unexpected eof in quoted literal")
-			}
-		}
-	}
 }
 
 // lexWhitespace is the state function for lexing whitespace.
@@ -648,7 +643,7 @@ func lexReservedBody(l *lexer) stateFn {
 			return l.emitItem(mk(itemReservedText, s))
 		case v == '|':
 			l.backup()
-			return lexLiteral(l)
+			return lexQuotedLiteral(l)
 		case v == '\\': // escaped character
 			next := l.next()
 
@@ -782,11 +777,6 @@ func isSimpleStart(r rune) bool {
 //	text-char = content-char / s / "." / "@" / "|"
 func isText(r rune) bool {
 	return isContent(r) || isWhitespace(r) || r == '.' || r == '@' || r == '|'
-}
-
-// isDigit returns true if r is digit character.
-func isDigit(r rune) bool {
-	return '0' <= r && r <= '9'
 }
 
 // isPrivateStart returns true if r is private start character.
