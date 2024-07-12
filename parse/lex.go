@@ -781,11 +781,6 @@ func isText(r rune) bool {
 	return isContent(r) || isWhitespace(r) || r == '.' || r == '@' || r == '|'
 }
 
-// isDigit returns true if r is digit character.
-func isDigit(r rune) bool {
-	return '0' <= r && r <= '9'
-}
-
 // isPrivateStart returns true if r is private start character.
 //
 // ABNF:
