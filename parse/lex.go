@@ -460,7 +460,7 @@ func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
 
 	// "+" is not valid unquoted literal character
 	if strings.Contains(s, "+") {
-		return l.emitErrorf("invalid unquoted literal")
+		return l.emitErrorf(`invalid unquoted literal "%s"`, s)
 	}
 
 	return l.emitItem(mk(itemUnquotedLiteral, s))
@@ -470,8 +470,8 @@ func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
 func lexVariable(l *lexer) stateFn {
 	var s string
 
-	if l.next() != variablePrefix {
-		return l.emitErrorf("invalid variable prefix")
+	if r := l.next(); r != variablePrefix {
+		return l.emitErrorf(`invalid variable prefix "%s"`, string(r))
 	}
 
 	for r := l.next(); isName(r); r = l.next() {
@@ -487,8 +487,8 @@ func lexVariable(l *lexer) stateFn {
 func lexReservedKeyword(l *lexer) stateFn {
 	var s string
 
-	if l.next() != '.' {
-		return l.emitErrorf("invalid reserved keyword prefix")
+	if r := l.next(); r != '.' {
+		return l.emitErrorf(`invalid reserved keyword prefix "%s"`, string(r))
 	}
 
 	for r := l.next(); isName(r); r = l.next() {
