@@ -324,7 +324,7 @@ func lexComplexMessage(l *lexer) stateFn {
 				l.backup()
 				l.isReservedBody = true
 
-				return lexNameOrNumberLiteral(l)
+				return lexReservedKeyword(l)
 			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
 				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
@@ -340,7 +340,7 @@ func lexComplexMessage(l *lexer) stateFn {
 			return lexReservedBody(l)
 		case r == variablePrefix:
 			l.backup()
-			return lexNameOrNumberLiteral(l)
+			return lexVariable(l)
 		case isWhitespace(r):
 			l.backup()
 
@@ -394,10 +394,9 @@ func lexExpr(l *lexer) stateFn {
 		return lexReservedBody(l)
 	case v == eof:
 		return l.emitErrorf("unexpected eof in expression")
-	case v == variablePrefix: // variable
+	case v == variablePrefix:
 		l.backup()
-
-		return lexNameOrNumberLiteral(l)
+		return lexVariable(l)
 	case v == '|', v == '-' && isDigit(l.peek()): // quoted and number literal
 		l.backup()
 		return lexLiteral(l)
@@ -443,51 +442,62 @@ func lexExpr(l *lexer) stateFn {
 	}
 }
 
-// lexNameOrNumberLiteral is the state function for lexing names.
-func lexNameOrNumberLiteral(l *lexer) stateFn {
-	var typ itemType
+// lexUnquotedOrNumberLiteral is the state function for lexing names.
+func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
+	var s string
 
-	switch l.next() {
-	case '$':
-		typ = itemVariable
-	case '.':
-		if l.isReservedBody {
-			typ = itemReservedKeyword
-		} else {
-			typ = itemUnquotedLiteral
-
-			l.backup()
-		}
-	default:
-		typ = itemUnquotedLiteral
-
-		l.backup() // backup to the first rune
-	}
-
-	var (
-		s string // item value
-		r rune   // current rune
-	)
-
-	for r = l.next(); isName(r) || r == '+'; r = l.next() {
+	for r := l.next(); isName(r) || r == '+'; r = l.next() {
 		s += string(r)
-	}
-
-	if r == eof {
-		return l.emitErrorf("unexpected eof in name")
-	}
-
-	var nl float64
-
-	if err := json.Unmarshal([]byte(s), &nl); err == nil {
-		typ = itemNumberLiteral
-	} else if strings.Contains(s, "+") {
-		return l.emitErrorf("invalid unquoted literal")
 	}
 
 	l.backup()
 
-	return l.emitItem(mk(typ, s))
+	var number float64
+
+	if err := json.Unmarshal([]byte(s), &number); err == nil {
+		return l.emitItem(mk(itemNumberLiteral, s))
+	}
+
+	// "+" is not valid unquoted literal character
+	if strings.Contains(s, "+") {
+		return l.emitErrorf("invalid unquoted literal")
+	}
+
+	return l.emitItem(mk(itemUnquotedLiteral, s))
+}
+
+// lexLiteral is the state function for lexing variables.
+func lexVariable(l *lexer) stateFn {
+	var s string
+
+	if l.next() != variablePrefix {
+		return l.emitErrorf("invalid variable prefix")
+	}
+
+	for r := l.next(); isName(r); r = l.next() {
+		s += string(r)
+	}
+
+	l.backup()
+
+	return l.emitItem(mk(itemVariable, s))
+}
+
+// lexLiteral is the state function for reserved keywords.
+func lexReservedKeyword(l *lexer) stateFn {
+	var s string
+
+	if l.next() != '.' {
+		return l.emitErrorf("invalid reserved keyword prefix")
+	}
+
+	for r := l.next(); isName(r); r = l.next() {
+		s += string(r)
+	}
+
+	l.backup()
+
+	return l.emitItem(mk(itemReservedKeyword, s))
 }
 
 // lexLiteral is the state function for lexing literals.
@@ -495,8 +505,8 @@ func lexLiteral(l *lexer) stateFn {
 	var s string
 
 	switch l.peek() {
-	default: // unquoted literal
-		return lexNameOrNumberLiteral(l)
+	default: // unquoted or number literal
+		return lexUnquotedOrNumberLiteral(l)
 	case '|': // quoted literal
 		var opening bool
 
