@@ -324,7 +324,7 @@ func lexComplexMessage(l *lexer) stateFn {
 				l.backup()
 				l.isReservedBody = true
 
-				return lexName(l)
+				return lexNameOrNumberLiteral(l)
 			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
 				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
@@ -340,7 +340,7 @@ func lexComplexMessage(l *lexer) stateFn {
 			return lexReservedBody(l)
 		case r == variablePrefix:
 			l.backup()
-			return lexName(l)
+			return lexNameOrNumberLiteral(l)
 		case isWhitespace(r):
 			l.backup()
 
@@ -397,7 +397,7 @@ func lexExpr(l *lexer) stateFn {
 	case v == variablePrefix: // variable
 		l.backup()
 
-		return lexName(l)
+		return lexNameOrNumberLiteral(l)
 	case v == '|', v == '-' && isDigit(l.peek()): // quoted and number literal
 		l.backup()
 		return lexLiteral(l)
@@ -443,8 +443,8 @@ func lexExpr(l *lexer) stateFn {
 	}
 }
 
-// lexName is the state function for lexing names.
-func lexName(l *lexer) stateFn {
+// lexNameOrNumberLiteral is the state function for lexing names.
+func lexNameOrNumberLiteral(l *lexer) stateFn {
 	var typ itemType
 
 	switch l.next() {
@@ -496,7 +496,7 @@ func lexLiteral(l *lexer) stateFn {
 
 	switch l.peek() {
 	default: // unquoted literal
-		return lexName(l)
+		return lexNameOrNumberLiteral(l)
 	case '|': // quoted literal
 		var opening bool
 
