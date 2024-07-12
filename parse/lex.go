@@ -369,13 +369,13 @@ func lexComplexMessage(l *lexer) stateFn {
 			return l.emitErrorf("unexpected } in complex message")
 		case r == '*':
 			return l.emitItem(mk(itemCatchAllKey, "*"))
-		case isDigit(r),
-			r == '-' && isDigit(l.peek()),
-			r == '|',
-			isName(r):
+		case r == '|':
 			l.backup()
 
-			return lexLiteral(l)
+			return lexQuotedLiteral(l)
+		case isDigit(r), r == '-' && isDigit(l.peek()), isName(r):
+			l.backup()
+			return lexUnquotedOrNumberLiteral(l)
 		case r == eof:
 			return nil
 		}
@@ -388,7 +388,7 @@ func lexExpr(l *lexer) stateFn {
 	default:
 		l.backup()
 
-		return lexLiteral(l)
+		return lexUnquotedOrNumberLiteral(l)
 	case l.isReservedBody:
 		l.backup()
 		return lexReservedBody(l)
@@ -397,9 +397,9 @@ func lexExpr(l *lexer) stateFn {
 	case v == variablePrefix:
 		l.backup()
 		return lexVariable(l)
-	case v == '|', v == '-' && isDigit(l.peek()): // quoted and number literal
+	case v == '|':
 		l.backup()
-		return lexLiteral(l)
+		return lexQuotedLiteral(l)
 	case v == '#', // markup-open
 		v == '/', // markup-close
 		v == '@', // attribute
@@ -500,15 +500,12 @@ func lexReservedKeyword(l *lexer) stateFn {
 	return l.emitItem(mk(itemReservedKeyword, s))
 }
 
-// lexLiteral is the state function for lexing literals.
-func lexLiteral(l *lexer) stateFn {
-	var s string
-
-	if l.peek() != '|' {
-		return lexUnquotedOrNumberLiteral(l)
-	}
-
-	var opening bool
+// lexQuotedLiteral is the state function for lexing literals.
+func lexQuotedLiteral(l *lexer) stateFn {
+	var (
+		s       string
+		opening bool
+	)
 
 	for {
 		r := l.next()
@@ -648,7 +645,7 @@ func lexReservedBody(l *lexer) stateFn {
 			return l.emitItem(mk(itemReservedText, s))
 		case v == '|':
 			l.backup()
-			return lexLiteral(l)
+			return lexQuotedLiteral(l)
 		case v == '\\': // escaped character
 			next := l.next()
 
