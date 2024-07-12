@@ -444,10 +444,11 @@ func lexExpr(l *lexer) stateFn {
 
 // lexQuotedLiteral is the state function for lexing quoted literals.
 func lexQuotedLiteral(l *lexer) stateFn {
-	var (
-		s       string
-		opening bool
-	)
+	var s string
+
+	if r := l.next(); r != '|' {
+		return l.emitErrorf("unexpected opening character in quoted literal: %s", string(r))
+	}
 
 	for {
 		r := l.next()
@@ -457,11 +458,8 @@ func lexQuotedLiteral(l *lexer) stateFn {
 			return l.emitErrorf("unknown character in quoted literal: %s", string(r))
 		case isQuoted(r):
 			s += string(r)
-		case r == '|':
-			opening = !opening
-			if !opening {
-				return l.emitItem(mk(itemQuotedLiteral, s))
-			}
+		case r == '|': // closing
+			return l.emitItem(mk(itemQuotedLiteral, s))
 		case r == '\\':
 			next := l.next()
 
