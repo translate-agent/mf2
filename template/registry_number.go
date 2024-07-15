@@ -22,23 +22,24 @@ func parseNumberOperand(operand any) (float64, error) {
 		return 0, fmt.Errorf(format+": %w", append(args, mf2.ErrBadOperand)...)
 	}
 
-	if operand == nil {
-		return errorf("operand is required")
-	}
-
 	var (
 		v   float64
 		err error
 	)
 
-	if s, ok := operand.(string); ok {
-		err = json.Unmarshal([]byte(s), &v)
-	} else {
+	switch t := operand.(type) {
+	default:
 		v, err = castAs[float64](operand)
-	}
-
-	if err != nil {
-		return errorf("unsupported operand type %T: %w", operand, err)
+		if err != nil {
+			return errorf("unsupported operand type %T: %w", operand, err)
+		}
+	case nil:
+		return errorf("operand is required")
+	case string:
+		err = json.Unmarshal([]byte(t), &v)
+		if err != nil {
+			return errorf(`bad operand "%s": %w`, operand, err)
+		}
 	}
 
 	return v, nil
