@@ -22,14 +22,14 @@ func parseNumberOperand(operand any) (float64, error) {
 		return 0, fmt.Errorf(format+": %w", append(args, mf2.ErrBadOperand)...)
 	}
 
+	if operand == nil {
+		return errorf("operand is required")
+	}
+
 	var (
 		v   float64
 		err error
 	)
-
-	if operand == nil {
-		return errorf("operand is required")
-	}
 
 	if s, ok := operand.(string); ok {
 		err = json.Unmarshal([]byte(s), &v)
