@@ -176,6 +176,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 			m[d.Operand] = struct{}{}
 
 			resolved, err := e.resolveExpression(ast.Expression(d))
+			// if can't resolve the expression, leave it as unresolved, e.g. {$foo}
 			e.variables[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // Will always be a variable.
 
 			if err != nil {
