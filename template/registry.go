@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
 
 	"golang.org/x/exp/constraints"
 	"golang.org/x/text/language"
@@ -59,6 +60,15 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 	v, ok := o[name]
 	if !ok {
 		return fallback, nil
+	}
+
+	if s, ok := v.(string); ok {
+		var err error
+
+		v, err = strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf(`parse integer from string "%s": %w`, s, err)
+		}
 	}
 
 	i, err := castAs[int](v)

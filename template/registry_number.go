@@ -1,6 +1,7 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"go.expect.digital/mf2"
@@ -21,16 +22,27 @@ func parseNumberOperand(operand any) (float64, error) {
 		return 0, fmt.Errorf(format+": %w", append(args, mf2.ErrBadOperand)...)
 	}
 
-	if operand == nil {
+	var (
+		number float64
+		err    error
+	)
+
+	switch v := operand.(type) {
+	default:
+		number, err = castAs[float64](v)
+		if err != nil {
+			return errorf("unsupported operand type %T: %w", v, err)
+		}
+	case nil:
 		return errorf("operand is required")
+	case string:
+		err = json.Unmarshal([]byte(v), &number)
+		if err != nil {
+			return errorf(`parse number "%s": %w`, operand, err)
+		}
 	}
 
-	v, err := castAs[float64](operand)
-	if err != nil {
-		return errorf("unsupported operand type %T: %w", operand, err)
-	}
-
-	return v, nil
+	return number, nil
 }
 
 type numberOptions struct {
