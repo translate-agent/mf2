@@ -67,7 +67,7 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 
 		v, err = strconv.ParseInt(s, 10, 32)
 		if err != nil {
-			return 0, fmt.Errorf("parse integer from string '%s': %w", s, err)
+			return 0, fmt.Errorf(`parse integer from string "%s": %w`, s, err)
 		}
 	}
 
