@@ -29,15 +29,9 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/.local_$d_=_{|2006-01-02|_:date_style=long}_{{{$d_:date}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/{|2006-01-02|_:date_style=long}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{:datetime}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{horse_:datetime}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{$x_:datetime}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.match_{$foo_:integer}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/hello_{0.42e+1_:integer}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/hello_{4.2_:integer}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/hello_{-4.20_:integer}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$d_=_{|2006-01-02T15:04:06|_:date}_{{{$d_:time}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{|2006-01-02T15:04:06|_:time}",
@@ -47,7 +41,6 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{|2006-01-02T15:04:06|_:time_style=medium}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#03",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/invalid_number_literal_{0x1_:number}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number_minimumFractionDigits=foo}_{{bar_{$foo}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#02",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$bar_=_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$bar}}}#01",
