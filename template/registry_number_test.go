@@ -48,6 +48,9 @@ func Test_Number(t *testing.T) {
 	assert = assertFormat(t, numberRegistryFunc, map[string]any{"maximumSignificantDigits": 2}, language.AmericanEnglish)
 	assert(1.23, "1.2")
 
+	assert = assertFormat(t, numberRegistryFunc, map[string]any{"maximumFractionDigits": "1"}, language.AmericanEnglish)
+	assert(0.15, "0.2")
+
 	// percent
 
 	assert = assertFormat(t, numberRegistryFunc, map[string]any{"style": "percent"}, language.Latvian)
@@ -98,4 +101,7 @@ func Test_Number(t *testing.T) {
 			"maximumSignificantDigits": 4,
 		}, language.AmericanEnglish)
 	assert(0.12345, "12.34%")
+
+	assert = assertFormat(t, numberRegistryFunc, map[string]any{}, language.Latvian)
+	assert("0.1", "0,1")
 }

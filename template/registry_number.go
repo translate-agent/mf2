@@ -23,26 +23,26 @@ func parseNumberOperand(operand any) (float64, error) {
 	}
 
 	var (
-		v   float64
-		err error
+		number float64
+		err    error
 	)
 
-	switch t := operand.(type) {
+	switch v := operand.(type) {
 	default:
-		v, err = castAs[float64](operand)
+		number, err = castAs[float64](v)
 		if err != nil {
-			return errorf("unsupported operand type %T: %w", operand, err)
+			return errorf("unsupported operand type %T: %w", v, err)
 		}
 	case nil:
 		return errorf("operand is required")
 	case string:
-		err = json.Unmarshal([]byte(t), &v)
+		err = json.Unmarshal([]byte(v), &number)
 		if err != nil {
-			return errorf(`bad operand "%s": %w`, operand, err)
+			return errorf(`parse number "%s": %w`, operand, err)
 		}
 	}
 
-	return v, nil
+	return number, nil
 }
 
 type numberOptions struct {
