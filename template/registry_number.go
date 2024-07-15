@@ -1,8 +1,8 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
@@ -27,8 +27,12 @@ func parseNumberOperand(operand any) (float64, error) {
 		err error
 	)
 
+	if operand == nil {
+		return errorf("operand is required")
+	}
+
 	if s, ok := operand.(string); ok {
-		v, err = strconv.ParseFloat(s, 64)
+		err = json.Unmarshal([]byte(s), &v)
 	} else {
 		v, err = castAs[float64](operand)
 	}
