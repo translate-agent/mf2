@@ -134,7 +134,9 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 	err := e.resolveDeclarations(message.Declarations)
 
 	switch {
-	case errors.Is(err, mf2.ErrUnsupportedStatement), errors.Is(err, mf2.ErrUnresolvedVariable):
+	case errors.Is(err, mf2.ErrUnsupportedStatement),
+		errors.Is(err, mf2.ErrUnresolvedVariable),
+		errors.Is(err, mf2.ErrBadOperand):
 		resolutionErr = fmt.Errorf("complex message: %w", err)
 	case err != nil:
 		return fmt.Errorf("complex message: %w", err)
@@ -174,11 +176,12 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 			m[d.Operand] = struct{}{}
 
 			resolved, err := e.resolveExpression(ast.Expression(d))
+			// if can't resolve the expression, leave it as unresolved, e.g. {$foo}
+			e.variables[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // Will always be a variable.
+
 			if err != nil {
 				return fmt.Errorf("input declaration: %w", err)
 			}
-
-			e.variables[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // Will always be a variable.
 		}
 	}
 
