@@ -41,7 +41,6 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{|2006-01-02T15:04:06|_:time_style=medium}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#03",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number_minimumFractionDigits=foo}_{{bar_{$foo}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#02",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$bar_=_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$bar}}}#01",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_{$bar_:number}_one_one_{{one_one}}_one_*_{{one_other}}_*_*_{{other}}",
@@ -258,6 +257,8 @@ func assertErr(t *testing.T, want Errors, err error) {
 			t.Errorf("asserting error '%s' is not implemented", v)
 		case "bad-operand":
 			wantErr(mf2.ErrBadOperand)
+		case "bad-option":
+			wantErr(mf2.ErrBadOption)
 		case "duplicate-declaration":
 			wantErr(mf2.ErrDuplicateDeclaration)
 		case "duplicate-option-name":
