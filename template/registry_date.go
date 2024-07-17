@@ -23,7 +23,7 @@ type dateOptions struct {
 	Style string
 }
 
-// parseDateOptions parses :datetime options.
+// parseDateOptions parses :date options.
 func parseDateOptions(options Options) (*dateOptions, error) {
 	errorf := func(format string, args ...any) (*dateOptions, error) {
 		return nil, fmt.Errorf("parse options: "+format, args...)
@@ -59,7 +59,7 @@ func parseDateOptions(options Options) (*dateOptions, error) {
 
 func dateFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
-		return "", fmt.Errorf("date function: "+format, args...)
+		return "", fmt.Errorf("exec date function: "+format, args...)
 	}
 
 	// NOTE(mvilks): operand parsing is the same as for datetime registry function
