@@ -7,30 +7,30 @@ import (
 	"golang.org/x/text/language"
 )
 
-// dateFunc is the implementation of the date function. Locale-sensitive date formatting.
-var dateRegistryFunc = RegistryFunc{
-	Format: dateFunc,
+// timeFunc is the implementation of the time function. Locale-sensitive time formatting.
+var timeRegistryFunc = RegistryFunc{
+	Format: timeFunc,
 }
 
-type dateOptions struct {
+type timeOptions struct {
 	// (default is UTC)
 	//
 	// NOTE: The option is not part of the default registry.
 	// Implementations SHOULD avoid creating options that conflict with these, but
 	// are encouraged to track development of these options during Tech Preview.
 	TimeZone *time.Location
-	// The predefined date formatting style to use (full, long, medium, short).
+	// The predefined time formatting style to use (full, long, medium, short).
 	Style string
 }
 
-// parseDateOptions parses :date options.
-func parseDateOptions(options Options) (*dateOptions, error) {
-	errorf := func(format string, args ...any) (*dateOptions, error) {
+// parseTimeOptions parses :time options.
+func parseTimeOptions(options Options) (*timeOptions, error) {
+	errorf := func(format string, args ...any) (*timeOptions, error) {
 		return nil, fmt.Errorf("parse options: "+format, args...)
 	}
 
 	var (
-		opts dateOptions
+		opts timeOptions
 		err  error
 	)
 
@@ -46,9 +46,9 @@ func parseDateOptions(options Options) (*dateOptions, error) {
 	return &opts, nil
 }
 
-func dateFunc(operand any, options Options, locale language.Tag) (any, error) {
+func timeFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
-		return "", fmt.Errorf("exec date function: "+format, args...)
+		return "", fmt.Errorf("exec time function: "+format, args...)
 	}
 
 	// NOTE(mvilks): operand parsing is the same as for datetime registry function
@@ -57,22 +57,24 @@ func dateFunc(operand any, options Options, locale language.Tag) (any, error) {
 		return errorf("%w", err)
 	}
 
-	opts, err := parseDateOptions(options)
+	opts, err := parseTimeOptions(options)
 	if err != nil {
 		return errorf("%w", err)
 	}
 
 	var layout string
 
+	// time styles as per Intl.DateTimeFormat
+	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat
 	switch opts.Style {
 	case "full":
-		layout = "Monday, 02 January 2006"
+		layout = "15:04:05 MST"
 	case "long":
-		layout = "02 January 2006"
+		layout = "15:04:05 -0700"
 	case "medium":
-		layout = "02 Jan 2006"
+		layout = "15:04:05"
 	case "short":
-		layout = "02/01/06"
+		layout = "15:04"
 	}
 
 	value = value.In(opts.TimeZone)

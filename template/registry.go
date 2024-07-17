@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
+	"time"
 
 	"golang.org/x/exp/constraints"
 	"golang.org/x/text/language"
@@ -93,6 +94,7 @@ func NewRegistry() Registry {
 		"integer":  integerRegistryFunc,
 		"number":   numberRegistryFunc,
 		"string":   stringRegistryFunc,
+		"time":     timeRegistryFunc,
 	}
 }
 
@@ -135,4 +137,26 @@ func castAs[T any](val any) (T, error) {
 	v = v.Convert(typ)
 
 	return v.Interface().(T), nil //nolint:forcetypeassert
+}
+
+// getTZ gets the timezone information from the registry function options.
+func getTZ(options map[string]any) (*time.Location, error) {
+	v, ok := options["timeZone"]
+	if !ok {
+		return time.UTC, nil
+	}
+
+	switch tz := v.(type) {
+	default:
+		return nil, fmt.Errorf("want timeZone as string or *time.Location, got %T", v)
+	case *time.Location:
+		return tz, nil
+	case string:
+		timezone, err := time.LoadLocation(tz)
+		if err != nil {
+			return nil, fmt.Errorf("load TZ data for %s: %w", tz, err)
+		}
+
+		return timezone, nil
+	}
 }

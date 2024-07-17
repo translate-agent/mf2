@@ -29,11 +29,7 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.match_{$foo_:integer}_one_{{one}}_*_{{other}}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$d_=_{|2006-01-02T15:04:06|_:date}_{{{$d_:time}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{|2006-01-02T15:04:06|_:time}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{:time}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{horse_:time}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$t_=_{|2006-01-02T15:04:06|_:time_style=medium}_{{{$t_:time}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/{|2006-01-02T15:04:06|_:time_style=medium}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#03",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#02",
