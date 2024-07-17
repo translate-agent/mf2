@@ -39,19 +39,8 @@ func parseDateOptions(options Options) (*dateOptions, error) {
 		return errorf("%w", err)
 	}
 
-	opts.TimeZone = time.UTC
-
-	if v, ok := options["timeZone"]; ok {
-		switch tz := v.(type) {
-		default:
-			return errorf("want timeZone as string or *time.Location, got %T", v)
-		case *time.Location:
-			opts.TimeZone = tz
-		case string:
-			if opts.TimeZone, err = time.LoadLocation(tz); err != nil {
-				return errorf("load TZ data for %s: %w", tz, err)
-			}
-		}
+	if opts.TimeZone, err = getTZ(options); err != nil {
+		return errorf("%w", err)
 	}
 
 	return &opts, nil

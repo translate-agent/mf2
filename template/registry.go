@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
+	"time"
 
 	"golang.org/x/exp/constraints"
 	"golang.org/x/text/language"
@@ -136,4 +137,30 @@ func castAs[T any](val any) (T, error) {
 	v = v.Convert(typ)
 
 	return v.Interface().(T), nil //nolint:forcetypeassert
+}
+
+// getTZ gets the timezone information from the registry function options.
+func getTZ(options map[string]any) (*time.Location, error) {
+	var err error
+
+	// default is system default time zone or UTC
+	timezone := time.UTC
+
+	v, ok := options["timeZone"]
+	if !ok {
+		return timezone, nil
+	}
+
+	switch tz := v.(type) {
+	default:
+		return timezone, fmt.Errorf("want timeZone as string or *time.Location, got %T", v)
+	case *time.Location:
+		timezone = tz
+	case string:
+		if timezone, err = time.LoadLocation(tz); err != nil {
+			return timezone, fmt.Errorf("load TZ data for %s: %w", tz, err)
+		}
+	}
+
+	return timezone, nil
 }
