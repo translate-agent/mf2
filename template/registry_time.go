@@ -13,7 +13,7 @@ var timeRegistryFunc = RegistryFunc{
 }
 
 type timeOptions struct {
-	// (default is system default time zone or UTC)
+	// (default is UTC)
 	//
 	// NOTE: The option is not part of the default registry.
 	// Implementations SHOULD avoid creating options that conflict with these, but
