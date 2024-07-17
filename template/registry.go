@@ -154,7 +154,7 @@ func getTZ(options map[string]any) (*time.Location, error) {
 	case string:
 		timezone, err := time.LoadLocation(tz)
 		if err != nil {
-			return timezone, fmt.Errorf("load TZ data for %s: %w", tz, err)
+			return nil, fmt.Errorf("load TZ data for %s: %w", tz, err)
 		}
 
 		return timezone, nil
