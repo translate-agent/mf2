@@ -127,7 +127,7 @@ type numberOptions struct {
 
 func parseNumberOptions(opts Options) (*numberOptions, error) {
 	errorf := func(format string, args ...any) (*numberOptions, error) {
-		return nil, fmt.Errorf("parse options: "+format, args...)
+		return nil, fmt.Errorf("%w: "+format, append([]any{mf2.ErrBadOption}, args...)...)
 	}
 
 	for k := range opts {

@@ -136,7 +136,8 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 	switch {
 	case errors.Is(err, mf2.ErrUnsupportedStatement),
 		errors.Is(err, mf2.ErrUnresolvedVariable),
-		errors.Is(err, mf2.ErrBadOperand):
+		errors.Is(err, mf2.ErrBadOperand),
+		errors.Is(err, mf2.ErrBadOption):
 		resolutionErr = fmt.Errorf("complex message: %w", err)
 	case err != nil:
 		return fmt.Errorf("complex message: %w", err)
