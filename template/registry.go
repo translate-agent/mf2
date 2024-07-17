@@ -93,6 +93,7 @@ func NewRegistry() Registry {
 		"integer":  integerRegistryFunc,
 		"number":   numberRegistryFunc,
 		"string":   stringRegistryFunc,
+		"time":     timeRegistryFunc,
 	}
 }
 
