@@ -62,10 +62,6 @@ func dateFunc(operand any, options Options, locale language.Tag) (any, error) {
 		return errorf("%w", err)
 	}
 
-	if opts == nil {
-		opts = &dateOptions{Style: "short"}
-	}
-
 	var layout string
 
 	switch opts.Style {

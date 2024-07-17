@@ -62,10 +62,6 @@ func timeFunc(operand any, options Options, locale language.Tag) (any, error) {
 		return errorf("%w", err)
 	}
 
-	if opts == nil {
-		opts = &timeOptions{Style: "short"}
-	}
-
 	var layout string
 
 	// time styles as per Intl.DateTimeFormat
