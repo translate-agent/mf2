@@ -89,6 +89,7 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 func NewRegistry() Registry {
 	return Registry{
 		"datetime": datetimeRegistryFunc,
+		"date":     dateRegistryFunc,
 		"integer":  integerRegistryFunc,
 		"number":   numberRegistryFunc,
 		"string":   stringRegistryFunc,
