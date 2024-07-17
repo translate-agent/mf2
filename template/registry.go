@@ -141,26 +141,22 @@ func castAs[T any](val any) (T, error) {
 
 // getTZ gets the timezone information from the registry function options.
 func getTZ(options map[string]any) (*time.Location, error) {
-	var err error
-
-	// default is system default time zone or UTC
-	timezone := time.UTC
-
 	v, ok := options["timeZone"]
 	if !ok {
-		return timezone, nil
+		return time.UTC, nil
 	}
 
 	switch tz := v.(type) {
 	default:
-		return timezone, fmt.Errorf("want timeZone as string or *time.Location, got %T", v)
+		return nil, fmt.Errorf("want timeZone as string or *time.Location, got %T", v)
 	case *time.Location:
-		timezone = tz
+		return tz, nil
 	case string:
-		if timezone, err = time.LoadLocation(tz); err != nil {
+		timezone, err := time.LoadLocation(tz)
+		if err != nil {
 			return timezone, fmt.Errorf("load TZ data for %s: %w", tz, err)
 		}
-	}
 
-	return timezone, nil
+		return timezone, nil
+	}
 }
