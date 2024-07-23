@@ -168,11 +168,13 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 			m[d.Variable] = struct{}{}
 
 			resolved, err := e.resolveExpression(d.Expression)
+			// if can't resolve the expression, leave it as unresolved, e.g. {$foo}
+			e.variables[string(d.Variable)] = resolved
+
 			if err != nil {
 				return fmt.Errorf("local declaration: %w", err)
 			}
 
-			e.variables[string(d.Variable)] = resolved
 		case ast.InputDeclaration:
 			m[d.Operand] = struct{}{}
 
