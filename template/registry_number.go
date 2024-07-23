@@ -6,6 +6,7 @@ import (
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
+	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
@@ -13,7 +14,8 @@ import (
 
 // numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
 var numberRegistryFunc = RegistryFunc{
-	Format: numberFunc,
+	Format: numberFunc(Format),
+	Match:  numberFunc(Match),
 }
 
 // parseNumberOperand parses resolved operand value.
@@ -250,56 +252,75 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	return &options, nil
 }
 
-func numberFunc(operand any, options Options, locale language.Tag) (any, error) {
-	errorf := func(format string, args ...any) (any, error) {
-		return nil, fmt.Errorf("exec number function: "+format, args...)
-	}
-
-	value, err := parseNumberOperand(operand)
-	if err != nil {
-		return errorf("%w", err)
-	}
-
-	opts, err := parseNumberOptions(options)
-	if err != nil {
-		return errorf("%w", err)
-	}
-
-	var result string
-
-	p := message.NewPrinter(locale)
-	numberOpts := []number.Option{
-		number.MinFractionDigits(opts.MinimumFractionDigits),
-		number.MaxFractionDigits(opts.MaximumFractionDigits),
-		number.MinIntegerDigits(opts.MinimumIntegerDigits),
-		number.Precision(opts.MaximumSignificantDigits),
-	}
-
-	switch opts.Style {
-	default:
-		return errorf(`option style "%s" is not implemented`, opts.Style)
-	case "decimal":
-		result = p.Sprint(number.Decimal(value, numberOpts...))
-	case "percent":
-		result = p.Sprint(number.Percent(value, numberOpts...))
-	}
-
-	switch opts.SignDisplay {
-	case "auto":
-	case "negative":
-	case "always":
-		if value >= 0 {
-			result = "+" + result
+func numberFunc(context FuncContext) func(operand any, options Options, locale language.Tag) (any, error) {
+	return func(operand any, options Options, locale language.Tag) (any, error) {
+		errorf := func(format string, args ...any) (any, error) {
+			return nil, fmt.Errorf("exec number function: "+format, args...)
 		}
-	case "exceptZero":
-		if value > 0 {
-			result = "+" + result
-		}
-	case "never":
-		if value < 0 {
-			result = result[1:]
-		}
-	}
 
-	return result, nil
+		value, err := parseNumberOperand(operand)
+		if err != nil {
+			return errorf("%w", err)
+		}
+
+		opts, err := parseNumberOptions(options)
+		if err != nil {
+			return errorf("%w", err)
+		}
+
+		var result string
+
+		p := message.NewPrinter(locale)
+		numberOpts := []number.Option{
+			number.MinFractionDigits(opts.MinimumFractionDigits),
+			number.MaxFractionDigits(opts.MaximumFractionDigits),
+			number.MinIntegerDigits(opts.MinimumIntegerDigits),
+			number.Precision(opts.MaximumSignificantDigits),
+		}
+
+		var num number.Formatter
+
+		switch opts.Style {
+		default:
+			return errorf(`option style "%s" is not implemented`, opts.Style)
+		case "decimal":
+			num = number.Decimal(value, numberOpts...)
+		case "percent":
+			num = number.Percent(value, numberOpts...)
+		}
+
+		if context == Match {
+			scale := -1
+			if opts.MaximumFractionDigits == 0 {
+				// most likely integer formatting
+				scale = 0
+			}
+
+			digits := num.Digits(nil, locale, scale)
+			form := plural.Cardinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
+
+			return toString(form), nil
+		}
+
+		result = p.Sprint(num)
+
+		switch opts.SignDisplay {
+		case "auto":
+		case "negative":
+		case "always":
+			if value >= 0 {
+				result = "+" + result
+			}
+		case "exceptZero":
+			if value > 0 {
+				result = "+" + result
+			}
+		case "never":
+			if value < 0 {
+				result = result[1:]
+			}
+		}
+
+		return result, nil
+	}
 }
