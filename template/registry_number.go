@@ -15,7 +15,7 @@ import (
 // numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
 var numberRegistryFunc = RegistryFunc{
 	Format: numberFunc(Format),
-	Match:  numberFunc(Match),
+	Select: numberFunc(Select),
 }
 
 // parseNumberOperand parses resolved operand value.
@@ -289,7 +289,7 @@ func numberFunc(context FuncContext) func(operand any, options Options, locale l
 			num = number.Percent(value, numberOpts...)
 		}
 
-		if context == Match {
+		if context == Select {
 			scale := -1
 			if opts.MaximumFractionDigits == 0 {
 				// most likely integer formatting

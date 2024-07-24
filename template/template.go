@@ -405,7 +405,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 		}
 
 		// TODO(jhorsts): what is match and format context? Does MF2 still have it?
-		if f.Match == nil {
+		if f.Select == nil {
 			return nil, fmt.Errorf(`selector: function "%s" not allowed`, function.Identifier.Name)
 		}
 
@@ -421,7 +421,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			continue
 		}
 
-		rslt, err := f.Match(input, opts, e.template.locale)
+		rslt, err := f.Select(input, opts, e.template.locale)
 		if err != nil {
 			addErr(err)
 			continue

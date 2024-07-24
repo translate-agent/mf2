@@ -15,7 +15,7 @@ import (
 // See ".message-format-wg/spec/registry.xml".
 
 type RegistryFunc struct {
-	Match  func(input any, options Options, locale language.Tag) (output any, err error)
+	Select func(input any, options Options, locale language.Tag) (output any, err error)
 	Format func(input any, options Options, locale language.Tag) (output any, err error)
 }
 
@@ -25,7 +25,7 @@ type FuncContext int
 
 const (
 	Format FuncContext = iota
-	Match
+	Select
 )
 
 // Options are a possible options for the function.

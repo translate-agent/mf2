@@ -9,7 +9,7 @@ import (
 // integerRegistryFunc is the implementation of the integer function. Locale-sensitive integer formatting.
 var integerRegistryFunc = RegistryFunc{
 	Format: integerFunc(Format),
-	Match:  integerFunc(Match),
+	Select: integerFunc(Select),
 }
 
 func integerFunc(context FuncContext) func(operand any, options Options, locale language.Tag) (any, error) {
