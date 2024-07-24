@@ -299,7 +299,7 @@ func numberFunc(context FuncContext) func(operand any, options Options, locale l
 			digits := num.Digits(nil, locale, scale)
 			form := plural.Cardinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
 
-			return toString(form), nil
+			return pluralFormString(form), nil
 		}
 
 		result = p.Sprint(num)

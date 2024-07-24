@@ -169,8 +169,8 @@ func getTZ(options map[string]any) (*time.Location, error) {
 	}
 }
 
-// toString formats plural.Form as string.
-func toString(f plural.Form) string {
+// pluralFormString formats plural.Form as string.
+func pluralFormString(f plural.Form) string {
 	switch f {
 	default:
 		return "other"
