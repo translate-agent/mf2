@@ -10,7 +10,7 @@ import (
 // Formatting of strings as a literal and selection based on string equality.
 var stringRegistryFunc = RegistryFunc{
 	Format: stringFunc,
-	Match:  stringFunc,
+	Select: stringFunc,
 }
 
 func stringFunc(operand any, options Options, locale language.Tag) (any, error) {

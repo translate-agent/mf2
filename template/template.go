@@ -168,11 +168,13 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 			m[d.Variable] = struct{}{}
 
 			resolved, err := e.resolveExpression(d.Expression)
+			// if can't resolve the expression, leave it as unresolved, e.g. {$foo}
+			e.variables[string(d.Variable)] = resolved
+
 			if err != nil {
 				return fmt.Errorf("local declaration: %w", err)
 			}
 
-			e.variables[string(d.Variable)] = resolved
 		case ast.InputDeclaration:
 			m[d.Operand] = struct{}{}
 
@@ -403,7 +405,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 		}
 
 		// TODO(jhorsts): what is match and format context? Does MF2 still have it?
-		if f.Match == nil {
+		if f.Select == nil {
 			return nil, fmt.Errorf(`selector: function "%s" not allowed`, function.Identifier.Name)
 		}
 
@@ -419,7 +421,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			continue
 		}
 
-		rslt, err := f.Match(input, opts, e.template.locale)
+		rslt, err := f.Select(input, opts, e.template.locale)
 		if err != nil {
 			addErr(err)
 			continue

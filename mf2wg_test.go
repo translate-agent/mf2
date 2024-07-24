@@ -26,29 +26,16 @@ func init() {
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.match_{$foo_:integer}_one_{{one}}_*_{{other}}",
-
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$d_=_{|2006-01-02T15:04:06|_:date}_{{{$d_:time}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$t_=_{|2006-01-02T15:04:06|_:time_style=medium}_{{{$t_:time}}}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#03",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#02",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$bar_=_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$bar}}}#01",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_{$bar_:number}_one_one_{{one_one}}_one_*_{{one_other}}_*_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$bar_=_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$bar}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$none}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number}_.local_$bar_=_{$foo}_.match_{$bar}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_{$bar_:number}_one_one_{{one_one}}_one_*_{{one_other}}_*_*_{{other}}#02",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_one_{{one}}_1_{{=1}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar_:number}_.match_{$bar}_one_{{one}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number}_.match_{$foo}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar}_.match_{$bar_:number}_one_{{one}}_*_{{other}}#01",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$foo_=_{$bar_:number}_{{bar_{$foo}}}#01",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$foo_=_{$bar_:number_minimumFractionDigits=foo}_{{bar_{$foo}}}",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$foo_=_{$bar_:number}_.match_{$foo}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_{$bar_:number}_one_one_{{one_one}}_one_*_{{one_other}}_*_*_{{other}}#01",
 		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_1_{{=1}}_one_{{one}}_*_{{other}}",
 	}
 }

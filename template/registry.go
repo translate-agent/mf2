@@ -8,17 +8,25 @@ import (
 	"time"
 
 	"golang.org/x/exp/constraints"
+	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
 )
 
 // See ".message-format-wg/spec/registry.xml".
 
 type RegistryFunc struct {
-	Match  func(input any, options Options, locale language.Tag) (output any, err error)
+	Select func(input any, options Options, locale language.Tag) (output any, err error)
 	Format func(input any, options Options, locale language.Tag) (output any, err error)
 }
 
 type Registry map[string]RegistryFunc
+
+type FuncContext int
+
+const (
+	Format FuncContext = iota
+	Select
+)
 
 // Options are a possible options for the function.
 type Options map[string]any
@@ -158,5 +166,23 @@ func getTZ(options map[string]any) (*time.Location, error) {
 		}
 
 		return timezone, nil
+	}
+}
+
+// pluralFormString formats plural.Form as string.
+func pluralFormString(f plural.Form) string {
+	switch f {
+	default:
+		return "other"
+	case plural.Zero:
+		return "zero"
+	case plural.One:
+		return "one"
+	case plural.Two:
+		return "two"
+	case plural.Few:
+		return "few"
+	case plural.Many:
+		return "many"
 	}
 }
