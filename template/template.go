@@ -31,6 +31,33 @@ type Template struct {
 	locale   language.Tag
 }
 
+type variable struct {
+	formatValue, selectValue *string
+	expression               ast.Expression
+}
+
+func newVariable(e ast.Expression) variable { return variable{expression: e} }
+
+func (v variable) Format(e *executer) (string, error) {
+	if v.formatValue != nil {
+		return *v.formatValue, nil
+	}
+
+	if e == nil {
+		// we shouldn't get here
+		return "", mf2.ErrBadOperand
+	}
+
+	val, err := e.resolveExpression(v.expression)
+	v.formatValue = &val
+
+	return *v.formatValue, err
+}
+
+func (v variable) Select() (string, error) {
+	return "", nil
+}
+
 // New returns a new Template.
 func New(options ...Option) *Template {
 	t := &Template{
@@ -157,34 +184,36 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 	return resolutionErr
 }
 
-func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
-	m := make(map[ast.Value]struct{}, len(declarations))
+func newLiteral(v any) ast.Value { //nolint:ireturn
+	switch t := v.(type) {
+	case string:
+		return ast.QuotedLiteral(t)
+	case float64:
+		return ast.NumberLiteral(t)
+	case int:
+		return ast.NumberLiteral(t)
+	}
 
+	return nil
+}
+
+func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 	for _, decl := range declarations {
 		switch d := decl.(type) {
 		case ast.ReservedStatement:
 			return fmt.Errorf("%w", mf2.ErrUnsupportedStatement)
 		case ast.LocalDeclaration:
-			m[d.Variable] = struct{}{}
-
-			resolved, err := e.resolveExpression(d.Expression)
-			// if can't resolve the expression, leave it as unresolved, e.g. {$foo}
-			e.variables[string(d.Variable)] = resolved
-
-			if err != nil {
-				return fmt.Errorf("local declaration: %w", err)
-			}
-
+			e.variables[string(d.Variable)] = newVariable(d.Expression)
 		case ast.InputDeclaration:
-			m[d.Operand] = struct{}{}
+			expr := ast.Expression(d)
 
-			resolved, err := e.resolveExpression(ast.Expression(d))
-			// if can't resolve the expression, leave it as unresolved, e.g. {$foo}
-			e.variables[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // Will always be a variable.
-
-			if err != nil {
-				return fmt.Errorf("input declaration: %w", err)
+			val, ok := e.variables[string(d.Operand.(ast.Variable))]
+			if !ok {
+				return mf2.ErrUnresolvedVariable
 			}
+
+			expr.Operand = newLiteral(val)
+			e.variables[string(d.Operand.(ast.Variable))] = newVariable(expr) //nolint: forcetypeassert
 		}
 	}
 
@@ -279,9 +308,22 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 	}
 
 	if funcName == "" {
-		switch value.(type) {
+		switch t := value.(type) {
 		default: // TODO(jhorsts): how is unknown type formatted?
 			return fmtErroredExpr(), resolutionErr
+		case variable:
+			f, err := t.Format(e)
+
+			switch {
+			case errors.Is(err, mf2.ErrUnresolvedVariable),
+				errors.Is(err, mf2.ErrBadOperand),
+				errors.Is(err, mf2.ErrBadOption):
+				return f, err
+			case err != nil:
+				return fmtErroredExpr(), errors.Join(resolutionErr, err)
+			}
+
+			return f, nil
 		case string:
 			funcName = "string"
 		case float64:
@@ -419,6 +461,10 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 		if err != nil {
 			addErr(err)
 			continue
+		}
+
+		if t, ok := input.(variable); ok {
+			input, err = t.Format(e)
 		}
 
 		rslt, err := f.Select(input, opts, e.template.locale)
