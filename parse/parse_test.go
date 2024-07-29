@@ -331,11 +331,12 @@ func TestParseSimpleMessage(t *testing.T) {
 			got, err := Parse(test.input)
 			if err != nil {
 				t.Error(err)
+				return
 			}
 
 			// Check that AST message is equal to expected one.
 			if test.want.String() != got.Message.String() {
-				t.Errorf("want %v, got %v", test.want, got.Message)
+				t.Errorf("want '%v', got '%v'", test.want, got.Message)
 			}
 
 			// Check that AST message converted back to string is equal to input.

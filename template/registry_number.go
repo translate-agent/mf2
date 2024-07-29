@@ -1,35 +1,50 @@
 package template
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
+	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/number"
 )
 
-// See ".message-format-wg/spec/registry.xml".
-
 // numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
 var numberRegistryFunc = RegistryFunc{
-	Format: numberFunc,
+	Format: numberFunc(Format),
+	Select: numberFunc(Select),
 }
 
-func parseNumberInput(input any) (float64, error) {
-	if input == nil {
-		return 0, fmt.Errorf("input is required: %w", mf2.ErrBadOperand)
+// parseNumberOperand parses resolved operand value.
+func parseNumberOperand(operand any) (float64, error) {
+	errorf := func(format string, args ...any) (float64, error) {
+		return 0, fmt.Errorf(format+": %w", append(args, mf2.ErrBadOperand)...)
 	}
 
-	v, err := castAs[float64](input)
-	if err != nil {
-		return 0, fmt.Errorf("unsupported type %T: %w: %w", input, err, mf2.ErrBadOperand)
+	var (
+		number float64
+		err    error
+	)
+
+	switch v := operand.(type) {
+	default:
+		number, err = castAs[float64](v)
+		if err != nil {
+			return errorf("unsupported operand type %T: %w", v, err)
+		}
+	case nil:
+		return errorf("operand is required")
+	case string:
+		err = json.Unmarshal([]byte(v), &number)
+		if err != nil {
+			return errorf(`parse number "%s": %w`, operand, err)
+		}
 	}
 
-	return v, nil
+	return number, nil
 }
 
 type numberOptions struct {
@@ -113,10 +128,14 @@ type numberOptions struct {
 }
 
 func parseNumberOptions(opts Options) (*numberOptions, error) {
+	errorf := func(format string, args ...any) (*numberOptions, error) {
+		return nil, fmt.Errorf("%w: "+format, append([]any{mf2.ErrBadOption}, args...)...)
+	}
+
 	for k := range opts {
 		switch k {
 		default:
-			return nil, fmt.Errorf("unsupported option: %s", k)
+			return errorf("unsupported option: %s", k)
 		case "compactDisplay", "currency", "currencyDisplay", "currencySign", "notation", "numberingSystem",
 			"signDisplay", "style", "unit", "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits",
 			"maximumFractionDigits", "minimumSignificantDigits", "maximumSignificantDigits", "select", "useGrouping": // noop
@@ -130,30 +149,30 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 
 	selects := oneOf("plural", "ordinal", "exact")
 	if options.Select, err = opts.GetString("select", "plural", selects); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	useGroupings := oneOf("auto", "always", "never", "min2")
 	if options.UseGrouping, err = opts.GetString("useGrouping", "auto", useGroupings); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	compactDisplays := oneOf("short", "long")
 	if options.CompactDisplay, err = opts.GetString("compactDisplay", "short", compactDisplays); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	if curr, ok := opts["currency"]; ok {
 		switch v := curr.(type) {
 		default:
-			return nil, fmt.Errorf("invalid currency type: %T", v)
+			return errorf("invalid currency type: %T", v)
 		case string:
 			if options.Currency, err = currency.ParseISO(v); err != nil {
-				return nil, fmt.Errorf("invalid currency value: %s", v)
+				return errorf("invalid currency value: %s", v)
 			}
 
 			if options.Currency == currency.XXX {
-				return nil, errors.New("empty currency value")
+				return errorf("empty currency value")
 			}
 		case currency.Unit:
 			options.Currency = v
@@ -162,17 +181,17 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 
 	currencyDisplays := oneOf("code", "symbol", "narrowSymbol", "name")
 	if options.CurrencyDisplay, err = opts.GetString("currencyDisplay", "", currencyDisplays); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	currencySigns := oneOf("standard", "accounting")
 	if options.CurrencySign, err = opts.GetString("currencySign", "standard", currencySigns); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	notations := oneOf("standard", "scientific", "engineering", "compact")
 	if options.Notation, err = opts.GetString("notation", "standard", notations); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	numberingSystems := oneOf(
@@ -180,34 +199,34 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		"knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec", "telu", "thai", "tibt",
 	)
 	if options.NumberingSystem, err = opts.GetString("numberingSystem", "", numberingSystems); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	signDisplays := oneOf("auto", "always", "exceptZero", "negative", "never")
 	if options.SignDisplay, err = opts.GetString("signDisplay", "auto", signDisplays); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	styles := oneOf("decimal", "percent")
 	if options.Style, err = opts.GetString("style", "decimal", styles); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	if options.Unit, err = opts.GetInt("unit", 0); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	unitDisplays := oneOf("short", "narrow")
 	if options.UnitDisplay, err = opts.GetString("unitDisplay", "short", unitDisplays); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	if options.MinimumIntegerDigits, err = opts.GetInt("minimumIntegerDigits", 1, eqOrGreaterThan(1)); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	if options.MinimumFractionDigits, err = opts.GetInt("minimumFractionDigits", 0, eqOrGreaterThan(0)); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	var maxFractionDigits int // percent default
@@ -218,84 +237,90 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 
 	options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, eqOrGreaterThan(0))
 	if err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	if options.MinimumSignificantDigits, err = opts.GetInt("minimumSignificantDigits", 1, eqOrGreaterThan(1)); err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	options.MaximumSignificantDigits, err = opts.GetInt("maximumSignificantDigits", -1)
 	if err != nil {
-		return nil, err
+		return errorf("%w", err)
 	}
 
 	return &options, nil
 }
 
-func numberFunc(input any, options Options, locale language.Tag) (any, error) {
-	value, err := parseNumberInput(input)
-	if err != nil {
-		return nil, err
-	}
-
-	opts, err := parseNumberOptions(options)
-	if err != nil {
-		return nil, err
-	}
-
-	var result string
-
-	p := message.NewPrinter(locale)
-	numberOpts := []number.Option{
-		number.MinFractionDigits(opts.MinimumFractionDigits),
-		number.MaxFractionDigits(opts.MaximumFractionDigits),
-		number.MinIntegerDigits(opts.MinimumIntegerDigits),
-		number.Precision(opts.MaximumSignificantDigits),
-	}
-
-	switch opts.Style {
-	case "decimal":
-		result = p.Sprint(number.Decimal(value, numberOpts...))
-	case "percent":
-		result = p.Sprint(number.Percent(value, numberOpts...))
-	default:
-		return nil, fmt.Errorf("style '%s' is not implemented", opts.Style)
-	}
-
-	switch opts.SignDisplay {
-	case "auto":
-	case "negative":
-	case "always":
-		if value >= 0 {
-			result = "+" + result
+func numberFunc(context FuncContext) func(operand any, options Options, locale language.Tag) (any, error) {
+	return func(operand any, options Options, locale language.Tag) (any, error) {
+		errorf := func(format string, args ...any) (any, error) {
+			return nil, fmt.Errorf("exec number function: "+format, args...)
 		}
-	case "exceptZero":
-		if value > 0 {
-			result = "+" + result
+
+		value, err := parseNumberOperand(operand)
+		if err != nil {
+			return errorf("%w", err)
 		}
-	case "never":
-		if value < 0 {
-			result = result[1:]
+
+		opts, err := parseNumberOptions(options)
+		if err != nil {
+			return errorf("%w", err)
 		}
+
+		var result string
+
+		p := message.NewPrinter(locale)
+		numberOpts := []number.Option{
+			number.MinFractionDigits(opts.MinimumFractionDigits),
+			number.MaxFractionDigits(opts.MaximumFractionDigits),
+			number.MinIntegerDigits(opts.MinimumIntegerDigits),
+			number.Precision(opts.MaximumSignificantDigits),
+		}
+
+		var num number.Formatter
+
+		switch opts.Style {
+		default:
+			return errorf(`option style "%s" is not implemented`, opts.Style)
+		case "decimal":
+			num = number.Decimal(value, numberOpts...)
+		case "percent":
+			num = number.Percent(value, numberOpts...)
+		}
+
+		if context == Select {
+			scale := -1
+			if opts.MaximumFractionDigits == 0 {
+				// most likely integer formatting
+				scale = 0
+			}
+
+			digits := num.Digits(nil, locale, scale)
+			form := plural.Cardinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
+
+			return pluralFormString(form), nil
+		}
+
+		result = p.Sprint(num)
+
+		switch opts.SignDisplay {
+		case "auto":
+		case "negative":
+		case "always":
+			if value >= 0 {
+				result = "+" + result
+			}
+		case "exceptZero":
+			if value > 0 {
+				result = "+" + result
+			}
+		case "never":
+			if value < 0 {
+				result = result[1:]
+			}
+		}
+
+		return result, nil
 	}
-
-	return result, nil
-}
-
-// helpers
-
-// castAs tries to cast any value to the given type.
-func castAs[T any](val any) (T, error) {
-	var zeroVal T
-	typ := reflect.TypeOf(zeroVal)
-
-	v := (reflect.ValueOf(val))
-	if !v.Type().ConvertibleTo(typ) {
-		return zeroVal, fmt.Errorf("convert %v to %T", v.Type(), zeroVal)
-	}
-
-	v = v.Convert(typ)
-
-	return v.Interface().(T), nil //nolint:forcetypeassert
 }

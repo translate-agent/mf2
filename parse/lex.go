@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
-
-	"go.expect.digital/mf2"
 )
 
 // eof is the end of file item.
@@ -326,7 +324,7 @@ func lexComplexMessage(l *lexer) stateFn {
 				l.backup()
 				l.isReservedBody = true
 
-				return lexName(l)
+				return lexReservedKeyword(l)
 			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
 				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
@@ -342,7 +340,7 @@ func lexComplexMessage(l *lexer) stateFn {
 			return lexReservedBody(l)
 		case r == variablePrefix:
 			l.backup()
-			return lexName(l)
+			return lexVariable(l)
 		case isWhitespace(r):
 			l.backup()
 
@@ -371,13 +369,13 @@ func lexComplexMessage(l *lexer) stateFn {
 			return l.emitErrorf("unexpected } in complex message")
 		case r == '*':
 			return l.emitItem(mk(itemCatchAllKey, "*"))
-		case isDigit(r),
-			r == '-' && isDigit(l.peek()),
-			r == '|',
-			isName(r):
+		case r == '|':
 			l.backup()
 
-			return lexLiteral(l)
+			return lexQuotedLiteral(l)
+		case isName(r):
+			l.backup()
+			return lexUnquotedOrNumberLiteral(l)
 		case r == eof:
 			return nil
 		}
@@ -390,19 +388,18 @@ func lexExpr(l *lexer) stateFn {
 	default:
 		l.backup()
 
-		return lexLiteral(l)
+		return lexUnquotedOrNumberLiteral(l)
 	case l.isReservedBody:
 		l.backup()
 		return lexReservedBody(l)
 	case v == eof:
 		return l.emitErrorf("unexpected eof in expression")
-	case v == variablePrefix: // variable
+	case v == variablePrefix:
 		l.backup()
-
-		return lexName(l)
-	case v == '|', v == '-' && isDigit(l.peek()): // quoted and number literal
+		return lexVariable(l)
+	case v == '|':
 		l.backup()
-		return lexLiteral(l)
+		return lexQuotedLiteral(l)
 	case v == '#', // markup-open
 		v == '/', // markup-close
 		v == '@', // attribute
@@ -445,95 +442,95 @@ func lexExpr(l *lexer) stateFn {
 	}
 }
 
-// lexName is the state function for lexing names.
-func lexName(l *lexer) stateFn {
-	var typ itemType
+// lexQuotedLiteral is the state function for lexing quoted literals.
+func lexQuotedLiteral(l *lexer) stateFn {
+	var s string
 
-	switch l.next() {
-	case '$':
-		typ = itemVariable
-	case '.':
-		typ = itemReservedKeyword
-	default:
-		typ = itemUnquotedLiteral
-
-		l.backup() // backup to the first rune
+	if r := l.next(); r != '|' {
+		return l.emitErrorf(`unexpected opening character in quoted literal: "%s"`, string(r))
 	}
 
-	var (
-		s string // item value
-		r rune   // current rune
-	)
+	for {
+		r := l.next()
 
-	for r = l.next(); isName(r); r = l.next() {
+		switch {
+		default:
+			return l.emitErrorf(`unknown character in quoted literal: "%s"`, string(r))
+		case isQuoted(r):
+			s += string(r)
+		case r == '|': // closing
+			return l.emitItem(mk(itemQuotedLiteral, s))
+		case r == '\\':
+			next := l.next()
+
+			switch next {
+			default:
+				return l.emitErrorf(`unexpected escaped character in quoted literal: "%s"`, string(r))
+			case '\\', '|':
+				s += string(next)
+			case eof:
+				return l.emitErrorf("unexpected eof in quoted literal")
+			}
+		}
+	}
+}
+
+// lexUnquotedOrNumberLiteral is the state function for lexing names.
+func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
+	var s string
+
+	for r := l.next(); isName(r) || r == '+'; r = l.next() {
 		s += string(r)
-	}
-
-	if r == eof {
-		return l.emitErrorf("unexpected eof in name")
 	}
 
 	l.backup()
 
-	return l.emitItem(mk(typ, s))
+	var number float64
+
+	if err := json.Unmarshal([]byte(s), &number); err == nil {
+		return l.emitItem(mk(itemNumberLiteral, s))
+	}
+
+	// "+" is not valid unquoted literal character
+	if strings.Contains(s, "+") {
+		return l.emitErrorf(`invalid unquoted literal "%s"`, s)
+	}
+
+	return l.emitItem(mk(itemUnquotedLiteral, s))
 }
 
-// lexLiteral is the state function for lexing literals.
-func lexLiteral(l *lexer) stateFn {
+// lexLiteral is the state function for lexing variables.
+func lexVariable(l *lexer) stateFn {
 	var s string
 
-	switch l.peek() {
-	default: // unquoted literal
-		return lexName(l)
-	case '|': // quoted literal
-		var opening bool
-
-		for {
-			r := l.next()
-
-			switch {
-			default:
-				return l.emitErrorf("unknown character in quoted literal: %s", string(r))
-			case isQuoted(r):
-				s += string(r)
-			case r == '|':
-				opening = !opening
-				if !opening {
-					return l.emitItem(mk(itemQuotedLiteral, s))
-				}
-			case r == '\\':
-				next := l.next()
-
-				switch next {
-				default:
-					return l.emitErrorf("unexpected escaped character in quoted literal: %s", string(r))
-				case '\\', '|':
-					s += string(next)
-				case eof:
-					return l.emitErrorf("unexpected eof in quoted literal")
-				}
-			}
-		}
-	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9': // number literal
-		for {
-			r := l.next()
-
-			switch r {
-			default:
-				var number float64
-
-				if err := json.Unmarshal([]byte(s), &number); err != nil {
-					return l.emitErrorf("%w: %s", mf2.ErrBadOperand, s)
-				}
-
-				l.backup()
-
-				return l.emitItem(mk(itemNumberLiteral, s))
-			case '-', '+', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'e', 'E':
-				s += string(r)
-			}
-		}
+	if r := l.next(); r != variablePrefix {
+		return l.emitErrorf(`invalid variable prefix "%s"`, string(r))
 	}
+
+	for r := l.next(); isName(r); r = l.next() {
+		s += string(r)
+	}
+
+	l.backup()
+
+	return l.emitItem(mk(itemVariable, s))
+}
+
+// lexLiteral is the state function for reserved keywords.
+func lexReservedKeyword(l *lexer) stateFn {
+	var s string
+
+	if r := l.next(); r != '.' {
+		return l.emitErrorf(`invalid reserved keyword prefix "%s"`, string(r))
+	}
+
+	for r := l.next(); isName(r); r = l.next() {
+		s += string(r)
+	}
+
+	l.backup()
+
+	return l.emitItem(mk(itemReservedKeyword, s))
 }
 
 // lexWhitespace is the state function for lexing whitespace.
@@ -646,7 +643,7 @@ func lexReservedBody(l *lexer) stateFn {
 			return l.emitItem(mk(itemReservedText, s))
 		case v == '|':
 			l.backup()
-			return lexLiteral(l)
+			return lexQuotedLiteral(l)
 		case v == '\\': // escaped character
 			next := l.next()
 
@@ -780,11 +777,6 @@ func isSimpleStart(r rune) bool {
 //	text-char = content-char / s / "." / "@" / "|"
 func isText(r rune) bool {
 	return isContent(r) || isWhitespace(r) || r == '.' || r == '@' || r == '|'
-}
-
-// isDigit returns true if r is digit character.
-func isDigit(r rune) bool {
-	return '0' <= r && r <= '9'
 }
 
 // isPrivateStart returns true if r is private start character.
