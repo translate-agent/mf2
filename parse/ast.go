@@ -151,21 +151,25 @@ type Expression struct {
 
 // String returns MF2 formatted string.
 func (e Expression) String() string {
-	s := "{"
+	var s []string
 
 	if e.Operand != nil {
-		s += " " + e.Operand.String()
+		s = append(s, e.Operand.String())
 	}
 
 	if e.Annotation != nil {
-		s += " " + e.Annotation.String()
+		s = append(s, e.Annotation.String())
 	}
 
 	if len(e.Attributes) > 0 {
-		s += " " + sliceToString(e.Attributes, " ")
+		s = append(s, sliceToString(e.Attributes, " "))
 	}
 
-	return s + "}"
+	if len(s) == 0 {
+		return "{}"
+	}
+
+	return "{ " + strings.Join(s, " ") + " }"
 }
 
 func (Expression) node()        {}
@@ -240,7 +244,12 @@ type PrivateUseAnnotation struct {
 
 // String returns MF2 formatted string.
 func (p PrivateUseAnnotation) String() string {
-	return string(p.Start) + sliceToString(p.ReservedBody, "")
+	body := sliceToString(p.ReservedBody, " ")
+	if len(body) > 0 {
+		return string(p.Start) + " " + body
+	}
+
+	return string(p.Start)
 }
 
 func (PrivateUseAnnotation) node()       {}
@@ -441,7 +450,7 @@ func (m Markup) String() string {
 			s += " " + sliceToString(m.Attributes, " ")
 		}
 
-		return s + "}"
+		return s + " }"
 	case Close:
 		s := "{ /" + m.Identifier.String()
 
