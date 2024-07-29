@@ -84,7 +84,7 @@ func Test_Builder(t *testing.T) {
 							ReservedText("hey3 hey4"),
 							ReservedText("hey5"),
 						).
-						Attributes(
+						Attr(
 							VarAttribute("attr1", "var"),
 						),
 				).
@@ -111,7 +111,7 @@ func Test_Builder(t *testing.T) {
 			NewBuilder().
 				Local("hostName", Var("host")).
 				Local("hostName2", Annotation(Ampersand, QuotedLiteral("hey"))).
-				Input(Var("input").Attributes(EmptyAttribute("empty"))).
+				Input(Var("input").Attr(EmptyAttribute("empty"))).
 				Input(Var("input2").Func("upper")).
 				Reserved("reserved1", Var("reserved")).
 				Reserved("reserved2", Var("a"), Literal("b"), Expr().Func("upper")).
@@ -122,7 +122,7 @@ func Test_Builder(t *testing.T) {
 					QuotedLiteral("quoted2"),
 					ReservedText("{text}"),
 					Literal("literal").
-						Attributes(
+						Attr(
 							VarAttribute("attr1", "var"),
 						).
 						Func("upper", LiteralOption("limit", 2)),
@@ -171,7 +171,7 @@ func Test_Builder(t *testing.T) {
 				Text("Attributes for variable expression ").
 				Expr(
 					Var("i").
-						Attributes(
+						Attr(
 							VarAttribute("attr1", "var"),
 							LiteralAttribute("attr2", "literal"),
 							EmptyAttribute("empty"),

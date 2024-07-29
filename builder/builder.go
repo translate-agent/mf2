@@ -527,8 +527,8 @@ func (e *Expression) Func(name string, option ...FuncOption) *Expression {
 	return e
 }
 
-// Attributes adds attributes to the expression.
-func (e *Expression) Attributes(attributes ...attribute) *Expression {
+// Attr adds attributes to the expression.
+func (e *Expression) Attr(attributes ...attribute) *Expression {
 	for _, v := range attributes {
 		e.expression.Attributes = append(e.expression.Attributes, parse.Attribute(v))
 	}
