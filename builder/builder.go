@@ -147,7 +147,7 @@ func (b *Builder) Reserved(
 		switch v := v.(type) {
 		case ReservedBody:
 			switch x := v.(type) {
-			case QuotedLiteral:
+			case Quoted:
 				reserved.ReservedBody = append(reserved.ReservedBody, parse.QuotedLiteral(x))
 			case ReservedText:
 				reserved.ReservedBody = append(reserved.ReservedBody, parse.ReservedText(x))
@@ -413,13 +413,13 @@ func (FuncOption) optsAndAttr() {}
 
 type ReservedBody interface{ reservedBody() }
 
-type QuotedLiteral parse.QuotedLiteral
+type Quoted parse.QuotedLiteral
 
 type ReservedText parse.ReservedText
 
-func (l QuotedLiteral) reservedBody() {}
+func (l Quoted) reservedBody() {}
 
-func (QuotedLiteral) reservedOrExpression() {}
+func (Quoted) reservedOrExpression() {}
 
 func (t ReservedText) reservedBody() {}
 
@@ -485,7 +485,7 @@ func (e *Expression) Annotation(start AnnotationStart, reservedBody ...ReservedB
 
 	for _, v := range reservedBody {
 		switch x := v.(type) {
-		case QuotedLiteral:
+		case Quoted:
 			annotation.ReservedBody = append(annotation.ReservedBody, parse.QuotedLiteral(x))
 		case ReservedText:
 			annotation.ReservedBody = append(annotation.ReservedBody, parse.ReservedText(x))

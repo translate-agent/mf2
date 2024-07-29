@@ -64,7 +64,7 @@ func Test_Builder(t *testing.T) {
 				Expr(
 					Var("f").
 						Annotation(Caret,
-							QuotedLiteral("a"),
+							Quoted("a"),
 							ReservedText("reserved")),
 				).
 				// Annotation expression, reserved use annotation without body
@@ -72,7 +72,7 @@ func Test_Builder(t *testing.T) {
 				// Annotation expression, reserved use annotation with escaped quoted and text
 				Expr(
 					Annotation(GreaterThan,
-						QuotedLiteral("b|"),
+						Quoted("b|"),
 						ReservedText("escaped |}"),
 					),
 				).
@@ -110,16 +110,16 @@ func Test_Builder(t *testing.T) {
 			"complex message all declarations",
 			NewBuilder().
 				Local("hostName", Var("host")).
-				Local("hostName2", Annotation(Ampersand, QuotedLiteral("hey"))).
+				Local("hostName2", Annotation(Ampersand, Quoted("hey"))).
 				Input(Var("input").Attr(EmptyAttribute("empty"))).
 				Input(Var("input2").Func("upper")).
 				Reserved("reserved1", Var("reserved")).
 				Reserved("reserved2", Var("a"), Literal("b"), Expr().Func("upper")).
 				Reserved(
 					"reserved3",
-					Annotation(Ampersand, QuotedLiteral("hey")),
-					QuotedLiteral("quoted"),
-					QuotedLiteral("quoted2"),
+					Annotation(Ampersand, Quoted("hey")),
+					Quoted("quoted"),
+					Quoted("quoted2"),
 					ReservedText("{text}"),
 					Literal("literal").
 						Attr(
