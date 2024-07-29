@@ -130,8 +130,6 @@ func (b *Builder) Input(expr *Expression) *Builder {
 	return b
 }
 
-type ReservedOrExpression interface{ reservedOrExpression() }
-
 func Expr() *Expression { return new(Expression) }
 
 func (b *Builder) Expr(expr *Expression) *Builder {
@@ -218,6 +216,8 @@ func (b *Builder) Keys(key any, keys ...any) *Builder {
 		return b
 	}
 
+	keys = append([]any{key}, keys...)
+
 	switch msg := b.tree.Message.(type) {
 	default:
 		b.err = fmt.Errorf(`add keys to "%s"`, msg)
@@ -226,7 +226,7 @@ func (b *Builder) Keys(key any, keys ...any) *Builder {
 		default:
 			b.err = fmt.Errorf(`add selectors to "%s"`, msg)
 		case parse.Matcher:
-			n := len(keys) + 1
+			n := len(keys)
 
 			if len(body.Selectors) != n {
 				b.err = errors.New("number of keys in each variant MUST match the number of selectors in the matcher")
@@ -235,7 +235,7 @@ func (b *Builder) Keys(key any, keys ...any) *Builder {
 
 			all := make([]parse.VariantKey, 0, n)
 
-			for _, k := range append([]any{key}, keys...) {
+			for _, k := range keys {
 				var v parse.VariantKey = toLiteral(k)
 				if k == "*" {
 					v = parse.CatchAllKey{}
@@ -256,8 +256,6 @@ func (b *Builder) Keys(key any, keys ...any) *Builder {
 type Expression struct {
 	expression parse.Expression
 }
-
-func (e *Expression) reservedOrExpression() {}
 
 func Literal(v any) *Expression {
 	return Expr().Literal(v)
@@ -382,11 +380,7 @@ type ReservedText parse.ReservedText
 
 func (l Quoted) reservedBody() {}
 
-func (Quoted) reservedOrExpression() {}
-
 func (t ReservedText) reservedBody() {}
-
-func (ReservedText) reservedOrExpression() {}
 
 type AnnotationStart int
 
@@ -440,18 +434,18 @@ func Annotation(start AnnotationStart, reservedBody ...ReservedBody) *Expression
 	return Expr().Annotation(start, reservedBody...)
 }
 
-// Annotation adds Private Use or Reserved annotation to the expression.
+// Annotation adds Private Use annotation to the expression.
 func (e *Expression) Annotation(start AnnotationStart, reservedBody ...ReservedBody) *Expression {
-	annotation := parse.ReservedAnnotation{
+	annotation := parse.PrivateUseAnnotation{
 		Start: []rune(start.String())[0],
 	}
 
-	for _, v := range reservedBody {
-		switch x := v.(type) {
+	for _, reservedBodyPart := range reservedBody {
+		switch v := reservedBodyPart.(type) {
 		case Quoted:
-			annotation.ReservedBody = append(annotation.ReservedBody, parse.QuotedLiteral(x))
+			annotation.ReservedBody = append(annotation.ReservedBody, parse.QuotedLiteral(v))
 		case ReservedText:
-			annotation.ReservedBody = append(annotation.ReservedBody, parse.ReservedText(x))
+			annotation.ReservedBody = append(annotation.ReservedBody, parse.ReservedText(v))
 		}
 	}
 
