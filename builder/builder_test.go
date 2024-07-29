@@ -1,6 +1,9 @@
 package builder
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
 func Test_Builder(t *testing.T) {
 	t.Parallel()
@@ -110,28 +113,11 @@ func Test_Builder(t *testing.T) {
 				Local("hostName2", Annotation(Ampersand, Quoted("hey"))).
 				Input(Var("input").Attr(EmptyAttribute("empty"))).
 				Input(Var("input2").Func("upper")).
-				Reserved("reserved1", Var("reserved")).
-				Reserved("reserved2", Var("a"), Literal("b"), Expr().Func("upper")).
-				Reserved(
-					"reserved3",
-					Annotation(Ampersand, Quoted("hey")),
-					Quoted("quoted"),
-					Quoted("quoted2"),
-					ReservedText("{text}"),
-					Literal("literal").
-						Attr(
-							VarAttribute("attr1", "var"),
-						).
-						Func("upper", LiteralOption("limit", 2)),
-				).
 				Text("Beep"),
 			`.local $hostName = { $host }
 .local $hostName2 = { & |hey| }
 .input { $input @empty }
 .input { $input2 :upper }
-.reserved1 { $reserved }
-.reserved2 { $a } { b } { :upper }
-.reserved3 |quoted| |quoted2| \{text\} { & |hey| } { literal :upper limit = 2 @attr1 = $var }
 {{Beep}}`,
 		},
 		{
@@ -161,20 +147,6 @@ func Test_Builder(t *testing.T) {
 				Keys(3, 0).Expr(Literal("\\a|")).
 				Keys("*", "*").Expr(Literal(1)),
 			".input { $i }\n.local $hostName = { $i }\n.match { $i } { $j }\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
-		},
-		{
-			"spacing",
-			NewBuilder().
-				Match(
-					Var("i"),
-					Var("j"),
-				).
-				Keys(1, 2).Text("{first}").
-				Keys(2, 0).Text("second ").Expr(Var("i")).
-				Keys(3, 0).Expr(Literal("\\a|")).
-				Keys("*", "*").Expr(Literal(1)).
-				Spacing(""),
-			".match{$i}{$j}\n1 2{{\\{first\\}}}\n2 0{{second {$i}}}\n3 0{{{|\\\\a\\||}}}\n* *{{{1}}}",
 		},
 		{
 			"attributes",
@@ -228,8 +200,63 @@ func Test_Builder(t *testing.T) {
 			}
 
 			if test.want != got {
-				t.Errorf("want '%s', got '%s'", test.want, got)
+				t.Errorf("\nwant '%s'\ngot  '%s'", test.want, got)
 			}
 		})
 	}
+}
+
+func BenchmarkBuildMatch(b *testing.B) {
+	var s string
+
+	for range b.N {
+		s, _ = NewBuilder().
+			Input(Var("i")).
+			Local("hostName", Var("i")).
+			Match(
+				Var("i"),
+				Var("j"),
+			).
+			Keys(1, 2).Text("{first}").
+			Keys(2, 0).Text("second ").Expr(Var("i")).
+			Keys(3, 0).Expr(Literal("\\a|")).
+			Keys("*", "*").Expr(Literal(1)).
+			Build()
+	}
+
+	runtime.KeepAlive(s)
+}
+
+func BenchmarkBuildMarkup(b *testing.B) {
+	var s string
+
+	for range b.N {
+		s, _ = NewBuilder().
+			OpenMarkup(
+				"open",
+				LiteralOption("opt1", "val1"),
+				LiteralAttribute("attr1", 1),
+				VarOption("opt2", "var"),
+			).
+			Text(" something ").
+			CloseMarkup(
+				"close",
+				EmptyAttribute("empty1"),
+				VarAttribute("attr1", "var"),
+			).
+			SelfCloseMarkup(
+				"selfClosing",
+				LiteralAttribute("attr1", "༼ つ ◕_◕ ༽つ"),
+			).
+			// nested markup
+			OpenMarkup("nest1").
+			OpenMarkup("nest2").
+			Text("nested").
+			SelfCloseMarkup("nest3").
+			CloseMarkup("nest2").
+			CloseMarkup("nest1").
+			Build()
+	}
+
+	runtime.KeepAlive(s)
 }
