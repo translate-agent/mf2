@@ -113,28 +113,11 @@ func Test_Builder(t *testing.T) {
 				Local("hostName2", Annotation(Ampersand, Quoted("hey"))).
 				Input(Var("input").Attr(EmptyAttribute("empty"))).
 				Input(Var("input2").Func("upper")).
-				Reserved("reserved1", Var("reserved")).
-				Reserved("reserved2", Var("a"), Literal("b"), Expr().Func("upper")).
-				Reserved(
-					"reserved3",
-					Annotation(Ampersand, Quoted("hey")),
-					Quoted("quoted"),
-					Quoted("quoted2"),
-					ReservedText("{text}"),
-					Literal("literal").
-						Attr(
-							VarAttribute("attr1", "var"),
-						).
-						Func("upper", LiteralOption("limit", 2)),
-				).
 				Text("Beep"),
 			`.local $hostName = { $host }
 .local $hostName2 = { & |hey| }
 .input { $input @empty }
 .input { $input2 :upper }
-.reserved1 { $reserved }
-.reserved2 { $a } { b } { :upper }
-.reserved3 |quoted| |quoted2| \{text\} { & |hey| } { literal :upper limit = 2 @attr1 = $var }
 {{Beep}}`,
 		},
 		{

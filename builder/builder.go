@@ -52,20 +52,20 @@ func (b *Builder) Text(s string) *Builder {
 		msg = append(msg, parse.Text(s))
 		b.tree.Message = msg
 	case parse.ComplexMessage:
-		switch v := msg.ComplexBody.(type) {
+		switch body := msg.ComplexBody.(type) {
 		case parse.QuotedPattern:
-			v = append(v, txt)
-			msg.ComplexBody = v
+			body = append(body, txt)
+			msg.ComplexBody = body
 			b.tree.Message = msg
 		case parse.Matcher:
-			i := len(v.Variants) - 1
+			i := len(body.Variants) - 1
 			if i < 0 {
-				b.err = fmt.Errorf(`add text "%s" to "%s"`, txt, v)
+				b.err = fmt.Errorf(`add text "%s" to "%s"`, txt, body)
 				return b
 			}
 
-			v.Variants[i].QuotedPattern = append(v.Variants[i].QuotedPattern, parse.Text(s))
-			msg.ComplexBody = v
+			body.Variants[i].QuotedPattern = append(body.Variants[i].QuotedPattern, parse.Text(s))
+			msg.ComplexBody = body
 		}
 
 		b.tree.Message = msg
@@ -91,14 +91,14 @@ func (b *Builder) Local(v string, expr *Expression) *Builder {
 			Declarations: []parse.Declaration{local},
 			ComplexBody:  parse.QuotedPattern{},
 		}
-	case parse.ComplexMessage:
-		msg.Declarations = append(msg.Declarations, local)
-		b.tree.Message = msg
 	case parse.SimpleMessage:
 		b.tree.Message = parse.ComplexMessage{
 			Declarations: []parse.Declaration{local},
 			ComplexBody:  parse.QuotedPattern(msg),
 		}
+	case parse.ComplexMessage:
+		msg.Declarations = append(msg.Declarations, local)
+		b.tree.Message = msg
 	}
 
 	return b
@@ -110,57 +110,20 @@ func (b *Builder) Input(expr *Expression) *Builder {
 		return b
 	}
 
+	input := parse.InputDeclaration(expr.expression)
+
 	switch msg := b.tree.Message.(type) {
 	default:
 		b.tree.Message = parse.ComplexMessage{
-			Declarations: []parse.Declaration{parse.InputDeclaration(expr.expression)},
+			Declarations: []parse.Declaration{input},
 		}
 	case parse.SimpleMessage:
 		b.tree.Message = parse.ComplexMessage{
-			Declarations: []parse.Declaration{parse.InputDeclaration(expr.expression)},
+			Declarations: []parse.Declaration{input},
 			ComplexBody:  parse.QuotedPattern(msg),
 		}
 	case parse.ComplexMessage:
-		msg.Declarations = append(msg.Declarations, parse.InputDeclaration(expr.expression))
-		b.tree.Message = msg
-	}
-
-	return b
-}
-
-// Reserved adds reserved statement to the builder.
-func (b *Builder) Reserved(
-	keyword string,
-	expression *Expression,
-	reservedOrExpression ...ReservedOrExpression,
-) *Builder {
-	if b.err != nil {
-		return b
-	}
-
-	reserved := parse.ReservedStatement{
-		Keyword:     keyword,
-		Expressions: []parse.Expression{expression.expression},
-	}
-
-	for _, v := range reservedOrExpression {
-		switch v := v.(type) {
-		case ReservedBody:
-			switch x := v.(type) {
-			case Quoted:
-				reserved.ReservedBody = append(reserved.ReservedBody, parse.QuotedLiteral(x))
-			case ReservedText:
-				reserved.ReservedBody = append(reserved.ReservedBody, parse.ReservedText(x))
-			}
-		case *Expression:
-			reserved.Expressions = append(reserved.Expressions, v.expression)
-		}
-	}
-
-	switch msg := b.tree.Message.(type) {
-	case parse.SimpleMessage:
-	case parse.ComplexMessage:
-		msg.Declarations = append(msg.Declarations, reserved)
+		msg.Declarations = append(msg.Declarations, input)
 		b.tree.Message = msg
 	}
 
