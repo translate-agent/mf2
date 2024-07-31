@@ -29,6 +29,10 @@ func parseNumberOperand(operand any) (float64, error) {
 		err    error
 	)
 
+	if t, ok := operand.(*Result); ok {
+		operand = t.value
+	}
+
 	switch v := operand.(type) {
 	default:
 		number, err = castAs[float64](v)

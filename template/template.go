@@ -31,28 +31,57 @@ type Template struct {
 	locale   language.Tag
 }
 
-type variable struct {
-	name        *string
-	formatValue *string // TODO(mvilks): "selectValue" to be implemented
-	expression  ast.Expression
+type Result struct {
+	value     any
+	selectKey func(keys []string) string
+	format    func() string
+	err       error
 }
 
-func newVariable(e ast.Expression, name *string) variable { return variable{expression: e, name: name} }
-
-func (v variable) Format(e *executer) (string, error) {
-	if v.formatValue != nil {
-		return *v.formatValue, nil
+func (r *Result) String() string {
+	if r.format != nil {
+		return r.format()
 	}
 
-	val, err := e.resolveExpression(v.expression)
-	if err != nil && v.name != nil {
-		n := "{$" + *v.name + "}"
-		val = n
+	switch value := r.value.(type) {
+	default:
+		s, err := castAs[string](r.value) // if underlying type is not string, return error
+		if err != nil {
+			return "" // errorf("unsupported value type: %T: %w", r.value, err)
+		}
+
+		return s
+	case fmt.Stringer:
+		return value.String()
+	case string, []byte, []rune, int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64, float32, float64, bool,
+		complex64, complex128, error:
+		return fmt.Sprint(value)
+	}
+}
+
+type Opt func(*Result)
+
+func WithFormat(format func() string) Opt {
+	return func(r *Result) {
+		r.format = format
+	}
+}
+
+func WithSelectKey(selectKey func(keys []string) string) Opt {
+	return func(r *Result) {
+		r.selectKey = selectKey
+	}
+}
+
+func NewResult(value any, opts ...Opt) *Result {
+	r := &Result{value: value}
+
+	for _, f := range opts {
+		f(r)
 	}
 
-	v.formatValue = &val
-
-	return *v.formatValue, err
+	return r
 }
 
 // New returns a new Template.
@@ -200,18 +229,33 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 		case ast.ReservedStatement:
 			return fmt.Errorf("%w", mf2.ErrUnsupportedStatement)
 		case ast.LocalDeclaration:
-			e.variables[string(d.Variable)] = newVariable(d.Expression, nil)
+			r, err := e.resolveExpression(d.Expression)
+			if err != nil {
+				r.err = errors.Join(r.err, fmt.Errorf("resolve for %s: %w", string(d.Variable), err))
+			}
+
+			e.variables[string(d.Variable)] = r // newVariable(d.Expression, nil)
 		case ast.InputDeclaration:
 			name := string(d.Operand.(ast.Variable)) //nolint: forcetypeassert // always ast.Variable
 
 			val, ok := e.variables[name]
 			if !ok {
-				return mf2.ErrUnresolvedVariable
+				r := NewResult("{$" + name + "}")
+				r.err = errors.Join(r.err, mf2.ErrUnresolvedVariable)
+
+				continue
 			}
 
 			expr := ast.Expression(d)
 			expr.Operand = newLiteral(val)
-			e.variables[name] = newVariable(expr, &name)
+
+			r, err := e.resolveExpression(expr)
+			if err != nil {
+				r = NewResult("{$" + name + "}")
+				r.err = errors.Join(r.err, fmt.Errorf("resolve for %s: %w", name, err))
+			}
+
+			e.variables[name] = r
 		}
 	}
 
@@ -237,7 +281,7 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 				resolutionErr = errors.Join(resolutionErr, err)
 			}
 
-			if _, err := e.w.Write([]byte(resolved)); err != nil {
+			if _, err := e.w.Write([]byte(resolved.String())); err != nil {
 				return errorf("write resolved expression: %w", err)
 			}
 		// When formatting to a string, markup placeholders format to an empty string by default.
@@ -249,10 +293,10 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 	return resolutionErr
 }
 
-func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
+func (e *executer) resolveExpression(expr ast.Expression) (*Result, error) {
 	value, err := e.resolveValue(expr.Operand)
 	if err != nil {
-		return fmt.Sprint(value), fmt.Errorf("expression: %w", err)
+		return NewResult(fmt.Sprint(value)), fmt.Errorf("expression: %w", err)
 	}
 
 	var (
@@ -263,12 +307,12 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 
 	switch v := expr.Annotation.(type) {
 	default:
-		return "", fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnsupportedExpression)
+		return NewResult(""), fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnsupportedExpression)
 	case ast.Function:
 		funcName = v.Identifier.Name
 
 		if options, err = e.resolveOptions(v.Options); err != nil {
-			return "", fmt.Errorf("expression: %w", err)
+			return NewResult(""), fmt.Errorf("expression: %w", err)
 		}
 	case ast.PrivateUseAnnotation:
 		// See ".message-format-wg/spec/formatting.md".
@@ -279,19 +323,19 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 		resolutionErr = fmt.Errorf(`expression: private use annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
 
 		if value == nil {
-			return "{" + string(v.Start) + "}", resolutionErr
+			return NewResult("{" + string(v.Start) + "}"), resolutionErr
 		}
 	case ast.ReservedAnnotation:
 		resolutionErr = fmt.Errorf(`expression: reserved annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
 
 		if value == nil {
-			return "{" + string(v.Start) + "}", resolutionErr
+			return NewResult("{" + string(v.Start) + "}"), resolutionErr
 		}
 	case nil: // noop, no annotation
 	}
 
-	fmtErroredExpr := func() string {
-		wrap := func(s fmt.Stringer) string { return "{" + s.String() + "}" }
+	fmtErroredExpr := func() *Result {
+		wrap := func(s fmt.Stringer) *Result { return NewResult("{" + s.String() + "}") }
 
 		switch v := expr.Operand.(type) {
 		default:
@@ -309,19 +353,8 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 		switch t := value.(type) {
 		default: // TODO(jhorsts): how is unknown type formatted?
 			return fmtErroredExpr(), resolutionErr
-		case variable:
-			f, err := t.Format(e) //nolint:govet
-
-			switch {
-			case errors.Is(err, mf2.ErrUnresolvedVariable),
-				errors.Is(err, mf2.ErrBadOperand),
-				errors.Is(err, mf2.ErrBadOption):
-				return f, err
-			case err != nil:
-				return fmtErroredExpr(), errors.Join(resolutionErr, err)
-			}
-
-			return f, nil
+		case *Result:
+			return t, resolutionErr
 		case string:
 			funcName = "string"
 		case float64:
@@ -336,7 +369,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 	}
 
 	if f.Format == nil {
-		return "", fmt.Errorf(`expression: function "%s" not allowed in formatting context`, funcName)
+		return NewResult(""), fmt.Errorf(`expression: function "%s" not allowed in formatting context`, funcName)
 	}
 
 	result, err := f.Format(value, options, e.template.locale)
@@ -344,7 +377,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (string, error) {
 		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
 	}
 
-	return fmt.Sprint(result), resolutionErr
+	return NewResult(result), resolutionErr
 }
 
 // resolveValue resolves the value of an expression's operand.
@@ -369,7 +402,12 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 			return "{" + v.String() + "}", fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
 
-		return val, nil
+		t, ok := val.(*Result)
+		if !ok {
+			return val, nil
+		}
+
+		return val, t.err
 	}
 }
 
@@ -459,10 +497,6 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 		if err != nil {
 			addErr(err)
 			continue
-		}
-
-		if t, ok := input.(variable); ok {
-			input, _ = t.Format(e)
 		}
 
 		rslt, err := f.Select(input, opts, e.template.locale)
