@@ -380,6 +380,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 		default: // TODO(jhorsts): how is unknown type formatted?
 			return fmtErroredExpr(), resolutionErr
 		case *ResolvedValue:
+			// the expression has already been resolved before
 			return t, resolutionErr
 		case string:
 			funcName = "string"
@@ -394,11 +395,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 		return fmtErroredExpr(), errors.Join(resolutionErr, err)
 	}
 
-	if f.Format == nil {
-		return NewResolvedValue(""), fmt.Errorf(`expression: function "%s" not allowed in formatting context`, funcName)
-	}
-
-	result, err := f.Format(value, options, e.template.locale)
+	result, err := f(value, options, e.template.locale)
 	if err != nil {
 		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
 	}
@@ -557,11 +554,6 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			continue
 		}
 
-		// TODO(jhorsts): what is match and format context? Does MF2 still have it?
-		if f.Select == nil {
-			return nil, fmt.Errorf(`selector: function "%s" not allowed`, function.Identifier.Name)
-		}
-
 		opts, err := e.resolveOptions(function.Options)
 		if err != nil {
 			addErr(err)
@@ -574,7 +566,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			continue
 		}
 
-		rslt, err := f.Select(input, opts, e.template.locale)
+		rslt, err := f(input, opts, e.template.locale)
 		if err != nil {
 			addErr(err)
 			continue

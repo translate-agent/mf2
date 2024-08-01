@@ -14,10 +14,7 @@ import (
 
 // See ".message-format-wg/spec/registry.xml".
 
-type RegistryFunc struct {
-	Select func(input any, options Options, locale language.Tag) (output any, err error)
-	Format func(input any, options Options, locale language.Tag) (output any, err error)
-}
+type RegistryFunc func(input any, options Options, locale language.Tag) (output any, err error)
 
 type Registry map[string]RegistryFunc
 

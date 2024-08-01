@@ -49,7 +49,7 @@ func Test_String(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := stringRegistryFunc.Format(test.input, test.options, language.AmericanEnglish)
+			got, err := stringRegistryFunc(test.input, test.options, language.AmericanEnglish)
 
 			if test.wantErr {
 				if err == nil {

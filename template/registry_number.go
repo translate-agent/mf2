@@ -13,12 +13,6 @@ import (
 	"golang.org/x/text/number"
 )
 
-// numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
-var numberRegistryFunc = RegistryFunc{
-	Format: numberFunc,
-	Select: numberFunc,
-}
-
 // parseNumberOperand parses resolved operand value.
 func parseNumberOperand(operand any) (float64, error) {
 	errorf := func(format string, args ...any) (float64, error) {
@@ -253,7 +247,8 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	return &options, nil
 }
 
-func numberFunc(operand any, options Options, locale language.Tag) (any, error) {
+// numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
+func numberRegistryFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
 		return nil, fmt.Errorf("exec number function: "+format, args...)
 	}

@@ -8,11 +8,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// datetimeFunc is the implementation of the datetime function. Locale-sensitive date and time formatting.
-var datetimeRegistryFunc = RegistryFunc{
-	Format: datetimeFunc,
-}
-
 type datetimeOptions struct {
 	// (default is system default time zone or UTC)
 	//
@@ -183,7 +178,8 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 	return &opts, nil
 }
 
-func datetimeFunc(operand any, options Options, locale language.Tag) (any, error) {
+// datetimeFunc is the implementation of the datetime function. Locale-sensitive date and time formatting.
+func datetimeRegistryFunc(operand any, options Options, locale language.Tag) (any, error) {
 	value, err := parseDatetimeOperand(operand)
 	if err != nil {
 		return "", fmt.Errorf("exec datetime func: %w", err)

@@ -7,11 +7,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// dateFunc is the implementation of the date function. Locale-sensitive date formatting.
-var dateRegistryFunc = RegistryFunc{
-	Format: dateFunc,
-}
-
 type dateOptions struct {
 	// (default is UTC)
 	//
@@ -46,7 +41,8 @@ func parseDateOptions(options Options) (*dateOptions, error) {
 	return &opts, nil
 }
 
-func dateFunc(operand any, options Options, locale language.Tag) (any, error) {
+// dateRegistryFunc is the implementation of the date function. Locale-sensitive date formatting.
+func dateRegistryFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
 		return "", fmt.Errorf("exec date function: "+format, args...)
 	}

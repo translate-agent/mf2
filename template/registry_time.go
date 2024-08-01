@@ -7,11 +7,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// timeFunc is the implementation of the time function. Locale-sensitive time formatting.
-var timeRegistryFunc = RegistryFunc{
-	Format: timeFunc,
-}
-
 type timeOptions struct {
 	// (default is UTC)
 	//
@@ -46,7 +41,8 @@ func parseTimeOptions(options Options) (*timeOptions, error) {
 	return &opts, nil
 }
 
-func timeFunc(operand any, options Options, locale language.Tag) (any, error) {
+// timeFunc is the implementation of the time function. Locale-sensitive time formatting.
+func timeRegistryFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
 		return "", fmt.Errorf("exec time function: "+format, args...)
 	}

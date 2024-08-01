@@ -56,7 +56,7 @@ func Test_Time(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := timeRegistryFunc.Format(test.input, test.options, language.AmericanEnglish)
+			got, err := timeRegistryFunc(test.input, test.options, language.AmericanEnglish)
 			if v, ok := got.(*ResolvedValue); ok {
 				got = v.format()
 			}
