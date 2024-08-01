@@ -3,6 +3,7 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
@@ -257,12 +258,12 @@ func numberFunc(operand any, options Options, locale language.Tag) (any, error) 
 		return nil, fmt.Errorf("exec number function: "+format, args...)
 	}
 
-	if v, ok := operand.(*Result); ok {
+	if v, ok := operand.(*ResolvedValue); ok {
 		if v.err != nil {
 			return errorf("%w", v.err)
 		}
 
-		operand = v.Value()
+		operand = v.value
 	}
 
 	value, err := parseNumberOperand(operand)
@@ -318,6 +319,10 @@ func numberFunc(operand any, options Options, locale language.Tag) (any, error) 
 	}
 
 	selectKey := func(keys []string) string {
+		if hasExactKey(keys) {
+			return format()
+		}
+
 		scale := -1
 		if opts.MaximumFractionDigits == 0 {
 			// most likely integer formatting
@@ -330,5 +335,17 @@ func numberFunc(operand any, options Options, locale language.Tag) (any, error) 
 		return pluralFormString(form)
 	}
 
-	return NewResult(value, WithFormat(format), WithSelectKey(selectKey)), nil
+	return NewResolvedValue(value, WithFormat(format), WithSelectKey(selectKey)), nil
+}
+
+func hasExactKey(keys []string) bool {
+	categories := []string{"zero", "one", "two", "few", "many", "other"}
+
+	for _, key := range keys {
+		if !slices.Contains(categories, key) {
+			return true
+		}
+	}
+
+	return false
 }

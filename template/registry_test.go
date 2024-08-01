@@ -15,7 +15,7 @@ func assertFormat(t *testing.T, f RegistryFunc, options map[string]any, locale l
 			t.Error(err)
 		}
 
-		if v, ok := result.(*Result); ok {
+		if v, ok := result.(*ResolvedValue); ok {
 			result = v.String()
 		}
 

@@ -31,71 +31,77 @@ type Template struct {
 	locale   language.Tag
 }
 
-type Result struct {
+type ResolvedValue struct {
 	value     any
 	selectKey func(keys []string) string
 	format    func() string
 	err       error
 }
 
-func (r *Result) Value() any {
-	if v, ok := r.value.(*Result); ok {
-		return v.Value()
-	}
-
-	return r.value
-}
-
-func (r *Result) String() string {
-	if r.format != nil {
-		return r.format()
-	}
-
-	switch value := r.value.(type) {
+func defaultFormat(value any) string {
+	switch v := value.(type) {
 	default:
-		s, err := castAs[string](r.value) // if underlying type is not string, return error
+		s, err := castAs[string](v) // if underlying type is not string, return error
 		if err != nil {
 			return "" // errorf("unsupported value type: %T: %w", r.value, err)
 		}
 
 		return s
 	case fmt.Stringer:
-		return value.String()
+		return v.String()
 	case string, []byte, []rune, int, int8, int16, int32, int64,
 		uint, uint8, uint16, uint32, uint64, float32, float64, bool,
 		complex64, complex128, error:
-		return fmt.Sprint(value)
+		return fmt.Sprint(v)
 	}
 }
 
-func (r *Result) SelectKey(keys []string) string {
-	if r.selectKey != nil {
-		return r.selectKey(keys)
-	}
+func defaultSelectKey(value any, keys []string) string {
+	v := defaultFormat(value)
 
-	if r.format != nil {
-		return r.format()
+	for _, k := range keys {
+		if v == k {
+			return k
+		}
 	}
 
 	return ast.CatchAllKey{}.String()
 }
 
-type Opt func(*Result)
+func (r *ResolvedValue) String() string {
+	if r.format != nil {
+		return r.format()
+	}
+
+	return defaultFormat(r.value)
+}
+
+type Opt func(*ResolvedValue)
 
 func WithFormat(format func() string) Opt {
-	return func(r *Result) {
+	return func(r *ResolvedValue) {
 		r.format = format
 	}
 }
 
 func WithSelectKey(selectKey func(keys []string) string) Opt {
-	return func(r *Result) {
+	return func(r *ResolvedValue) {
 		r.selectKey = selectKey
 	}
 }
 
-func NewResult(value any, opts ...Opt) *Result {
-	r := &Result{value: value}
+func NewResolvedValue(value any, opts ...Opt) *ResolvedValue {
+	var r *ResolvedValue
+
+	if v, ok := value.(*ResolvedValue); ok {
+		r = v
+	} else {
+		r = &ResolvedValue{
+			value:     value,
+			format:    func() string { return defaultFormat(value) },
+			selectKey: func(keys []string) string { return defaultSelectKey(value, keys) },
+		}
+	}
 
 	for _, f := range opts {
 		f(r)
@@ -260,7 +266,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 
 			val, ok := e.variables[name]
 			if !ok {
-				r := NewResult("{$" + name + "}")
+				r := NewResolvedValue("{$" + name + "}")
 				r.err = errors.Join(r.err, mf2.ErrUnresolvedVariable)
 
 				continue
@@ -271,7 +277,7 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 
 			r, err := e.resolveExpression(expr)
 			if err != nil {
-				r = NewResult("{$" + name + "}")
+				r = NewResolvedValue("{$" + name + "}")
 				r.err = errors.Join(r.err, fmt.Errorf("resolve for %s: %w", name, err))
 			}
 
@@ -313,10 +319,10 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 	return resolutionErr
 }
 
-func (e *executer) resolveExpression(expr ast.Expression) (*Result, error) {
+func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error) {
 	value, err := e.resolveValue(expr.Operand)
 	if err != nil {
-		return NewResult(fmt.Sprint(value)), fmt.Errorf("expression: %w", err)
+		return NewResolvedValue(fmt.Sprint(value)), fmt.Errorf("expression: %w", err)
 	}
 
 	var (
@@ -327,12 +333,12 @@ func (e *executer) resolveExpression(expr ast.Expression) (*Result, error) {
 
 	switch v := expr.Annotation.(type) {
 	default:
-		return NewResult(""), fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnsupportedExpression)
+		return NewResolvedValue(""), fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnsupportedExpression)
 	case ast.Function:
 		funcName = v.Identifier.Name
 
 		if options, err = e.resolveOptions(v.Options); err != nil {
-			return NewResult(""), fmt.Errorf("expression: %w", err)
+			return NewResolvedValue(""), fmt.Errorf("expression: %w", err)
 		}
 	case ast.PrivateUseAnnotation:
 		// See ".message-format-wg/spec/formatting.md".
@@ -343,19 +349,19 @@ func (e *executer) resolveExpression(expr ast.Expression) (*Result, error) {
 		resolutionErr = fmt.Errorf(`expression: private use annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
 
 		if value == nil {
-			return NewResult("{" + string(v.Start) + "}"), resolutionErr
+			return NewResolvedValue("{" + string(v.Start) + "}"), resolutionErr
 		}
 	case ast.ReservedAnnotation:
 		resolutionErr = fmt.Errorf(`expression: reserved annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
 
 		if value == nil {
-			return NewResult("{" + string(v.Start) + "}"), resolutionErr
+			return NewResolvedValue("{" + string(v.Start) + "}"), resolutionErr
 		}
 	case nil: // noop, no annotation
 	}
 
-	fmtErroredExpr := func() *Result {
-		wrap := func(s fmt.Stringer) *Result { return NewResult("{" + s.String() + "}") }
+	fmtErroredExpr := func() *ResolvedValue {
+		wrap := func(s fmt.Stringer) *ResolvedValue { return NewResolvedValue("{" + s.String() + "}") }
 
 		switch v := expr.Operand.(type) {
 		default:
@@ -373,7 +379,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*Result, error) {
 		switch t := value.(type) {
 		default: // TODO(jhorsts): how is unknown type formatted?
 			return fmtErroredExpr(), resolutionErr
-		case *Result:
+		case *ResolvedValue:
 			return t, resolutionErr
 		case string:
 			funcName = "string"
@@ -389,7 +395,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*Result, error) {
 	}
 
 	if f.Format == nil {
-		return NewResult(""), fmt.Errorf(`expression: function "%s" not allowed in formatting context`, funcName)
+		return NewResolvedValue(""), fmt.Errorf(`expression: function "%s" not allowed in formatting context`, funcName)
 	}
 
 	result, err := f.Format(value, options, e.template.locale)
@@ -397,7 +403,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*Result, error) {
 		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
 	}
 
-	return NewResult(result), resolutionErr
+	return NewResolvedValue(result), resolutionErr
 }
 
 // resolveValue resolves the value of an expression's operand.
@@ -422,7 +428,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 			return "{" + v.String() + "}", fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
 
-		t, ok := val.(*Result)
+		t, ok := val.(*ResolvedValue)
 		if !ok {
 			return val, nil
 		}
@@ -473,6 +479,38 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 	return matcherErr
 }
 
+func (e *executer) hasAnnotation(operand ast.Value) bool {
+	m, ok := e.template.ast.Message.(ast.ComplexMessage)
+	if !ok {
+		return false
+	}
+
+	for _, decl := range m.Declarations {
+		switch v := decl.(type) {
+		default:
+			return false
+		case ast.LocalDeclaration:
+			if v.Variable.String() != operand.String() {
+				continue
+			}
+
+			if v.Expression.Annotation != nil {
+				return true
+			}
+
+			return e.hasAnnotation(v.Expression.Operand)
+		case ast.InputDeclaration:
+			if v.Operand.String() != operand.String() {
+				continue
+			}
+
+			return v.Annotation != nil
+		}
+	}
+
+	return false
+}
+
 func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 	var selectorErr error
 
@@ -489,6 +527,23 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		switch annotation := selector.Annotation.(type) {
 		case nil:
+			if e.hasAnnotation(selector.Operand) {
+				input, err := e.resolveValue(selector.Operand)
+				if err != nil {
+					addErr(err)
+					continue
+				}
+
+				v, ok := input.(*ResolvedValue)
+				if !ok {
+					addErr(mf2.ErrBadOperand)
+				}
+
+				selectors = append(selectors, v.selectKey([]string{}))
+
+				continue
+			}
+
 			return nil, mf2.ErrMissingSelectorAnnotation
 		case ast.ReservedAnnotation, ast.PrivateUseAnnotation:
 			return nil, mf2.ErrUnsupportedExpression
@@ -649,8 +704,8 @@ func (e *executer) bestMatchedPattern(filteredVariants []ast.Variant, pref [][]s
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {
-	if v, ok := rv.(*Result); ok {
-		rv = v.SelectKey(keys)
+	if v, ok := rv.(*ResolvedValue); ok {
+		rv = v.selectKey(keys)
 	}
 
 	value, ok := rv.(string)

@@ -21,13 +21,6 @@ type RegistryFunc struct {
 
 type Registry map[string]RegistryFunc
 
-type FuncContext int
-
-const (
-	Format FuncContext = iota
-	Select
-)
-
 // Options are a possible options for the function.
 type Options map[string]any
 
