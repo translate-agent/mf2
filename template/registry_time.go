@@ -62,22 +62,26 @@ func timeFunc(operand any, options Options, locale language.Tag) (any, error) {
 		return errorf("%w", err)
 	}
 
-	var layout string
+	format := func() string {
+		var layout string
 
-	// time styles as per Intl.DateTimeFormat
-	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat
-	switch opts.Style {
-	case "full":
-		layout = "15:04:05 MST"
-	case "long":
-		layout = "15:04:05 -0700"
-	case "medium":
-		layout = "15:04:05"
-	case "short":
-		layout = "15:04"
+		// time styles as per Intl.DateTimeFormat
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat
+		switch opts.Style {
+		case "full":
+			layout = "15:04:05 MST"
+		case "long":
+			layout = "15:04:05 -0700"
+		case "medium":
+			layout = "15:04:05"
+		case "short":
+			layout = "15:04"
+		}
+
+		value = value.In(opts.TimeZone)
+
+		return value.Format(layout)
 	}
 
-	value = value.In(opts.TimeZone)
-
-	return value.Format(layout), nil
+	return NewResolvedValue(value, WithFormat(format)), nil
 }

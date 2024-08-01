@@ -67,6 +67,13 @@ func parseDatetimeOperand(operand any) (time.Time, error) {
 	switch v := operand.(type) {
 	default:
 		return errorf("unsupported operand type %T", operand)
+	case *ResolvedValue:
+		t, ok := v.value.(time.Time)
+		if ok {
+			return t, nil
+		}
+
+		return parseDatetimeOperand(t)
 	case string:
 		// layout is quick and dirty, does not conform with ISO 8601 fully as required
 		t, err := time.Parse(time.RFC3339[:len(v)], v)
@@ -183,7 +190,7 @@ func datetimeFunc(operand any, options Options, locale language.Tag) (any, error
 	}
 
 	if len(options) == 0 {
-		return fmt.Sprint(operand), nil
+		return fmt.Sprint(operand), nil // TODO(mvilks): should return format()
 	}
 
 	opts, err := parseDatetimeOptions(options)
@@ -191,35 +198,39 @@ func datetimeFunc(operand any, options Options, locale language.Tag) (any, error
 		return "", fmt.Errorf("exec datetime func: %w", err)
 	}
 
-	var layout string
+	format := func() string {
+		var layout string
 
-	switch opts.DateStyle {
-	case "full":
-		layout = "Monday, 02 January 2006"
-	case "long":
-		layout = "02 January 2006"
-	case "medium":
-		layout = "02 Jan 2006"
-	case "short":
-		layout = "02/01/06"
-	}
-
-	if len(opts.TimeStyle) > 0 {
-		if len(layout) > 0 {
-			layout += " "
-		}
-
-		switch opts.TimeStyle {
-		case "full", "long":
-			layout += "15:04:05"
+		switch opts.DateStyle {
+		case "full":
+			layout = "Monday, 02 January 2006"
+		case "long":
+			layout = "02 January 2006"
 		case "medium":
-			layout += "15:04"
+			layout = "02 Jan 2006"
 		case "short":
-			layout += "15"
+			layout = "02/01/06"
 		}
+
+		if len(opts.TimeStyle) > 0 {
+			if len(layout) > 0 {
+				layout += " "
+			}
+
+			switch opts.TimeStyle {
+			case "full", "long":
+				layout += "15:04:05"
+			case "medium":
+				layout += "15:04"
+			case "short":
+				layout += "15"
+			}
+		}
+
+		value = value.In(opts.TimeZone)
+
+		return value.Format(layout)
 	}
 
-	value = value.In(opts.TimeZone)
-
-	return value.Format(layout), nil
+	return NewResolvedValue(value, WithFormat(format)), nil
 }

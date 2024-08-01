@@ -62,20 +62,24 @@ func dateFunc(operand any, options Options, locale language.Tag) (any, error) {
 		return errorf("%w", err)
 	}
 
-	var layout string
+	format := func() string {
+		var layout string
 
-	switch opts.Style {
-	case "full":
-		layout = "Monday, 02 January 2006"
-	case "long":
-		layout = "02 January 2006"
-	case "medium":
-		layout = "02 Jan 2006"
-	case "short":
-		layout = "02/01/06"
+		switch opts.Style {
+		case "full":
+			layout = "Monday, 02 January 2006"
+		case "long":
+			layout = "02 January 2006"
+		case "medium":
+			layout = "02 Jan 2006"
+		case "short":
+			layout = "02/01/06"
+		}
+
+		value = value.In(opts.TimeZone)
+
+		return value.Format(layout)
 	}
 
-	value = value.In(opts.TimeZone)
-
-	return value.Format(layout), nil
+	return NewResolvedValue(value, WithFormat(format)), nil
 }
