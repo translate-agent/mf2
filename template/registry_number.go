@@ -14,8 +14,8 @@ import (
 
 // numberRegistryFunc is the implementation of the number function. Locale-sensitive number formatting.
 var numberRegistryFunc = RegistryFunc{
-	Format: numberFunc(Format),
-	Select: numberFunc(Select),
+	Format: numberFunc,
+	Select: numberFunc,
 }
 
 // parseNumberOperand parses resolved operand value.
@@ -28,10 +28,6 @@ func parseNumberOperand(operand any) (float64, error) {
 		number float64
 		err    error
 	)
-
-	if t, ok := operand.(*Result); ok {
-		operand = t.value
-	}
 
 	switch v := operand.(type) {
 	default:
@@ -256,57 +252,50 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	return &options, nil
 }
 
-func numberFunc(context FuncContext) func(operand any, options Options, locale language.Tag) (any, error) {
-	return func(operand any, options Options, locale language.Tag) (any, error) {
-		errorf := func(format string, args ...any) (any, error) {
-			return nil, fmt.Errorf("exec number function: "+format, args...)
+func numberFunc(operand any, options Options, locale language.Tag) (any, error) {
+	errorf := func(format string, args ...any) (any, error) {
+		return nil, fmt.Errorf("exec number function: "+format, args...)
+	}
+
+	if v, ok := operand.(*Result); ok {
+		if v.err != nil {
+			return errorf("%w", v.err)
 		}
 
-		value, err := parseNumberOperand(operand)
-		if err != nil {
-			return errorf("%w", err)
-		}
+		operand = v.Value()
+	}
 
-		opts, err := parseNumberOptions(options)
-		if err != nil {
-			return errorf("%w", err)
-		}
+	value, err := parseNumberOperand(operand)
+	if err != nil {
+		return errorf("%w", err)
+	}
 
-		var result string
+	opts, err := parseNumberOptions(options)
+	if err != nil {
+		return errorf("%w", err)
+	}
 
-		p := message.NewPrinter(locale)
-		numberOpts := []number.Option{
-			number.MinFractionDigits(opts.MinimumFractionDigits),
-			number.MaxFractionDigits(opts.MaximumFractionDigits),
-			number.MinIntegerDigits(opts.MinimumIntegerDigits),
-			number.Precision(opts.MaximumSignificantDigits),
-		}
+	p := message.NewPrinter(locale)
+	numberOpts := []number.Option{
+		number.MinFractionDigits(opts.MinimumFractionDigits),
+		number.MaxFractionDigits(opts.MaximumFractionDigits),
+		number.MinIntegerDigits(opts.MinimumIntegerDigits),
+		number.Precision(opts.MaximumSignificantDigits),
+	}
 
-		var num number.Formatter
+	var num number.Formatter
 
-		switch opts.Style {
-		default:
-			return errorf(`option style "%s" is not implemented`, opts.Style)
-		case "decimal":
-			num = number.Decimal(value, numberOpts...)
-		case "percent":
-			num = number.Percent(value, numberOpts...)
-		}
+	switch opts.Style {
+	default:
+		return errorf(`option style "%s" is not implemented`, opts.Style)
+	case "decimal":
+		num = number.Decimal(value, numberOpts...)
+	case "percent":
+		num = number.Percent(value, numberOpts...)
+	}
 
-		if context == Select {
-			scale := -1
-			if opts.MaximumFractionDigits == 0 {
-				// most likely integer formatting
-				scale = 0
-			}
-
-			digits := num.Digits(nil, locale, scale)
-			form := plural.Cardinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
-
-			return pluralFormString(form), nil
-		}
-
-		result = p.Sprint(num)
+	format := func() string {
+		result := p.Sprint(num)
 
 		switch opts.SignDisplay {
 		case "auto":
@@ -325,6 +314,21 @@ func numberFunc(context FuncContext) func(operand any, options Options, locale l
 			}
 		}
 
-		return result, nil
+		return result
 	}
+
+	selectKey := func(keys []string) string {
+		scale := -1
+		if opts.MaximumFractionDigits == 0 {
+			// most likely integer formatting
+			scale = 0
+		}
+
+		digits := num.Digits(nil, locale, scale)
+		form := plural.Cardinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
+
+		return pluralFormString(form)
+	}
+
+	return NewResult(value, WithFormat(format), WithSelectKey(selectKey)), nil
 }

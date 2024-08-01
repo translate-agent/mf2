@@ -38,6 +38,14 @@ type Result struct {
 	err       error
 }
 
+func (r *Result) Value() any {
+	if v, ok := r.value.(*Result); ok {
+		return v.Value()
+	}
+
+	return r.value
+}
+
 func (r *Result) String() string {
 	if r.format != nil {
 		return r.format()
@@ -58,6 +66,18 @@ func (r *Result) String() string {
 		complex64, complex128, error:
 		return fmt.Sprint(value)
 	}
+}
+
+func (r *Result) SelectKey(keys []string) string {
+	if r.selectKey != nil {
+		return r.selectKey(keys)
+	}
+
+	if r.format != nil {
+		return r.format()
+	}
+
+	return ast.CatchAllKey{}.String()
 }
 
 type Opt func(*Result)
@@ -629,6 +649,10 @@ func (e *executer) bestMatchedPattern(filteredVariants []ast.Variant, pref [][]s
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {
+	if v, ok := rv.(*Result); ok {
+		rv = v.SelectKey(keys)
+	}
+
 	value, ok := rv.(string)
 	if !ok {
 		return nil
