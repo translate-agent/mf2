@@ -1,7 +1,6 @@
 linters:
   enable-all: true
   disable:
-    - asasalint
     - depguard
     - dupl
     - err113
