@@ -902,7 +902,7 @@ func (p *parser) parseAttributes() ([]Attribute, error) {
 	var attributes []Attribute
 
 	errorf := func(format string, args ...any) ([]Attribute, error) {
-		return nil, fmt.Errorf("attribute at %d: "+format, append([]any{len(attributes)}, args)...)
+		return nil, fmt.Errorf("attribute at %d: "+format, append([]any{len(attributes)}, args...)...)
 	}
 
 	for {
