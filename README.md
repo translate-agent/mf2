@@ -28,9 +28,9 @@ List of the default functions registered in the function registry. The functions
 
 | Function               | Signature | Option                                        | Status |
 | ---------------------- | --------- | --------------------------------------------- | :----: |
-| date                   | format    | style                                         |   ✅︎    |
-| datetime               | format    | dateStyle                                     |   ✅︎    |
-| datetime               | format    | timeStyle                                     |   ✅︎    |
+| date                   | format    | style                                         |   ❌    |
+| datetime               | format    | dateStyle                                     |   ❌    |
+| datetime               | format    | timeStyle                                     |   ❌    |
 | datetime               | format    | timeZone<sup>\*</sup>                         |   ❌    |
 | datetime               | format    | hourCycle                                     |   ❌    |
 | datetime               | format    | dayPeriod                                     |   ❌    |
@@ -71,6 +71,6 @@ List of the default functions registered in the function registry. The functions
 | ordinal (number alias) |           |                                               |   ❌    |
 | plural (number alias)  |           |                                               |   ❌    |
 | string                 |           |                                               |   ✅︎    |
-| time                   | format    | style                                         |   ✅︎    |
+| time                   | format    | style                                         |   ❌    |
 
 > **<sup>\*</sup>** The options are not part of the default registry. MF2 WG says, "Implementations SHOULD avoid creating options that conflict with these, but are encouraged to track development of these options during Tech Preview".
