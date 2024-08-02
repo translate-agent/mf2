@@ -31,6 +31,8 @@ type Template struct {
 	locale   language.Tag
 }
 
+// ResolvedValue keeps the result of the Expression resolution with optionally
+// defined format() and selectKey() functions for Format and Select contexts.
 type ResolvedValue struct {
 	value     any
 	selectKey func(keys []string) string
@@ -68,6 +70,7 @@ func defaultSelectKey(value any, keys []string) string {
 	return ast.CatchAllKey{}.String()
 }
 
+// String makes the ResolvedValue implement the fmt.Stringer interface.
 func (r *ResolvedValue) String() string {
 	if r.format != nil {
 		return r.format()
@@ -76,26 +79,34 @@ func (r *ResolvedValue) String() string {
 	return defaultFormat(r.value)
 }
 
-type Opt func(*ResolvedValue)
+// OptionalFunction is a function to apply to the ResolvedValue.
+type OptionalFunction func(*ResolvedValue)
 
-func WithFormat(format func() string) Opt {
+// FormatFunction is a format function signature.
+type FormatFunction func() string
+
+// SelectKeyFunction is a format function signature.
+type SelectKeyFunction func(keys []string) string
+
+// WithFormat applies a custom format() function to the ResolvedValue.
+func WithFormat(format FormatFunction) OptionalFunction {
 	return func(r *ResolvedValue) {
 		r.format = format
 	}
 }
 
-func WithSelectKey(selectKey func(keys []string) string) Opt {
+// WithSelectKey applies a custom format() function to the ResolvedValue.
+func WithSelectKey(selectKey SelectKeyFunction) OptionalFunction {
 	return func(r *ResolvedValue) {
 		r.selectKey = selectKey
 	}
 }
 
-func NewResolvedValue(value any, opts ...Opt) *ResolvedValue {
-	var r *ResolvedValue
-
-	if v, ok := value.(*ResolvedValue); ok {
-		r = v
-	} else {
+// NewResolvedValue creates a new variable of type *ResolvedValue.
+// If value is already *ResolvedValue, the optional format() and selectKey() are applied to it.
+func NewResolvedValue(value any, functions ...OptionalFunction) *ResolvedValue {
+	r, ok := value.(*ResolvedValue)
+	if !ok {
 		r = &ResolvedValue{
 			value:     value,
 			format:    func() string { return defaultFormat(value) },
@@ -103,7 +114,7 @@ func NewResolvedValue(value any, opts ...Opt) *ResolvedValue {
 		}
 	}
 
-	for _, f := range opts {
+	for _, f := range functions {
 		f(r)
 	}
 
@@ -143,6 +154,7 @@ func WithFuncs(reg Registry) Option {
 	}
 }
 
+// WithLocale adds locale information to the template.
 func WithLocale(locale language.Tag) Option {
 	return func(t *Template) {
 		t.locale = locale
@@ -236,19 +248,6 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 	return resolutionErr
 }
 
-func newLiteral(v any) ast.Value { //nolint:ireturn
-	switch t := v.(type) {
-	case string:
-		return ast.QuotedLiteral(t)
-	case float64:
-		return ast.NumberLiteral(t)
-	case int:
-		return ast.NumberLiteral(t)
-	}
-
-	return nil
-}
-
 func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 	for _, decl := range declarations {
 		switch d := decl.(type) {
@@ -257,31 +256,17 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
 		case ast.LocalDeclaration:
 			r, err := e.resolveExpression(d.Expression)
 			if err != nil {
-				r.err = errors.Join(r.err, fmt.Errorf("resolve for %s: %w", string(d.Variable), err))
+				r.err = errors.Join(r.err, fmt.Errorf("resolve local %s: %w", d.Variable, err))
 			}
 
 			e.variables[string(d.Variable)] = r // newVariable(d.Expression, nil)
 		case ast.InputDeclaration:
-			name := string(d.Operand.(ast.Variable)) //nolint: forcetypeassert // always ast.Variable
-
-			val, ok := e.variables[name]
-			if !ok {
-				r := NewResolvedValue("{$" + name + "}")
-				r.err = errors.Join(r.err, mf2.ErrUnresolvedVariable)
-
-				continue
-			}
-
-			expr := ast.Expression(d)
-			expr.Operand = newLiteral(val)
-
-			r, err := e.resolveExpression(expr)
+			r, err := e.resolveExpression(ast.Expression(d))
 			if err != nil {
-				r = NewResolvedValue("{$" + name + "}")
-				r.err = errors.Join(r.err, fmt.Errorf("resolve for %s: %w", name, err))
+				r.err = errors.Join(r.err, fmt.Errorf("resolve input %s: %w", d.Operand, err))
 			}
 
-			e.variables[name] = r
+			e.variables[string(d.Operand.(ast.Variable))] = r //nolint: forcetypeassert // always ast.Variable
 		}
 	}
 
@@ -524,24 +509,24 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		switch annotation := selector.Annotation.(type) {
 		case nil:
-			if e.hasAnnotation(selector.Operand) {
-				input, err := e.resolveValue(selector.Operand)
-				if err != nil {
-					addErr(err)
-					continue
-				}
+			if !e.hasAnnotation(selector.Operand) {
+				return nil, mf2.ErrMissingSelectorAnnotation
+			}
 
-				v, ok := input.(*ResolvedValue)
-				if !ok {
-					addErr(mf2.ErrBadOperand)
-				}
-
-				selectors = append(selectors, v.selectKey([]string{}))
-
+			input, err := e.resolveValue(selector.Operand)
+			if err != nil {
+				addErr(err)
 				continue
 			}
 
-			return nil, mf2.ErrMissingSelectorAnnotation
+			v, ok := input.(*ResolvedValue)
+			if !ok {
+				addErr(mf2.ErrBadOperand)
+			}
+
+			selectors = append(selectors, v.selectKey([]string{}))
+
+			continue
 		case ast.ReservedAnnotation, ast.PrivateUseAnnotation:
 			return nil, mf2.ErrUnsupportedExpression
 		case ast.Function:
@@ -654,10 +639,10 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 
 func (e *executer) bestMatchedPattern(filteredVariants []ast.Variant, pref [][]string) ast.QuotedPattern {
 	// Step 4: Sort Variants
-	sortable := make([]SortableVariant, 0, len(filteredVariants))
+	sortable := make([]sortableVariant, 0, len(filteredVariants))
 
 	for _, variant := range filteredVariants {
-		sortable = append(sortable, SortableVariant{Score: -1, Variant: variant})
+		sortable = append(sortable, sortableVariant{Score: -1, Variant: variant})
 	}
 
 	for i := len(pref) - 1; i >= 0; i-- {
@@ -689,7 +674,7 @@ func (e *executer) bestMatchedPattern(filteredVariants []ast.Variant, pref [][]s
 			sortable[tupleIndex].Score = currentScore
 		}
 
-		sort.Sort(SortableVariants(sortable))
+		sort.Sort(sortableVariants(sortable))
 	}
 
 	return sortable[0].Variant.QuotedPattern
@@ -716,21 +701,21 @@ func matchSelectorKeys(rv any, keys []string) []string {
 	return matches
 }
 
-type SortableVariant struct {
+type sortableVariant struct {
 	Variant ast.Variant
 	Score   int
 }
 
-type SortableVariants []SortableVariant
+type sortableVariants []sortableVariant
 
-func (s SortableVariants) Len() int {
+func (s sortableVariants) Len() int {
 	return len(s)
 }
 
-func (s SortableVariants) Less(i, j int) bool {
+func (s sortableVariants) Less(i, j int) bool {
 	return s[i].Score < s[j].Score
 }
 
-func (s SortableVariants) Swap(i, j int) {
+func (s sortableVariants) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }

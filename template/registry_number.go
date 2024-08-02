@@ -3,7 +3,6 @@ package template
 import (
 	"encoding/json"
 	"fmt"
-	"slices"
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
@@ -333,12 +332,13 @@ func numberRegistryFunc(operand any, options Options, locale language.Tag) (any,
 	return NewResolvedValue(value, WithFormat(format), WithSelectKey(selectKey)), nil
 }
 
+// hasExactKey returns true if the variant keys contain exact value besides the plural categories.
 func hasExactKey(keys []string) bool {
-	categories := []string{"zero", "one", "two", "few", "many", "other"}
-
 	for _, key := range keys {
-		if !slices.Contains(categories, key) {
+		switch key {
+		default:
 			return true
+		case "zero", "one", "two", "few", "many", "other": // check next key
 		}
 	}
 
