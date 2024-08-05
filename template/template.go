@@ -79,24 +79,18 @@ func (r *ResolvedValue) String() string {
 	return defaultFormat(r.value)
 }
 
-// OptionalFunction is a function to apply to the ResolvedValue.
-type OptionalFunction func(*ResolvedValue)
-
-// FormatFunction is a format function signature.
-type FormatFunction func() string
-
-// SelectKeyFunction is a format function signature.
-type SelectKeyFunction func(keys []string) string
+// ResolvedValueOpt is a function to apply to the ResolvedValue.
+type ResolvedValueOpt func(*ResolvedValue)
 
 // WithFormat applies a custom format() function to the ResolvedValue.
-func WithFormat(format FormatFunction) OptionalFunction {
+func WithFormat(format func() string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.format = format
 	}
 }
 
 // WithSelectKey applies a custom format() function to the ResolvedValue.
-func WithSelectKey(selectKey SelectKeyFunction) OptionalFunction {
+func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.selectKey = selectKey
 	}
@@ -104,7 +98,7 @@ func WithSelectKey(selectKey SelectKeyFunction) OptionalFunction {
 
 // NewResolvedValue creates a new variable of type *ResolvedValue.
 // If value is already *ResolvedValue, the optional format() and selectKey() are applied to it.
-func NewResolvedValue(value any, functions ...OptionalFunction) *ResolvedValue {
+func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
 	r, ok := value.(*ResolvedValue)
 	if !ok {
 		r = &ResolvedValue{
@@ -114,7 +108,7 @@ func NewResolvedValue(value any, functions ...OptionalFunction) *ResolvedValue {
 		}
 	}
 
-	for _, f := range functions {
+	for _, f := range options {
 		f(r)
 	}
 
