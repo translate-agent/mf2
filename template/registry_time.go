@@ -7,11 +7,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// timeFunc is the implementation of the time function. Locale-sensitive time formatting.
-var timeRegistryFunc = RegistryFunc{
-	Format: timeFunc,
-}
-
 type timeOptions struct {
 	// (default is UTC)
 	//
@@ -46,6 +41,7 @@ func parseTimeOptions(options Options) (*timeOptions, error) {
 	return &opts, nil
 }
 
+// timeFunc is the implementation of the time function. Locale-sensitive time formatting.
 func timeFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
 		return "", fmt.Errorf("exec time function: "+format, args...)
@@ -62,22 +58,26 @@ func timeFunc(operand any, options Options, locale language.Tag) (any, error) {
 		return errorf("%w", err)
 	}
 
-	var layout string
+	format := func() string {
+		var layout string
 
-	// time styles as per Intl.DateTimeFormat
-	// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat
-	switch opts.Style {
-	case "full":
-		layout = "15:04:05 MST"
-	case "long":
-		layout = "15:04:05 -0700"
-	case "medium":
-		layout = "15:04:05"
-	case "short":
-		layout = "15:04"
+		// time styles as per Intl.DateTimeFormat
+		// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat
+		switch opts.Style {
+		case "full":
+			layout = "15:04:05 MST"
+		case "long":
+			layout = "15:04:05 -0700"
+		case "medium":
+			layout = "15:04:05"
+		case "short":
+			layout = "15:04"
+		}
+
+		value = value.In(opts.TimeZone)
+
+		return value.Format(layout)
 	}
 
-	value = value.In(opts.TimeZone)
-
-	return value.Format(layout), nil
+	return NewResolvedValue(value, WithFormat(format)), nil
 }

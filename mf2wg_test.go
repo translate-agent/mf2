@@ -21,21 +21,7 @@ var failing []string
 func init() {
 	//nolint:lll
 	failing = []string{
-		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/.local_$t_=_{|2006-01-02T15:04:06|_:time}_{{{$t_:date}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/date.json/.local_$d_=_{|2006-01-02|_:date_style=long}_{{{$d_:date}}}",
-
 		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
-
-		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$d_=_{|2006-01-02T15:04:06|_:date}_{{{$d_:time}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/time.json/.local_$t_=_{|2006-01-02T15:04:06|_:time_style=medium}_{{{$t_:time}}}",
-
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$none}_.match_{$foo_:number}_one_{{one}}_*_{{{$none}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number}_.local_$bar_=_{$foo}_.match_{$bar}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_one_{{one}}_1_{{=1}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$bar_:number}_.match_{$bar}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.input_{$foo_:number}_.match_{$foo}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$foo_=_{$bar_:number}_.match_{$foo}_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.match_{$foo_:number}_1_{{=1}}_one_{{one}}_*_{{other}}",
 	}
 }
 

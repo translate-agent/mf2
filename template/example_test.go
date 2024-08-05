@@ -90,7 +90,7 @@ func ExampleTemplate_complexMessage() {
 	// }
 
 	// Parse template.
-	t, err := template.New(template.WithFunc("color", template.RegistryFunc{Format: color})).Parse(input)
+	t, err := template.New(template.WithFunc("color", color)).Parse(input)
 	if err != nil {
 		panic(err)
 	}

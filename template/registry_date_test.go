@@ -37,7 +37,10 @@ func Test_Date(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := dateRegistryFunc.Format(test.input, test.options, language.AmericanEnglish)
+			got, err := dateFunc(test.input, test.options, language.AmericanEnglish)
+			if v, ok := got.(*ResolvedValue); ok {
+				got = v.format()
+			}
 
 			if test.wantErr {
 				if err == nil {

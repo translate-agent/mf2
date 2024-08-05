@@ -14,19 +14,9 @@ import (
 
 // See ".message-format-wg/spec/registry.xml".
 
-type RegistryFunc struct {
-	Select func(input any, options Options, locale language.Tag) (output any, err error)
-	Format func(input any, options Options, locale language.Tag) (output any, err error)
-}
+type Func func(input any, options Options, locale language.Tag) (output any, err error)
 
-type Registry map[string]RegistryFunc
-
-type FuncContext int
-
-const (
-	Format FuncContext = iota
-	Select
-)
+type Registry map[string]Func
 
 // Options are a possible options for the function.
 type Options map[string]any
@@ -97,12 +87,12 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 // NewRegistry returns a new registry with default functions.
 func NewRegistry() Registry {
 	return Registry{
-		"date":     dateRegistryFunc,
-		"datetime": datetimeRegistryFunc,
-		"integer":  integerRegistryFunc,
-		"number":   numberRegistryFunc,
-		"string":   stringRegistryFunc,
-		"time":     timeRegistryFunc,
+		"date":     dateFunc,
+		"datetime": datetimeFunc,
+		"integer":  integerFunc,
+		"number":   numberFunc,
+		"string":   stringFunc,
+		"time":     timeFunc,
 	}
 }
 

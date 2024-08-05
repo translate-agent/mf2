@@ -44,9 +44,7 @@ func Test_ExecuteSimpleMessage(t *testing.T) {
 			name: "function without operand",
 			text: "Hello, { :randName }",
 			funcs: Registry{
-				"randName": {
-					Format: func(any, Options, language.Tag) (any, error) { return "John", nil },
-				},
+				"randName": func(any, Options, language.Tag) (any, error) { return "John", nil },
 			},
 			want: "Hello, John",
 		},
@@ -95,9 +93,7 @@ func Test_ExecuteComplexMessage(t *testing.T) {
 		{{Hello, {$var1} {$var2} {$var3}!}}`,
 			inputs: map[string]any{"anotherVar": "World"},
 			funcs: Registry{
-				"randNum": {
-					Format: func(any, Options, language.Tag) (any, error) { return 0, nil },
-				},
+				"randNum": func(any, Options, language.Tag) (any, error) { return 0, nil },
 			},
 			want: "Hello, literalExpression World 0!",
 		},
