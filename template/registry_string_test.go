@@ -35,7 +35,7 @@ func Test_String(t *testing.T) {
 			name:    "illegal type", // does not implement stringer, and is not castable to string
 			input:   struct{}{},
 			options: nil,
-			wantErr: true,
+			want:    "",
 		},
 		{
 			name:    "illegal options", // string function does not support any options
@@ -49,8 +49,7 @@ func Test_String(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := stringFunc(test.input, test.options, language.AmericanEnglish)
-
+			v, err := stringFunc(test.input, test.options, language.AmericanEnglish)
 			if test.wantErr {
 				if err == nil {
 					t.Error("want error, got nil")
@@ -63,8 +62,11 @@ func Test_String(t *testing.T) {
 
 			if err != nil {
 				t.Error(err)
+
+				return
 			}
 
+			got := v.format()
 			if test.want != got {
 				t.Errorf("want '%s', got '%s'", test.want, got)
 			}

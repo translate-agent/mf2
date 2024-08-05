@@ -42,9 +42,9 @@ func parseDateOptions(options Options) (*dateOptions, error) {
 }
 
 // dateFunc is the implementation of the date function. Locale-sensitive date formatting.
-func dateFunc(operand any, options Options, locale language.Tag) (any, error) {
-	errorf := func(format string, args ...any) (any, error) {
-		return "", fmt.Errorf("exec date function: "+format, args...)
+func dateFunc(operand any, options Options, locale language.Tag) (*ResolvedValue, error) {
+	errorf := func(format string, args ...any) (*ResolvedValue, error) {
+		return nil, fmt.Errorf("exec date function: "+format, args...)
 	}
 
 	// NOTE(mvilks): operand parsing is the same as for datetime registry function

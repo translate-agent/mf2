@@ -21,9 +21,10 @@ func Test_Datetime(t *testing.T) {
 	}{
 		// positive tests
 		{
+			// {$d :datetime} is the same as {$d :datetime dateStyle=medium timeStyle=short}
 			name:  "no options",
 			input: testDate,
-			want:  "2021-01-02 03:04:05.000000006 +0000 UTC",
+			want:  "02 Jan 2021 03:04",
 		},
 		{
 			name:    "dateStyle",
@@ -35,19 +36,19 @@ func Test_Datetime(t *testing.T) {
 			name:    "timeStyle",
 			input:   testDate,
 			options: map[string]any{"timeStyle": "medium"},
-			want:    "03:04",
+			want:    "03:04:05",
 		},
 		{
 			name:    "dateStyle and timeStyle",
 			input:   testDate,
 			options: map[string]any{"dateStyle": "short", "timeStyle": "long"},
-			want:    "02/01/21 03:04:05",
+			want:    "02/01/21 03:04:05 +0000",
 		},
 		{
 			name:    "timeZone",
 			input:   testDate,
 			options: map[string]any{"timeStyle": "long", "dateStyle": "medium", "timeZone": "EET"},
-			want:    "02 Jan 2021 05:04:05",
+			want:    "02 Jan 2021 05:04:05 +0200",
 		},
 		// negative tests
 		{
@@ -68,10 +69,7 @@ func Test_Datetime(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := datetimeFunc(test.input, test.options, language.AmericanEnglish)
-			if v, ok := got.(*ResolvedValue); ok {
-				got = v.format()
-			}
+			v, err := datetimeFunc(test.input, test.options, language.AmericanEnglish)
 
 			if test.wantErr {
 				if err == nil {
@@ -83,8 +81,11 @@ func Test_Datetime(t *testing.T) {
 
 			if err != nil {
 				t.Error(err)
+
+				return
 			}
 
+			got := v.format()
 			if test.want != got {
 				t.Errorf("want '%s', got '%s'", test.want, got)
 			}

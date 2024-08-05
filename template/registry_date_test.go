@@ -37,10 +37,7 @@ func Test_Date(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := dateFunc(test.input, test.options, language.AmericanEnglish)
-			if v, ok := got.(*ResolvedValue); ok {
-				got = v.format()
-			}
+			v, err := dateFunc(test.input, test.options, language.AmericanEnglish)
 
 			if test.wantErr {
 				if err == nil {
@@ -52,8 +49,11 @@ func Test_Date(t *testing.T) {
 
 			if err != nil {
 				t.Error(err)
+
+				return
 			}
 
+			got := v.format()
 			if test.want != got {
 				t.Errorf("want '%s', got '%s'", test.want, got)
 			}

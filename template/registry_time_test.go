@@ -56,11 +56,7 @@ func Test_Time(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := timeFunc(test.input, test.options, language.AmericanEnglish)
-			if v, ok := got.(*ResolvedValue); ok {
-				got = v.format()
-			}
-
+			v, err := timeFunc(test.input, test.options, language.AmericanEnglish)
 			if test.wantErr {
 				if err == nil {
 					t.Error("want error, got nil")
@@ -71,8 +67,11 @@ func Test_Time(t *testing.T) {
 
 			if err != nil {
 				t.Error(err)
+
+				return
 			}
 
+			got := v.format()
 			if test.want != got {
 				t.Errorf("want '%s', got '%s'", test.want, got)
 			}
