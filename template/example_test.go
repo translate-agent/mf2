@@ -65,7 +65,7 @@ func ExampleTemplate_complexMessage() {
 		}
 
 		if options == nil {
-			return template.NewResolvedValue(color), nil
+			return template.NewResolvedValue(color, template.WithFormat(func() string { return color })), nil
 		}
 
 		format := func() string {
