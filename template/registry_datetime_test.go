@@ -69,7 +69,6 @@ func Test_Datetime(t *testing.T) {
 			t.Parallel()
 
 			v, err := datetimeFunc(test.input, test.options, language.AmericanEnglish)
-			got := v.format()
 
 			if test.wantErr {
 				if err == nil {
@@ -83,6 +82,7 @@ func Test_Datetime(t *testing.T) {
 				t.Error(err)
 			}
 
+			got := v.format()
 			if test.want != got {
 				t.Errorf("want '%s', got '%s'", test.want, got)
 			}

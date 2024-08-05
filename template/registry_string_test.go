@@ -50,8 +50,6 @@ func Test_String(t *testing.T) {
 			t.Parallel()
 
 			v, err := stringFunc(test.input, test.options, language.AmericanEnglish)
-			got := v.format()
-
 			if test.wantErr {
 				if err == nil {
 					t.Error("want error, got nil")
@@ -66,6 +64,7 @@ func Test_String(t *testing.T) {
 				t.Error(err)
 			}
 
+			got := v.format()
 			if test.want != got {
 				t.Errorf("want '%s', got '%s'", test.want, got)
 			}

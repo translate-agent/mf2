@@ -44,7 +44,7 @@ func parseTimeOptions(options Options) (*timeOptions, error) {
 // timeFunc is the implementation of the time function. Locale-sensitive time formatting.
 func timeFunc(operand any, options Options, locale language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
-		return NewResolvedValue(""), fmt.Errorf("exec time function: "+format, args...)
+		return nil, fmt.Errorf("exec time function: "+format, args...)
 	}
 
 	// NOTE(mvilks): operand parsing is the same as for datetime registry function

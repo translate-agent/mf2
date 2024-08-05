@@ -52,7 +52,7 @@ func ExampleTemplate_complexMessage() {
 
 	color := func(value any, options template.Options, locale language.Tag) (*template.ResolvedValue, error) {
 		errorf := func(format string, args ...any) (*template.ResolvedValue, error) {
-			return template.NewResolvedValue(""), fmt.Errorf("exec color function: "+format, args...)
+			return nil, fmt.Errorf("exec color function: "+format, args...)
 		}
 
 		if value == nil {
