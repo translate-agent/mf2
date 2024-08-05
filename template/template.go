@@ -37,11 +37,6 @@ type ResolvedValue struct {
 	err       error
 }
 
-// Value returns raw value.
-func (r *ResolvedValue) Value() any {
-	return r.value
-}
-
 func defaultFormat(value any) string {
 	switch v := value.(type) {
 	default:
