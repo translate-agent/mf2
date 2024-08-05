@@ -14,7 +14,7 @@ func stringFunc(operand any, options Options, locale language.Tag) (*ResolvedVal
 	}
 
 	if operand == nil {
-		return NewResolvedValue(""), nil
+		return NewResolvedValue("", WithFormat(func() string { return "" })), nil
 	}
 
 	if len(options) > 0 {

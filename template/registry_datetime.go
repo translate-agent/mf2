@@ -88,6 +88,10 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 		return nil, fmt.Errorf("parse options: "+format, args...)
 	}
 
+	if len(options) == 0 {
+		return &datetimeOptions{DateStyle: "medium", TimeStyle: "short"}, nil
+	}
+
 	for opt := range options {
 		switch opt {
 		case "calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
@@ -189,10 +193,6 @@ func datetimeFunc(operand any, options Options, locale language.Tag) (*ResolvedV
 		return errorf("%w", err)
 	}
 
-	if len(options) == 0 {
-		return NewResolvedValue(operand), nil
-	}
-
 	opts, err := parseDatetimeOptions(options)
 	if err != nil {
 		return errorf("%w", err)
@@ -218,16 +218,20 @@ func datetimeFunc(operand any, options Options, locale language.Tag) (*ResolvedV
 			}
 
 			switch opts.TimeStyle {
-			case "full", "long":
-				layout += "15:04:05"
+			case "full":
+				layout += "15:04:05 MST"
+			case "long":
+				layout += "15:04:05 -0700"
 			case "medium":
-				layout += "15:04"
+				layout += "15:04:05"
 			case "short":
-				layout += "15"
+				layout += "15:04"
 			}
 		}
 
-		value = value.In(opts.TimeZone)
+		if opts.TimeZone != nil {
+			value = value.In(opts.TimeZone)
+		}
 
 		return value.Format(layout)
 	}
