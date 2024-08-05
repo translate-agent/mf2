@@ -62,6 +62,8 @@ func Test_String(t *testing.T) {
 
 			if err != nil {
 				t.Error(err)
+
+				return
 			}
 
 			got := v.format()

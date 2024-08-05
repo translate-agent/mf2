@@ -81,6 +81,8 @@ func Test_Datetime(t *testing.T) {
 
 			if err != nil {
 				t.Error(err)
+
+				return
 			}
 
 			got := v.format()

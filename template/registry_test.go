@@ -13,6 +13,8 @@ func assertFormat(t *testing.T, f Func, options map[string]any, locale language.
 		v, err := f(in, options, locale)
 		if err != nil {
 			t.Error(err)
+
+			return
 		}
 
 		result := v.String()
