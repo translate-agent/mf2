@@ -28,7 +28,6 @@ linters:
     - nlreturn
     - nonamedreturns
     - promlinter
-    - revive
     - tagliatelle
     - testableexamples
     - testpackage
@@ -41,6 +40,8 @@ linters:
 linters-settings:
   cyclop:
     max-complexity: 30
+  exhaustive:
+    default-signifies-exhaustive: true
   govet:
     enable-all: true
   importas:
@@ -58,5 +59,3 @@ linters-settings:
       - Literal # false reporting in parseLiteral() by nolintlint
   predeclared:
     ignore: ""
-  exhaustive:
-    default-signifies-exhaustive: true

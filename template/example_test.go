@@ -50,7 +50,7 @@ func ExampleTemplate_complexMessage() {
 .input { $color :color style=RGB}
 {{John is { $age } years old and his favorite color is { $color }.}}`
 
-	color := func(value any, options template.Options, locale language.Tag) (*template.ResolvedValue, error) {
+	color := func(value any, options template.Options, _ language.Tag) (*template.ResolvedValue, error) {
 		errorf := func(format string, args ...any) (*template.ResolvedValue, error) {
 			return nil, fmt.Errorf("exec color function: "+format, args...)
 		}

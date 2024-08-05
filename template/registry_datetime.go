@@ -183,7 +183,7 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 }
 
 // datetimeFunc is the implementation of the datetime function. Locale-sensitive date and time formatting.
-func datetimeFunc(operand any, options Options, locale language.Tag) (*ResolvedValue, error) {
+func datetimeFunc(operand any, options Options, _ language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
 		return nil, fmt.Errorf("exec datetime function: "+format, args...)
 	}
