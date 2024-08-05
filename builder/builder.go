@@ -300,7 +300,7 @@ func (b *Builder) OpenMarkup(name string, optionsAndAttributes ...OptsAndAttr) *
 	return b.markup(parse.Open, name, optionsAndAttributes)
 }
 
-func (b *Builder) CloseMarkup(name string, attributes ...attribute) *Builder {
+func (b *Builder) CloseMarkup(name string, attributes ...Attribute) *Builder {
 	optsAndAttr := make([]OptsAndAttr, 0, len(attributes))
 	for _, v := range attributes {
 		optsAndAttr = append(optsAndAttr, v)
@@ -333,7 +333,7 @@ func (b *Builder) markup(typ parse.MarkupType, name string, optionsAndAttributes
 		switch v := opt.(type) {
 		case FuncOption:
 			markup.Options = append(markup.Options, parse.Option(v))
-		case attribute:
+		case Attribute:
 			markup.Attributes = append(markup.Attributes, parse.Attribute(v))
 		}
 	}
@@ -485,7 +485,7 @@ func (e *Expression) Func(name string, option ...FuncOption) *Expression {
 }
 
 // Attr adds attributes to the expression.
-func (e *Expression) Attr(attributes ...attribute) *Expression {
+func (e *Expression) Attr(attributes ...Attribute) *Expression {
 	for _, v := range attributes {
 		e.expression.Attributes = append(e.expression.Attributes, parse.Attribute(v))
 	}
@@ -493,20 +493,20 @@ func (e *Expression) Attr(attributes ...attribute) *Expression {
 	return e
 }
 
-type attribute parse.Attribute
+type Attribute parse.Attribute
 
-func (attribute) optsAndAttr() {}
+func (Attribute) optsAndAttr() {}
 
-func VarAttribute(name, varName string) attribute {
-	return attribute(parse.Attribute{Identifier: parse.Identifier{Name: name}, Value: parse.Variable(varName)})
+func VarAttribute(name, varName string) Attribute {
+	return Attribute(parse.Attribute{Identifier: parse.Identifier{Name: name}, Value: parse.Variable(varName)})
 }
 
-func LiteralAttribute(name string, value any) attribute {
-	return attribute(parse.Attribute{Identifier: parse.Identifier{Name: name}, Value: toLiteral(value)})
+func LiteralAttribute(name string, value any) Attribute {
+	return Attribute(parse.Attribute{Identifier: parse.Identifier{Name: name}, Value: toLiteral(value)})
 }
 
-func EmptyAttribute(name string) attribute {
-	return attribute(parse.Attribute{Identifier: parse.Identifier{Name: name}})
+func EmptyAttribute(name string) Attribute {
+	return Attribute(parse.Attribute{Identifier: parse.Identifier{Name: name}})
 }
 
 // helpers

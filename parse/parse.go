@@ -51,7 +51,7 @@ func (p *parser) backup() {
 // nextNonWS returns next non-whitespace token if any otherwise returns error token.
 func (p *parser) nextNonWS() item {
 	next := p.next()
-	for ; next.typ == itemWhitespace; next = p.next() {
+	for ; next.typ == itemWhitespace; next = p.next() { //nolint:revive
 	}
 
 	return next
