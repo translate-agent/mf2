@@ -247,8 +247,8 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 }
 
 // numberFunc is the implementation of the number function. Locale-sensitive number formatting.
-func numberFunc(operand any, options Options, locale language.Tag) (any, error) {
-	errorf := func(format string, args ...any) (any, error) {
+func numberFunc(operand any, options Options, locale language.Tag) (*ResolvedValue, error) {
+	errorf := func(format string, args ...any) (*ResolvedValue, error) {
 		return nil, fmt.Errorf("exec number function: "+format, args...)
 	}
 

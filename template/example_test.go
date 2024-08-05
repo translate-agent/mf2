@@ -50,44 +50,51 @@ func ExampleTemplate_complexMessage() {
 .input { $color :color style=RGB}
 {{John is { $age } years old and his favorite color is { $color }.}}`
 
-	color := func(value any, options template.Options, locale language.Tag) (any, error) {
+	color := func(value any, options template.Options, locale language.Tag) (*template.ResolvedValue, error) {
+		errorf := func(format string, args ...any) (*template.ResolvedValue, error) {
+			return template.NewResolvedValue(""), fmt.Errorf("exec color function: "+format, args...)
+		}
+
 		if value == nil {
-			return "", fmt.Errorf("input is required: %w", mf2.ErrBadOperand)
+			return errorf("input is required: %w", mf2.ErrBadOperand)
 		}
 
 		color, ok := value.(string)
 		if !ok {
-			return nil, fmt.Errorf("input is not a string: %w", mf2.ErrBadOperand)
+			return errorf("input is not a string: %w", mf2.ErrBadOperand)
 		}
 
 		if options == nil {
-			return color, nil
+			return template.NewResolvedValue(color), nil
 		}
 
-		style, err := options.GetString("style", "RGB")
-		if err != nil {
-			return nil, fmt.Errorf("get style: %w", err)
-		}
-
-		var result string
-
-		switch style {
-		case "RGB":
-			switch color {
-			case "red":
-				result = "255,0,0"
-			case "green":
-				result = "0,255,0"
-			case "blue":
-				result = "0,0,255"
+		format := func() string {
+			style, err := options.GetString("style", "RGB")
+			if err != nil {
+				return color
 			}
-		case "HEX": // Other Implementations
-		case "HSL": // Other Implementations
+
+			var result string
+
+			switch style {
+			case "RGB":
+				switch color {
+				case "red":
+					result = "255,0,0"
+				case "green":
+					result = "0,255,0"
+				case "blue":
+					result = "0,0,255"
+				}
+			case "HEX": // Other Implementations
+			case "HSL": // Other Implementations
+			}
+
+			return result
 		}
 
-		return result, nil
+		return template.NewResolvedValue(color, template.WithFormat(format)), nil
 	}
-	// }
 
 	// Parse template.
 	t, err := template.New(template.WithFunc("color", color)).Parse(input)
