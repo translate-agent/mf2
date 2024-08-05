@@ -68,7 +68,7 @@ func Test_Datetime(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := datetimeRegistryFunc(test.input, test.options, language.AmericanEnglish)
+			got, err := datetimeFunc(test.input, test.options, language.AmericanEnglish)
 			if v, ok := got.(*ResolvedValue); ok {
 				got = v.format()
 			}

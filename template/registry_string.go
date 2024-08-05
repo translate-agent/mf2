@@ -6,9 +6,9 @@ import (
 	"golang.org/x/text/language"
 )
 
-// stringRegistryFunc is the implementation of the string function.
+// stringFunc is the implementation of the string function.
 // Formatting of strings as a literal and selection based on string equality.
-func stringRegistryFunc(operand any, options Options, locale language.Tag) (any, error) {
+func stringFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
 		return nil, fmt.Errorf("exec string function: "+format, args...)
 	}

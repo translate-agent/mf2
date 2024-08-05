@@ -41,8 +41,8 @@ func parseDateOptions(options Options) (*dateOptions, error) {
 	return &opts, nil
 }
 
-// dateRegistryFunc is the implementation of the date function. Locale-sensitive date formatting.
-func dateRegistryFunc(operand any, options Options, locale language.Tag) (any, error) {
+// dateFunc is the implementation of the date function. Locale-sensitive date formatting.
+func dateFunc(operand any, options Options, locale language.Tag) (any, error) {
 	errorf := func(format string, args ...any) (any, error) {
 		return "", fmt.Errorf("exec date function: "+format, args...)
 	}

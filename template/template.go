@@ -14,9 +14,6 @@ import (
 	ast "go.expect.digital/mf2/parse"
 )
 
-// Func is a function, that will be called when a function is encountered in the template.
-type Func func(operand any, options map[string]any) (string, error)
-
 // Template represents a MessageFormat2 template.
 type Template struct {
 	// TODO: locale field. Can change the output of some functions.
@@ -133,7 +130,7 @@ func New(options ...Option) *Template {
 type Option func(t *Template)
 
 // WithFunc adds a single function to function registry.
-func WithFunc(name string, f RegistryFunc) Option {
+func WithFunc(name string, f Func) Option {
 	return func(t *Template) {
 		t.registry[name] = f
 	}

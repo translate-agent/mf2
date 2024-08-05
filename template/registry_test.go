@@ -6,7 +6,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-func assertFormat(t *testing.T, f RegistryFunc, options map[string]any, locale language.Tag) func(in any, want string) {
+func assertFormat(t *testing.T, f Func, options map[string]any, locale language.Tag) func(in any, want string) {
 	t.Helper()
 
 	return func(in any, want string) {
