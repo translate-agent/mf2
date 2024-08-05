@@ -64,11 +64,11 @@ func ExampleTemplate_complexMessage() {
 			return errorf("input is not a string: %w", mf2.ErrBadOperand)
 		}
 
-		if options == nil {
-			return template.NewResolvedValue(color, template.WithFormat(func() string { return color })), nil
-		}
-
 		format := func() string {
+			if len(options) == 0 {
+				return color
+			}
+
 			style, err := options.GetString("style", "RGB")
 			if err != nil {
 				return color
