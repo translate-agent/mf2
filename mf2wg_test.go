@@ -56,7 +56,7 @@ func TestMF2WG(t *testing.T) {
 
 			for _, test := range tests.Tests {
 				t.Run(test.Src, func(t *testing.T) {
-					// t.Parallel()
+					t.Parallel()
 
 					if slices.Contains(failing, t.Name()) {
 						t.Skip()

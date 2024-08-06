@@ -72,13 +72,13 @@ func (r *ResolvedValue) Value() any {
 }
 
 // // String makes the ResolvedValue implement the fmt.Stringer interface.
-// func (r *ResolvedValue) String() string {
-// 	if r.format != nil {
-// 		return r.format()
-// 	}
+func (r *ResolvedValue) String() string {
+	if r.format != nil {
+		return r.format()
+	}
 
-// 	return "" // defaultFormat(r.value)
-// }
+	return defaultFormat(r.value)
+}
 
 // ResolvedValueOpt is a function to apply to the ResolvedValue.
 type ResolvedValueOpt func(*ResolvedValue)
@@ -177,13 +177,32 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	executer := &executer{template: t, w: w, variables: make(map[string]*ResolvedValue, len(input))}
 
 	for k, v := range input {
-		e := ast.Expression{Operand: newLiteral(v)}
-		r, err := executer.resolveExpression(e)
+		var f string
+
+		def := NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
+
+		switch v.(type) {
+		default:
+			executer.variables[k] = def
+			continue
+		case string:
+			f = "string"
+		case float64, int:
+			f = "number"
+		}
+
+		fun, ok := t.registry[f]
+		if !ok {
+			executer.variables[k] = def
+			continue
+		}
+
+		r, err := fun(v, nil, t.locale)
 		if err != nil {
 			return fmt.Errorf("execute template: %w", err)
 		}
+
 		executer.variables[k] = r
-		// NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) })) // FIXME(mvilks): what is the default format()?
 	}
 
 	if err := executer.execute(); err != nil {
@@ -191,19 +210,6 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	}
 
 	return nil
-}
-
-func newLiteral(value any) ast.Value {
-	switch t := value.(type) {
-	default:
-		return ast.QuotedLiteral(fmt.Sprintf("%s", t))
-	case float64:
-		return ast.NumberLiteral(t)
-	case int:
-		return ast.NumberLiteral(t)
-	case string:
-		return ast.QuotedLiteral(t)
-	}
 }
 
 // Sprint wraps Execute and returns the result as a string.
@@ -306,7 +312,7 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 				resolutionErr = errors.Join(resolutionErr, err)
 			}
 
-			if _, err := e.w.Write([]byte(resolved.format())); err != nil {
+			if _, err := e.w.Write([]byte(resolved.String())); err != nil {
 				return errorf("write resolved expression: %w", err)
 			}
 		// When formatting to a string, markup placeholders format to an empty string by default.
