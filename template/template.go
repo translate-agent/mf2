@@ -67,14 +67,18 @@ func defaultSelectKey(value any, keys []string) string {
 	return ast.CatchAllKey{}.String()
 }
 
-// String makes the ResolvedValue implement the fmt.Stringer interface.
-func (r *ResolvedValue) String() string {
-	if r.format != nil {
-		return r.format()
-	}
-
-	return defaultFormat(r.value)
+func (r *ResolvedValue) Value() any {
+	return r.value
 }
+
+// // String makes the ResolvedValue implement the fmt.Stringer interface.
+// func (r *ResolvedValue) String() string {
+// 	if r.format != nil {
+// 		return r.format()
+// 	}
+
+// 	return "" // defaultFormat(r.value)
+// }
 
 // ResolvedValueOpt is a function to apply to the ResolvedValue.
 type ResolvedValueOpt func(*ResolvedValue)
@@ -170,10 +174,16 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 		return errors.New("execute template: AST is nil")
 	}
 
-	executer := &executer{template: t, w: w, variables: make(map[string]any, len(input))}
+	executer := &executer{template: t, w: w, variables: make(map[string]*ResolvedValue, len(input))}
 
 	for k, v := range input {
-		executer.variables[k] = v
+		e := ast.Expression{Operand: newLiteral(v)}
+		r, err := executer.resolveExpression(e)
+		if err != nil {
+			return fmt.Errorf("execute template: %w", err)
+		}
+		executer.variables[k] = r
+		// NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) })) // FIXME(mvilks): what is the default format()?
 	}
 
 	if err := executer.execute(); err != nil {
@@ -181,6 +191,19 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	}
 
 	return nil
+}
+
+func newLiteral(value any) ast.Value {
+	switch t := value.(type) {
+	default:
+		return ast.QuotedLiteral(fmt.Sprintf("%s", t))
+	case float64:
+		return ast.NumberLiteral(t)
+	case int:
+		return ast.NumberLiteral(t)
+	case string:
+		return ast.QuotedLiteral(t)
+	}
 }
 
 // Sprint wraps Execute and returns the result as a string.
@@ -194,7 +217,7 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 type executer struct {
 	template  *Template
 	w         io.Writer
-	variables map[string]any
+	variables map[string]*ResolvedValue
 }
 
 func (e *executer) execute() error {
@@ -283,7 +306,7 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 				resolutionErr = errors.Join(resolutionErr, err)
 			}
 
-			if _, err := e.w.Write([]byte(resolved.String())); err != nil {
+			if _, err := e.w.Write([]byte(resolved.format())); err != nil {
 				return errorf("write resolved expression: %w", err)
 			}
 		// When formatting to a string, markup placeholders format to an empty string by default.
@@ -376,7 +399,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
 	}
 
-	return NewResolvedValue(result), resolutionErr
+	return result, resolutionErr
 }
 
 // resolveValue resolves the value of an expression's operand.
@@ -401,12 +424,12 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 			return "{" + v.String() + "}", fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
 
-		t, ok := val.(*ResolvedValue)
-		if !ok {
-			return val, nil
-		}
+		// t, ok := val.(*ResolvedValue)
+		// if !ok {
+		// 	return val, nil
+		// }
 
-		return val, t.err
+		return val, val.err
 	}
 }
 

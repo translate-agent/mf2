@@ -13,6 +13,10 @@ func stringFunc(operand any, options Options, locale language.Tag) (*ResolvedVal
 		return nil, fmt.Errorf("exec string function: "+format, args...)
 	}
 
+	if v, ok := operand.(*ResolvedValue); ok {
+		operand = v.value
+	}
+
 	if operand == nil {
 		return NewResolvedValue("", WithFormat(func() string { return "" })), nil
 	}
