@@ -60,7 +60,7 @@ func ExampleTemplate_complexMessage() {
 		}
 
 		if v, ok := value.(*template.ResolvedValue); ok {
-			value = v.Value()
+			value = v.String()
 		}
 
 		color, ok := value.(string)

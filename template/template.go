@@ -67,10 +67,6 @@ func defaultSelectKey(value any, keys []string) string {
 	return ast.CatchAllKey{}.String()
 }
 
-func (r *ResolvedValue) Value() any {
-	return r.value
-}
-
 // // String makes the ResolvedValue implement the fmt.Stringer interface.
 func (r *ResolvedValue) String() string {
 	if r.format != nil {
@@ -177,7 +173,7 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	executer := &executer{template: t, w: w, variables: make(map[string]*ResolvedValue, len(input))}
 
 	for k, v := range input {
-		var f string
+		var function string
 
 		def := NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
 
@@ -186,18 +182,18 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 			executer.variables[k] = def
 			continue
 		case string:
-			f = "string"
+			function = "string"
 		case float64, int:
-			f = "number"
+			function = "number"
 		}
 
-		fun, ok := t.registry[f]
+		f, ok := t.registry[function]
 		if !ok {
 			executer.variables[k] = def
 			continue
 		}
 
-		r, err := fun(v, nil, t.locale)
+		r, err := f(v, nil, t.locale)
 		if err != nil {
 			return fmt.Errorf("execute template: %w", err)
 		}
@@ -429,11 +425,6 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 		if !ok {
 			return "{" + v.String() + "}", fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
-
-		// t, ok := val.(*ResolvedValue)
-		// if !ok {
-		// 	return val, nil
-		// }
 
 		return val, val.err
 	}
