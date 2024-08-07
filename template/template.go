@@ -67,7 +67,7 @@ func defaultSelectKey(value any, keys []string) string {
 	return ast.CatchAllKey{}.String()
 }
 
-// String makes the ResolvedValue implement the fmt.Stringer interface.
+// // String makes the ResolvedValue implement the fmt.Stringer interface.
 func (r *ResolvedValue) String() string {
 	if r.format != nil {
 		return r.format()
@@ -170,10 +170,29 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 		return errors.New("execute template: AST is nil")
 	}
 
-	executer := &executer{template: t, w: w, variables: make(map[string]any, len(input))}
+	executer := &executer{template: t, w: w, variables: make(map[string]*ResolvedValue, len(input))}
 
 	for k, v := range input {
-		executer.variables[k] = v
+		var f Func
+
+		def := NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
+
+		switch v.(type) {
+		default:
+			executer.variables[k] = def
+			continue
+		case string:
+			f = stringFunc
+		case float64, int:
+			f = numberFunc
+		}
+
+		r, err := f(v, nil, t.locale)
+		if err != nil {
+			return fmt.Errorf("execute template: %w", err)
+		}
+
+		executer.variables[k] = r
 	}
 
 	if err := executer.execute(); err != nil {
@@ -194,7 +213,7 @@ func (t *Template) Sprint(input map[string]any) (string, error) {
 type executer struct {
 	template  *Template
 	w         io.Writer
-	variables map[string]any
+	variables map[string]*ResolvedValue
 }
 
 func (e *executer) execute() error {
@@ -376,7 +395,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
 	}
 
-	return NewResolvedValue(result), resolutionErr
+	return result, resolutionErr
 }
 
 // resolveValue resolves the value of an expression's operand.
@@ -401,12 +420,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 			return "{" + v.String() + "}", fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
 
-		t, ok := val.(*ResolvedValue)
-		if !ok {
-			return val, nil
-		}
-
-		return val, t.err
+		return val, val.err
 	}
 }
 

@@ -61,6 +61,10 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 		return fallback, nil
 	}
 
+	if t, ok := v.(*ResolvedValue); ok {
+		v = t.value
+	}
+
 	if s, ok := v.(string); ok {
 		var err error
 

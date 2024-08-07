@@ -63,12 +63,7 @@ func parseDatetimeOperand(operand any) (time.Time, error) {
 	default:
 		return errorf("unsupported operand type %T", operand)
 	case *ResolvedValue:
-		t, ok := v.value.(time.Time)
-		if ok {
-			return t, nil
-		}
-
-		return parseDatetimeOperand(t)
+		return parseDatetimeOperand(v.value)
 	case string:
 		// layout is quick and dirty, does not conform with ISO 8601 fully as required
 		t, err := time.Parse(time.RFC3339[:len(v)], v)

@@ -59,6 +59,10 @@ func ExampleTemplate_complexMessage() {
 			return errorf("input is required: %w", mf2.ErrBadOperand)
 		}
 
+		if v, ok := value.(*template.ResolvedValue); ok {
+			value = v.String()
+		}
+
 		color, ok := value.(string)
 		if !ok {
 			return errorf("input is not a string: %w", mf2.ErrBadOperand)

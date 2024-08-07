@@ -17,7 +17,7 @@ func assertFormat(t *testing.T, f Func, options map[string]any, locale language.
 			return
 		}
 
-		result := v.String()
+		result := v.format()
 
 		if want != result {
 			t.Errorf("want '%s', got '%s'", want, result)
