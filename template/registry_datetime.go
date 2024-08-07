@@ -50,20 +50,20 @@ type datetimeOptions struct {
 }
 
 // parseDatetimeOperand parses resolved operand value.
-func parseDatetimeOperand(operand any) (time.Time, error) {
+func parseDatetimeOperand(operand *ResolvedValue) (time.Time, error) {
 	errorf := func(format string, args ...any) (time.Time, error) {
 		return time.Time{}, fmt.Errorf(format+": %w", append(args, mf2.ErrBadOperand)...)
 	}
 
-	if operand == nil {
+	value := operand.value
+
+	if value == nil {
 		return errorf("operand is required")
 	}
 
-	switch v := operand.(type) {
+	switch v := value.(type) {
 	default:
-		return errorf("unsupported operand type %T", operand)
-	case *ResolvedValue:
-		return parseDatetimeOperand(v.value)
+		return errorf("unsupported operand type %T", value)
 	case string:
 		// layout is quick and dirty, does not conform with ISO 8601 fully as required
 		t, err := time.Parse(time.RFC3339[:len(v)], v)
