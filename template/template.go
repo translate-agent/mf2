@@ -175,11 +175,9 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	for k, v := range input {
 		var f Func
 
-		r := NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
-
 		switch v.(type) {
 		default:
-			executer.variables[k] = r
+			executer.variables[k] = NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
 			continue
 		case string:
 			f = stringFunc
@@ -187,9 +185,7 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 			f = numberFunc
 		}
 
-		var err error
-
-		r, err = f(r, nil, t.locale)
+		r, err := f(NewResolvedValue(v), nil, t.locale)
 		if err != nil {
 			return fmt.Errorf("execute template: %w", err)
 		}
