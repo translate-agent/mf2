@@ -21,23 +21,5 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 		return errorf("want no options")
 	}
 
-	format := func() string {
-		switch value := operand.value.(type) {
-		default:
-			s, err := castAs[string](value) // if underlying type is not string, return empty string
-			if err != nil {
-				return ""
-			}
-
-			return s
-		case fmt.Stringer:
-			return value.String()
-		case string, []byte, []rune, int, int8, int16, int32, int64,
-			uint, uint8, uint16, uint32, uint64, float32, float64, bool,
-			complex64, complex128, error:
-			return fmt.Sprint(value)
-		}
-	}
-
-	return NewResolvedValue(operand, WithFormat(format)), nil
+	return operand, nil
 }

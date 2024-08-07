@@ -40,11 +40,8 @@ type ResolvedValue struct {
 func defaultFormat(value any) string {
 	switch v := value.(type) {
 	default:
-		s, err := castAs[string](v) // if underlying type is not string, return error
-		if err != nil {
-			return "" // errorf("unsupported value type: %T: %w", r.value, err)
-		}
-
+		// TODO(jhorsts): if underlying type is not string, return errorf("unsupported value type: %T: %w", r.value, err)
+		s, _ := v.(string)
 		return s
 	case fmt.Stringer:
 		return v.String()

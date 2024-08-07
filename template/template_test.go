@@ -305,12 +305,12 @@ func Test_ExecuteErrors(t *testing.T) {
 
 func BenchmarkTemplate_Sprint(b *testing.B) {
 	//nolint:dupword
-	tmpl, err := New().Parse(".match {$foo :string} {$bar :string} one one {{one one}} one * {{one other}} * * {{other}}")
+	tmpl, err := New().Parse(".match {$foo :string} {$bar :number} one one {{one one}} one * {{one other}} * * {{other}}")
 	if err != nil {
 		b.Error(err)
 	}
 
-	_, err = tmpl.Sprint(map[string]any{"foo": "foo", "bar": "bar"})
+	_, err = tmpl.Sprint(map[string]any{"foo": "foo", "bar": 1})
 	if err != nil {
 		b.Error(err)
 	}
@@ -318,7 +318,7 @@ func BenchmarkTemplate_Sprint(b *testing.B) {
 	var result string
 
 	for range b.N {
-		result, _ = tmpl.Sprint(map[string]any{"foo": "foo", "bar": "bar"})
+		result, _ = tmpl.Sprint(map[string]any{"foo": "foo", "bar": 1})
 	}
 
 	_ = result
