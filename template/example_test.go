@@ -108,6 +108,9 @@ func ExampleTemplate_complexMessage() {
 	// Output: John is 42 years old and his favorite color is 255,0,0.
 }
 
+// TODO(mvilks): come up with a better example of the ResolvedValue usage that requires access to the raw value.
+// E.g. function ":parity" that returns a localized name for "odd"/"even".
+
 func ExampleTemplate_calculator() {
 	// Define a MF2 string.
 	const input = `.input {$a :integer}

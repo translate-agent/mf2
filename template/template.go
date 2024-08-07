@@ -192,7 +192,9 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 			f = numberFunc
 		}
 
-		r, err := f(r, nil, t.locale)
+		var err error
+
+		r, err = f(r, nil, t.locale)
 		if err != nil {
 			return fmt.Errorf("execute template: %w", err)
 		}
