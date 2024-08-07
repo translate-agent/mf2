@@ -42,7 +42,7 @@ func parseTimeOptions(options Options) (*timeOptions, error) {
 }
 
 // timeFunc is the implementation of the time function. Locale-sensitive time formatting.
-func timeFunc(operand any, options Options, _ language.Tag) (*ResolvedValue, error) {
+func timeFunc(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
 		return nil, fmt.Errorf("exec time function: "+format, args...)
 	}

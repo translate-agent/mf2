@@ -10,7 +10,7 @@ func assertFormat(t *testing.T, f Func, options map[string]any, locale language.
 	t.Helper()
 
 	return func(in any, want string) {
-		v, err := f(in, options, locale)
+		v, err := f(NewResolvedValue(in), options, locale)
 		if err != nil {
 			t.Error(err)
 

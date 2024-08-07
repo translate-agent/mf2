@@ -67,7 +67,7 @@ func defaultSelectKey(value any, keys []string) string {
 	return ast.CatchAllKey{}.String()
 }
 
-// // String makes the ResolvedValue implement the fmt.Stringer interface.
+// String makes the ResolvedValue implement the fmt.Stringer interface.
 func (r *ResolvedValue) String() string {
 	if r.format != nil {
 		return r.format()
@@ -175,11 +175,9 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	for k, v := range input {
 		var f Func
 
-		def := NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
-
 		switch v.(type) {
 		default:
-			executer.variables[k] = def
+			executer.variables[k] = NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
 			continue
 		case string:
 			f = stringFunc
@@ -187,7 +185,7 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 			f = numberFunc
 		}
 
-		r, err := f(v, nil, t.locale)
+		r, err := f(NewResolvedValue(v), nil, t.locale)
 		if err != nil {
 			return fmt.Errorf("execute template: %w", err)
 		}
@@ -390,7 +388,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 		return fmtErroredExpr(), errors.Join(resolutionErr, err)
 	}
 
-	result, err := f(value, options, e.template.locale)
+	result, err := f(NewResolvedValue(value), options, e.template.locale)
 	if err != nil {
 		return fmtErroredExpr(), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
 	}
@@ -556,7 +554,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			continue
 		}
 
-		rslt, err := f(input, opts, e.template.locale)
+		rslt, err := f(NewResolvedValue(input), opts, e.template.locale)
 		if err != nil {
 			addErr(err)
 			continue

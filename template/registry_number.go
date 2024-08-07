@@ -13,7 +13,7 @@ import (
 )
 
 // parseNumberOperand parses resolved operand value.
-func parseNumberOperand(operand any) (float64, error) {
+func parseNumberOperand(operand *ResolvedValue) (float64, error) {
 	errorf := func(format string, args ...any) (float64, error) {
 		return 0, fmt.Errorf(format+": %w", append(args, mf2.ErrBadOperand)...)
 	}
@@ -23,7 +23,9 @@ func parseNumberOperand(operand any) (float64, error) {
 		err    error
 	)
 
-	switch v := operand.(type) {
+	value := operand.value
+
+	switch v := value.(type) {
 	default:
 		number, err = castAs[float64](v)
 		if err != nil {
@@ -247,17 +249,9 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 }
 
 // numberFunc is the implementation of the number function. Locale-sensitive number formatting.
-func numberFunc(operand any, options Options, locale language.Tag) (*ResolvedValue, error) {
+func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
 		return nil, fmt.Errorf("exec number function: "+format, args...)
-	}
-
-	if v, ok := operand.(*ResolvedValue); ok {
-		if v.err != nil {
-			return errorf("%w", v.err)
-		}
-
-		operand = v.value
 	}
 
 	value, err := parseNumberOperand(operand)
