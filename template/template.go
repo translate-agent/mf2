@@ -173,7 +173,7 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	executer := &executer{template: t, w: w, variables: make(map[string]*ResolvedValue, len(input))}
 
 	for k, v := range input {
-		var function string
+		var f Func
 
 		def := NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
 
@@ -182,15 +182,9 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 			executer.variables[k] = def
 			continue
 		case string:
-			function = "string"
+			f = stringFunc
 		case float64, int:
-			function = "number"
-		}
-
-		f, ok := t.registry[function]
-		if !ok {
-			executer.variables[k] = def
-			continue
+			f = numberFunc
 		}
 
 		r, err := f(v, nil, t.locale)
