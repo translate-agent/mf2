@@ -67,13 +67,18 @@ func defaultSelectKey(value any, keys []string) string {
 	return ast.CatchAllKey{}.String()
 }
 
-// // String makes the ResolvedValue implement the fmt.Stringer interface.
+// String makes the ResolvedValue implement the fmt.Stringer interface.
 func (r *ResolvedValue) String() string {
 	if r.format != nil {
 		return r.format()
 	}
 
 	return defaultFormat(r.value)
+}
+
+// Value exposes raw value.
+func (r *ResolvedValue) Value() any {
+	return r.value
 }
 
 // ResolvedValueOpt is a function to apply to the ResolvedValue.
