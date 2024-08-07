@@ -37,7 +37,12 @@ func Test_Date(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			v, err := dateFunc(NewResolvedValue(test.input), test.options, language.AmericanEnglish)
+			opts := make(map[string]*ResolvedValue, len(test.options))
+			for k, v := range test.options {
+				opts[k] = NewResolvedValue(v)
+			}
+
+			v, err := dateFunc(NewResolvedValue(test.input), opts, language.AmericanEnglish)
 
 			if test.wantErr {
 				if err == nil {

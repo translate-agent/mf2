@@ -9,9 +9,9 @@ import (
 // integerFunc is the implementation of the integer function. Locale-sensitive integer formatting.
 func integerFunc(operand *ResolvedValue, options Options, locale language.Tag) (*ResolvedValue, error) {
 	if options == nil {
-		options = Options{"maximumFractionDigits": 0}
+		options = Options{"maximumFractionDigits": NewResolvedValue(0)}
 	} else {
-		options["maximumFractionDigits"] = 0
+		options["maximumFractionDigits"] = NewResolvedValue(0)
 	}
 
 	value, err := numberFunc(operand, options, locale)
