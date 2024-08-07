@@ -69,7 +69,7 @@ func Test_Datetime(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			v, err := datetimeFunc(test.input, test.options, language.AmericanEnglish)
+			v, err := datetimeFunc(NewResolvedValue(test.input), test.options, language.AmericanEnglish)
 
 			if test.wantErr {
 				if err == nil {

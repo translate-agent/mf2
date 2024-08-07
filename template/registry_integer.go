@@ -7,7 +7,7 @@ import (
 )
 
 // integerFunc is the implementation of the integer function. Locale-sensitive integer formatting.
-func integerFunc(operand any, options Options, locale language.Tag) (*ResolvedValue, error) {
+func integerFunc(operand *ResolvedValue, options Options, locale language.Tag) (*ResolvedValue, error) {
 	if options == nil {
 		options = Options{"maximumFractionDigits": 0}
 	} else {

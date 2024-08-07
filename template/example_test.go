@@ -50,7 +50,7 @@ func ExampleTemplate_complexMessage() {
 .input { $color :color style=RGB}
 {{John is { $age } years old and his favorite color is { $color }.}}`
 
-	color := func(value any, options template.Options, _ language.Tag) (*template.ResolvedValue, error) {
+	color := func(value *template.ResolvedValue, options template.Options, _ language.Tag) (*template.ResolvedValue, error) { //nolint:lll
 		errorf := func(format string, args ...any) (*template.ResolvedValue, error) {
 			return nil, fmt.Errorf("exec color function: "+format, args...)
 		}
@@ -59,14 +59,7 @@ func ExampleTemplate_complexMessage() {
 			return errorf("input is required: %w", mf2.ErrBadOperand)
 		}
 
-		if v, ok := value.(*template.ResolvedValue); ok {
-			value = v.String()
-		}
-
-		color, ok := value.(string)
-		if !ok {
-			return errorf("input is not a string: %w", mf2.ErrBadOperand)
-		}
+		color := value.String()
 
 		format := func() string {
 			if len(options) == 0 {

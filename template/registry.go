@@ -14,7 +14,7 @@ import (
 
 // See ".message-format-wg/spec/registry.xml".
 
-type Func func(input any, options Options, locale language.Tag) (output *ResolvedValue, err error)
+type Func func(input *ResolvedValue, options Options, locale language.Tag) (output *ResolvedValue, err error)
 
 type Registry map[string]Func
 

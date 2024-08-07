@@ -56,7 +56,7 @@ func Test_Time(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			v, err := timeFunc(test.input, test.options, language.AmericanEnglish)
+			v, err := timeFunc(NewResolvedValue(test.input), test.options, language.AmericanEnglish)
 			if test.wantErr {
 				if err == nil {
 					t.Error("want error, got nil")

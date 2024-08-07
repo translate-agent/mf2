@@ -8,16 +8,12 @@ import (
 
 // stringFunc is the implementation of the string function.
 // Formatting of strings as a literal and selection based on string equality.
-func stringFunc(operand any, options Options, _ language.Tag) (*ResolvedValue, error) {
+func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
 		return nil, fmt.Errorf("exec string function: "+format, args...)
 	}
 
-	if v, ok := operand.(*ResolvedValue); ok {
-		operand = v.value
-	}
-
-	if operand == nil {
+	if operand.value == nil {
 		return NewResolvedValue("", WithFormat(func() string { return "" })), nil
 	}
 
@@ -26,9 +22,9 @@ func stringFunc(operand any, options Options, _ language.Tag) (*ResolvedValue, e
 	}
 
 	format := func() string {
-		switch value := operand.(type) {
+		switch value := operand.value.(type) {
 		default:
-			s, err := castAs[string](operand) // if underlying type is not string, return empty string
+			s, err := castAs[string](value) // if underlying type is not string, return empty string
 			if err != nil {
 				return ""
 			}
