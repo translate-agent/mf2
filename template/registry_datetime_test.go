@@ -69,7 +69,7 @@ func Test_Datetime(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			opts := make(map[string]*ResolvedValue, len(test.options))
+			opts := make(Options, len(test.options))
 			for k, v := range test.options {
 				opts[k] = NewResolvedValue(v)
 			}

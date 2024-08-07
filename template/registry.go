@@ -145,7 +145,7 @@ func castAs[T any](val any) (T, error) {
 }
 
 // getTZ gets the timezone information from the registry function options.
-func getTZ(options map[string]*ResolvedValue) (*time.Location, error) {
+func getTZ(options Options) (*time.Location, error) {
 	v, ok := options["timeZone"]
 	if !ok {
 		return time.UTC, nil
