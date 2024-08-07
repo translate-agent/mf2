@@ -76,11 +76,6 @@ func (r *ResolvedValue) String() string {
 	return defaultFormat(r.value)
 }
 
-// Value exposes raw value.
-func (r *ResolvedValue) Value() any {
-	return r.value
-}
-
 // ResolvedValueOpt is a function to apply to the ResolvedValue.
 type ResolvedValueOpt func(*ResolvedValue)
 

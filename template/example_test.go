@@ -3,7 +3,6 @@ package template_test
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"go.expect.digital/mf2"
 	"go.expect.digital/mf2/template"
@@ -108,53 +107,5 @@ func ExampleTemplate_complexMessage() {
 	// Output: John is 42 years old and his favorite color is 255,0,0.
 }
 
-// TODO(mvilks): come up with a better example of the ResolvedValue usage that requires access to the raw value.
+// TODO(mvilks): come up with a good example of the ResolvedValue usage that requires access to the raw value.
 // E.g. function ":parity" that returns a localized name for "odd"/"even".
-
-func ExampleTemplate_calculator() {
-	// Define a MF2 string.
-	const input = `.input {$a :integer}
-.input {$b :integer}
-{{{$a} + {$b} = {$a :add b=$b}}}`
-
-	add := func(input *template.ResolvedValue, options template.Options, _ language.Tag) (*template.ResolvedValue, error) {
-		errorf := func(format string, args ...any) (*template.ResolvedValue, error) {
-			return nil, fmt.Errorf("exec add function: "+format, args...)
-		}
-
-		first, ok := input.Value().(float64)
-		if !ok {
-			return errorf("first operand should be number")
-		}
-
-		if len(options) == 0 {
-			return errorf("other number required")
-		}
-
-		other, err := options.GetInt("b", 0)
-		if err != nil {
-			return errorf("get other number from options")
-		}
-
-		result := int(first) + other
-
-		format := func() string {
-			return strconv.Itoa(result)
-		}
-
-		return template.NewResolvedValue(result, template.WithFormat(format)), nil
-	}
-
-	// Parse template.
-	t, err := template.New(template.WithFunc("add", add)).Parse(input)
-	if err != nil {
-		panic(err)
-	}
-
-	// Execute the template.
-	if err = t.Execute(os.Stdout, map[string]any{"a": 321, "b": 456}); err != nil {
-		panic(err)
-	}
-
-	// Output: 321 + 456 = 777
-}
