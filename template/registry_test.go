@@ -9,8 +9,13 @@ import (
 func assertFormat(t *testing.T, f Func, options map[string]any, locale language.Tag) func(in any, want string) {
 	t.Helper()
 
+	opts := make(Options, len(options))
+	for k, v := range options {
+		opts[k] = NewResolvedValue(v)
+	}
+
 	return func(in any, want string) {
-		v, err := f(NewResolvedValue(in), options, locale)
+		v, err := f(NewResolvedValue(in), opts, locale)
 		if err != nil {
 			t.Error(err)
 

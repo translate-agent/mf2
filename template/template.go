@@ -317,7 +317,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 
 	var (
 		funcName      string
-		options       map[string]any
+		options       Options
 		resolutionErr error
 	)
 
@@ -419,8 +419,8 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	}
 }
 
-func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) {
-	m := make(map[string]any, len(options))
+func (e *executer) resolveOptions(options []ast.Option) (Options, error) {
+	m := make(Options, len(options))
 
 	for _, opt := range options {
 		name := opt.Identifier.Name
@@ -433,7 +433,7 @@ func (e *executer) resolveOptions(options []ast.Option) (map[string]any, error) 
 			return nil, fmt.Errorf("option: %w", err)
 		}
 
-		m[name] = value
+		m[name] = NewResolvedValue(value)
 	}
 
 	return m, nil

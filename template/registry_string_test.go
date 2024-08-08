@@ -49,7 +49,12 @@ func Test_String(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			v, err := stringFunc(NewResolvedValue(test.input), test.options, language.AmericanEnglish)
+			opts := make(Options, len(test.options))
+			for k, v := range test.options {
+				opts[k] = NewResolvedValue(v)
+			}
+
+			v, err := stringFunc(NewResolvedValue(test.input), opts, language.AmericanEnglish)
 			if test.wantErr {
 				if err == nil {
 					t.Error("want error, got nil")

@@ -19,7 +19,7 @@ type Func func(input *ResolvedValue, options Options, locale language.Tag) (outp
 type Registry map[string]Func
 
 // Options are a possible options for the function.
-type Options map[string]any
+type Options map[string]*ResolvedValue
 
 // GetString returns the value by name.
 // If the value is not found, returns the fallback value.
@@ -34,7 +34,7 @@ func (o Options) GetString(name, fallback string, validate ...Validate[string]) 
 		return fallback, nil
 	}
 
-	s, ok := v.(string)
+	s, ok := v.value.(string)
 	if !ok {
 		return errorf("got %T", v)
 	}
@@ -61,22 +61,25 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 		return fallback, nil
 	}
 
-	if t, ok := v.(*ResolvedValue); ok {
-		v = t.value
-	}
+	var i int
 
-	if s, ok := v.(string); ok {
+	switch n := v.value.(type) {
+	default:
 		var err error
 
-		v, err = strconv.ParseInt(s, 10, 64)
+		i, err = castAs[int](n)
 		if err != nil {
-			return 0, fmt.Errorf(`parse integer from string "%s": %w`, s, err)
+			return errorf("%w", err)
 		}
-	}
+	case string:
+		n64, err := strconv.ParseInt(n, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf(`parse integer from string "%s": %w`, n, err)
+		}
 
-	i, err := castAs[int](v)
-	if err != nil {
-		return errorf("%w", err)
+		i = int(n64)
+	case int:
+		i = n
 	}
 
 	for _, f := range validate {
@@ -142,15 +145,15 @@ func castAs[T any](val any) (T, error) {
 }
 
 // getTZ gets the timezone information from the registry function options.
-func getTZ(options map[string]any) (*time.Location, error) {
+func getTZ(options Options) (*time.Location, error) {
 	v, ok := options["timeZone"]
 	if !ok {
 		return time.UTC, nil
 	}
 
-	switch tz := v.(type) {
+	switch tz := v.value.(type) {
 	default:
-		return nil, fmt.Errorf("want timeZone as string or *time.Location, got %T", v)
+		return nil, fmt.Errorf("want timeZone as string or *time.Location, got %T", v.value)
 	case *time.Location:
 		return tz, nil
 	case string:

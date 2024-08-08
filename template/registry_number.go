@@ -159,7 +159,7 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	}
 
 	if curr, ok := opts["currency"]; ok {
-		switch v := curr.(type) {
+		switch v := curr.value.(type) {
 		default:
 			return errorf("invalid currency type: %T", v)
 		case string:
