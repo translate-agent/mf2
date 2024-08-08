@@ -310,16 +310,16 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 }
 
 func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error) {
-	value, err := e.resolveValue(expr.Operand)
-	if err != nil {
-		return NewResolvedValue(fmt.Sprint(value)), fmt.Errorf("expression: %w", err)
-	}
-
 	var (
 		funcName      string
 		options       Options
 		resolutionErr error
 	)
+
+	value, err := e.resolveValue(expr.Operand)
+	if err != nil {
+		resolutionErr = errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
+	}
 
 	switch v := expr.Annotation.(type) {
 	default:
