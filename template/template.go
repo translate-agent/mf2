@@ -355,6 +355,10 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 
 		switch v := expr.Operand.(type) {
 		default:
+			if f, ok := expr.Annotation.(ast.Function); ok {
+				return NewResolvedValue("{:" + f.Identifier.String() + "}")
+			}
+
 			return wrap(expr.Annotation)
 		case ast.Variable:
 			return wrap(v)
