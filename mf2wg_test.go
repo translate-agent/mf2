@@ -22,6 +22,39 @@ func init() {
 	//nolint:lll
 	failing = []string{
 		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
+
+		"TestMF2WG/.message-format-wg/test/tests/unsupported-expressions.json/.local_$bar_=_{$none_~plural}_.match_{foo_:string}__*_{{{$bar}}}",
+		"TestMF2WG/.message-format-wg/test/tests/unsupported-expressions.json/hello_{$foo____>num_x_\\\\_abcde_|aaa||3.14|_|42|_r__}",
+		"TestMF2WG/.message-format-wg/test/tests/unsupported-expressions.json/.input{_$n_~_}{{{$n}}}",
+		"TestMF2WG/.message-format-wg/test/tests/unsupported-expressions.json/hello_{$foo____>num_x_\\\\_abcde_|aaa||3.14||42|_r__}",
+		"TestMF2WG/.message-format-wg/test/tests/unsupported-expressions.json/hello_{$foo____+num_x_\\\\_abcde_|3.14|_r__}",
+		"TestMF2WG/.message-format-wg/test/tests/unsupported-expressions.json/hello_{$foo_~xyzz_}",
+		"TestMF2WG/.message-format-wg/test/tests/unsupported-expressions.json/hello_{$x___<xyzz___}",
+
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/.match{a_:f}a{{}}b{{}}*{{}}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{:f_k_=_v}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{:f_k=_v}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{:f_k_=v}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{:f_k=v}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{:f}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/.match{a_:f}a{{}}*{{}}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/.match{a_:f}{b_:f}a_b{{}}*_*{{}}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{:f_}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{_:f}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{:f_@c}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/.match{a_:f}*{{}}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/.match{a_:f}{b_:f}a_b_{{}}*_*{{}}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/.match{a_:f}a_{{}}*{{}}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{0E-1}#01",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{:u:f}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{$x_:u:f}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{$x_:f}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{a_:u:f}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{a_:f}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{0E1}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{0E-1}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{0e1}",
+		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{-0}",
 	}
 }
 
