@@ -119,10 +119,10 @@ func oneOf[T comparable](values ...T) func(T) error {
 	}
 }
 
-func eqOrGreaterThan[T constraints.Ordered](min T) func(T) error {
+func eqOrGreaterThan[T constraints.Ordered](v T) func(T) error {
 	return func(value T) error {
-		if value < min {
-			return fmt.Errorf("want greater than %v, got %v", min, value)
+		if value < v {
+			return fmt.Errorf("want greater than %v, got %v", v, value)
 		}
 
 		return nil
