@@ -424,7 +424,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.NameLiteral:
 		return string(v), nil
 	case ast.NumberLiteral:
-		return float64(v), nil
+		return string(v), nil
 	case ast.Variable:
 		val, ok := e.variables[string(v)]
 		if !ok {

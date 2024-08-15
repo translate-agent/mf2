@@ -3,6 +3,7 @@ package builder
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"go.expect.digital/mf2/parse"
@@ -564,7 +565,7 @@ func toLiteral(value any) parse.Literal {
 	default:
 		s = fmt.Sprint(value)
 	case int:
-		return parse.NumberLiteral(float64(v))
+		return parse.NumberLiteral(strconv.Itoa(v))
 	case string:
 		s = v
 	}

@@ -83,7 +83,7 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 						Options: []Option{
 							{
-								Value: NumberLiteral(-3.14),
+								Value: NumberLiteral("-3.14"),
 								Identifier: Identifier{
 									Namespace: "",
 									Name:      "option1",
@@ -129,7 +129,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			input: "Hello, { 1e3 }  World!",
 			want: SimpleMessage{
 				Text("Hello, "),
-				Expression{Operand: NumberLiteral(1e3)},
+				Expression{Operand: NumberLiteral("1e3")},
 				Text("  World!"),
 			},
 		},
@@ -173,14 +173,14 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 						Options: []Option{
 							{
-								Value: NumberLiteral(-1),
+								Value: NumberLiteral("-1"),
 								Identifier: Identifier{
 									Namespace: "ns1",
 									Name:      "option1",
 								},
 							},
 							{
-								Value: NumberLiteral(+1),
+								Value: NumberLiteral("1"),
 								Identifier: Identifier{
 									Namespace: "ns2",
 									Name:      "option2",
@@ -228,7 +228,7 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 						Options: []Option{
 							{
-								Value: NumberLiteral(999),
+								Value: NumberLiteral("999"),
 								Identifier: Identifier{
 									Namespace: "namespace",
 									Name:      "option999",
@@ -269,7 +269,7 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 						{
 							Identifier: Identifier{Name: "k"},
-							Value:      NumberLiteral(2),
+							Value:      NumberLiteral("2"),
 						},
 						{
 							Identifier: Identifier{Namespace: "l", Name: "l"},
@@ -418,14 +418,14 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 						},
 						Attributes: []Attribute{
-							{Identifier: Identifier{Name: "c"}, Value: NumberLiteral(1)},
-							{Identifier: Identifier{Name: "d"}, Value: NumberLiteral(2)},
+							{Identifier: Identifier{Name: "c"}, Value: NumberLiteral("1")},
+							{Identifier: Identifier{Name: "d"}, Value: NumberLiteral("2")},
 						},
 					},
 					// .local $local1={1}
 					LocalDeclaration{
 						Variable:   Variable("local1"),
-						Expression: Expression{Operand: NumberLiteral(1)},
+						Expression: Expression{Operand: NumberLiteral("1")},
 					},
 					// .local $local2={|2| ^private @a @b=2}
 					LocalDeclaration{
@@ -438,7 +438,7 @@ func TestParseComplexMessage(t *testing.T) {
 							},
 							Attributes: []Attribute{
 								{Identifier: Identifier{Name: "a"}},
-								{Identifier: Identifier{Name: "b"}, Value: NumberLiteral(2)},
+								{Identifier: Identifier{Name: "b"}, Value: NumberLiteral("2")},
 							},
 						},
 					},
@@ -518,7 +518,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Keys: []VariantKey{NumberLiteral(1)},
+							Keys: []VariantKey{NumberLiteral("1")},
 							QuotedPattern: QuotedPattern{
 								Text("Hello "),
 								Expression{Operand: Variable("variable")},
@@ -555,7 +555,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Keys: []VariantKey{NumberLiteral(1)},
+							Keys: []VariantKey{NumberLiteral("1")},
 							QuotedPattern: QuotedPattern{
 								Text("Hello "),
 								Expression{Operand: Variable("variable")},
@@ -592,7 +592,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Keys: []VariantKey{NumberLiteral(1)},
+							Keys: []VariantKey{NumberLiteral("1")},
 							QuotedPattern: QuotedPattern{
 								Text("Hello "),
 								Expression{Operand: Variable("variable")},

@@ -22,12 +22,6 @@ func init() {
 	//nolint:lll
 	failing = []string{
 		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
-
-		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{0E-1}#01",
-		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{0E1}",
-		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{0E-1}",
-		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{0e1}",
-		"TestMF2WG/.message-format-wg/test/tests/syntax.json/{-0}",
 	}
 }
 

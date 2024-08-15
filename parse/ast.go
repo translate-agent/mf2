@@ -2,7 +2,6 @@ package parse
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -208,10 +207,10 @@ func (NameLiteral) literal()    {}
 func (NameLiteral) value()      {}
 func (NameLiteral) variantKey() {}
 
-type NumberLiteral float64
+type NumberLiteral string
 
 // String returns MF2 formatted string.
-func (l NumberLiteral) String() string { return strconv.FormatFloat(float64(l), 'f', -1, 64) }
+func (l NumberLiteral) String() string { return string(l) }
 
 func (NumberLiteral) node()       {}
 func (NumberLiteral) literal()    {}
