@@ -465,6 +465,10 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 		return fmt.Errorf("matcher: %w", matcherErr)
 	}
 
+	if hasDuplicateVariants(m.Variants) {
+		return fmt.Errorf("marcher: %w", mf2.ErrDuplicateVariant)
+	}
+
 	pref := e.resolvePreferences(m, res)
 
 	filteredVariants := e.filterVariants(m, pref)
@@ -629,14 +633,10 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 			//	we need the keys's raw string value, not the representation of it
 			//  e.g. the `1` should be equal to `|1|`
 			switch key := key.(type) {
+			default:
+				ks = keyString(key)
 			case ast.CatchAllKey:
 				continue
-			case ast.QuotedLiteral:
-				ks = string(key)
-			case ast.NameLiteral:
-				ks = string(key)
-			case ast.NumberLiteral:
-				ks = key.String()
 			}
 
 			if !slices.Contains(keyOrder, ks) {
@@ -674,15 +674,11 @@ func (e *executer) bestMatchedPattern(filteredVariants []ast.Variant, pref [][]s
 			//	we need the keys's raw string value, not the representation of it
 			//  e.g. the `1` should be equal to `|1|`
 			switch key := key.(type) {
+			default:
+				ks = keyString(key)
 			case ast.CatchAllKey:
 				sortable[tupleIndex].Score = currentScore
 				continue
-			case ast.QuotedLiteral:
-				ks = string(key)
-			case ast.NameLiteral:
-				ks = string(key)
-			case ast.NumberLiteral:
-				ks = key.String()
 			}
 
 			currentScore = slices.Index(matches, ks)
@@ -694,6 +690,43 @@ func (e *executer) bestMatchedPattern(filteredVariants []ast.Variant, pref [][]s
 	}
 
 	return sortable[0].Variant.QuotedPattern
+}
+
+func keyString(key ast.VariantKey) string {
+	switch k := key.(type) {
+	case ast.CatchAllKey:
+		return "*"
+	case ast.QuotedLiteral:
+		return string(k)
+	case ast.NameLiteral:
+		return string(k)
+	case ast.NumberLiteral:
+		return string(k)
+	}
+
+	return ""
+}
+
+func hasDuplicateVariants(variants []ast.Variant) bool {
+	checked := make([][]string, 0, len(variants))
+
+	for _, v := range variants {
+		keys := make([]string, 0, len(v.Keys))
+
+		for _, k := range v.Keys {
+			keys = append(keys, keyString(k))
+		}
+
+		for _, c := range checked {
+			if slices.Equal(c, keys) {
+				return true
+			}
+		}
+
+		checked = append(checked, keys)
+	}
+
+	return false
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {
