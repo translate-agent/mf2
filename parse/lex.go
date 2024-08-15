@@ -279,7 +279,7 @@ func lexPattern(l *lexer) stateFn {
 			}
 
 			return lexExpr(l)
-		case !l.isComplexMessage && len(s) == 0 && r == '.':
+		case !l.isComplexMessage && (len(s) == 0 || isStringWhitespace(s)) && r == '.':
 			l.backup()
 
 			return lexComplexMessage(l)
@@ -300,11 +300,15 @@ func lexPattern(l *lexer) stateFn {
 			isText(r) && (l.isComplexMessage || len(s) >= 1):
 			s += string(r)
 		case r == eof:
-			if len(s) > 0 {
-				return l.emitItem(mk(itemText, s))
+			if len(s) == 0 {
+				return nil
 			}
 
-			return nil
+			if l.prevType == itemQuotedPatternClose && isStringWhitespace(s) {
+				return nil
+			}
+
+			return l.emitItem(mk(itemText, s))
 		}
 	}
 }
@@ -727,6 +731,16 @@ func isWhitespace(r rune) bool {
 	case ' ', '\t', '\r', '\n', '\u3000':
 		return true
 	}
+}
+
+func isStringWhitespace(s string) bool {
+	for _, r := range s {
+		if !isWhitespace(r) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // isReservedStart returns true if r is the first reserved annotation character.
