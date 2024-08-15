@@ -20,6 +20,9 @@ var (
 	// ErrDuplicateOptionName occurs when the same identifier
 	// appears on the left-hand side of more than one option in the same expression.
 	ErrDuplicateOptionName = errors.New("duplicate option name")
+	// ErrDuplicateVariant error occurs when the same list of keys is used
+	// for more than one variant.
+	ErrDuplicateVariant = errors.New("duplicate variant")
 	// ErrMissingFallbackVariant occurs when the number of keys on a variant
 	// does not equal the number of selectors.
 	ErrMissingFallbackVariant = errors.New("missing fallback variant")
