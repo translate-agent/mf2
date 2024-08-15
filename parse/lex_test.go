@@ -536,6 +536,16 @@ func Test_lex(t *testing.T) {
 				mk(itemEOF, ""),
 			},
 		},
+		{
+			name:  "head and tail whitespaces",
+			input: "  {{}}  ",
+			want: []item{
+				mk(itemWhitespace, "  "),
+				mk(itemQuotedPatternOpen, "{{"),
+				mk(itemQuotedPatternClose, "}}"),
+				mk(itemWhitespace, "  "),
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
