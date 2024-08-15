@@ -428,7 +428,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.Variable:
 		val, ok := e.variables[string(v)]
 		if !ok {
-			return NewResolvedValue("{$" + string(v) + "}"), fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
+			return NewResolvedValue("{" + v.String() + "}"), fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
 
 		return val, val.err
