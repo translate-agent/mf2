@@ -694,6 +694,8 @@ func (e *executer) bestMatchedPattern(filteredVariants []ast.Variant, pref [][]s
 
 func keyString(key ast.VariantKey) string {
 	switch k := key.(type) {
+	default:
+		return ""
 	case ast.CatchAllKey:
 		return "*"
 	case ast.QuotedLiteral:
@@ -703,8 +705,6 @@ func keyString(key ast.VariantKey) string {
 	case ast.NumberLiteral:
 		return string(k)
 	}
-
-	return ""
 }
 
 func hasDuplicateVariants(variants []ast.Variant) bool {
