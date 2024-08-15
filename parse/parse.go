@@ -974,11 +974,11 @@ func (p *parser) parseLiteral() (Literal, error) {
 			return nil, fmt.Errorf("number literal: %w", err)
 		}
 
-		return NumberLiteral(num), nil
+		return NumberLiteral(itm.val), nil
 	case itemQuotedLiteral:
-		return QuotedLiteral(p.current().val), nil
+		return QuotedLiteral(itm.val), nil
 	case itemUnquotedLiteral:
-		return NameLiteral(p.current().val), nil
+		return NameLiteral(itm.val), nil
 	}
 }
 
