@@ -109,37 +109,35 @@ func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
 	return r
 }
 
-func newFallbackValue(value any) *ResolvedValue {
-	var s string
-
-	switch v := value.(type) {
-	default:
-		return NewResolvedValue("")
-	case ast.ReservedAnnotation:
-		s = string(v.Start)
-	case ast.PrivateUseAnnotation:
-		s = string(v.Start)
-	case ast.Function:
-		s = ":" + v.Identifier.String()
-	case ast.Variable:
-		s = v.String()
-	case ast.NameLiteral:
-		s = ast.QuotedLiteral(v).String()
-	case ast.NumberLiteral:
-		s = ast.QuotedLiteral(v.String()).String()
-	case ast.QuotedLiteral:
-		s = v.String()
-	case ast.Expression:
-		if v.Operand != nil {
-			return newFallbackValue(v.Operand)
-		}
-
-		return newFallbackValue(v.Annotation)
-	case *ResolvedValue:
-		return newFallbackValue(v.value)
+func newFallbackValue(expr ast.Expression) *ResolvedValue {
+	wrap := func(v string) *ResolvedValue {
+		return NewResolvedValue("{" + v + "}")
 	}
 
-	return NewResolvedValue("{" + s + "}")
+	switch v := expr.Operand.(type) {
+	default:
+		return wrap("\ufffd") // the U+FFFD REPLACEMENT CHARACTER �
+	case nil:
+		switch f := expr.Annotation.(type) {
+		default:
+			return wrap(f.String())
+		case ast.Function:
+			return wrap(":" + f.Identifier.String())
+		case ast.ReservedAnnotation:
+			return wrap(string(f.Start))
+		case ast.PrivateUseAnnotation:
+			// NOTE(mvilks): currently all private use is unsupported
+			return wrap(string(f.Start))
+		}
+	case ast.QuotedLiteral:
+		return wrap(v.String())
+	case ast.NameLiteral:
+		return wrap(ast.QuotedLiteral(v).String())
+	case ast.NumberLiteral:
+		return wrap(ast.QuotedLiteral(v.String()).String())
+	case ast.Variable:
+		return wrap(v.String())
+	}
 }
 
 // New returns a new Template.
@@ -356,12 +354,12 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 
 	switch v := expr.Annotation.(type) {
 	default:
-		return newFallbackValue(v), fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnsupportedExpression)
+		return newFallbackValue(expr), fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnsupportedExpression)
 	case ast.Function:
 		funcName = v.Identifier.Name
 
 		if options, err = e.resolveOptions(v.Options); err != nil {
-			return newFallbackValue(v), fmt.Errorf("expression: %w", err)
+			return newFallbackValue(expr), fmt.Errorf("expression: %w", err)
 		}
 	case ast.PrivateUseAnnotation:
 		// See ".message-format-wg/spec/formatting.md".
@@ -372,13 +370,13 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 		resolutionErr = fmt.Errorf(`expression: private use annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
 
 		if value == nil {
-			return newFallbackValue(v), resolutionErr
+			return newFallbackValue(expr), resolutionErr
 		}
 	case ast.ReservedAnnotation:
 		resolutionErr = fmt.Errorf(`expression: reserved annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
 
 		if value == nil {
-			return newFallbackValue(v), resolutionErr
+			return newFallbackValue(expr), resolutionErr
 		}
 	case nil: // noop, no annotation
 	}
@@ -386,7 +384,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 	if funcName == "" {
 		switch t := value.(type) {
 		default: // TODO(jhorsts): how is unknown type formatted?
-			return newFallbackValue(value), resolutionErr
+			return newFallbackValue(expr), resolutionErr
 		case *ResolvedValue:
 			// the expression has already been resolved before
 			return t, resolutionErr
@@ -430,7 +428,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.Variable:
 		val, ok := e.variables[string(v)]
 		if !ok {
-			return newFallbackValue(v), fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
+			return NewResolvedValue("{$" + string(v) + "}"), fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
 
 		return val, val.err

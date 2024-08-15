@@ -14,7 +14,7 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 	}
 
 	if operand.value == nil {
-		return newFallbackValue(""), nil
+		return NewResolvedValue(""), nil
 	}
 
 	if len(options) > 0 {
