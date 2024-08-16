@@ -138,16 +138,6 @@ func mkErr(format string, args ...any) item {
 	return item{typ: itemError, err: fmt.Errorf(format, args...)}
 }
 
-// mkText creates a new itemWhitespace if every rune in the val
-// is whitespace, itemText otherwise.
-func mkText(val string) item {
-	if isStringWhitespace(val) {
-		return mk(itemWhitespace, val)
-	}
-
-	return mk(itemText, val)
-}
-
 // lex creates a new lexer for the given input string.
 func lex(input string) *lexer {
 	return &lexer{
@@ -281,7 +271,13 @@ func lexPattern(l *lexer) stateFn {
 				l.backup()
 
 				if len(s) > 0 {
-					return l.emitItem(mkText(s))
+					itm := mk(itemText, s)
+
+					if isStringWhitespace(s) {
+						itm.typ = itemWhitespace
+					}
+
+					return l.emitItem(itm)
 				}
 
 				return lexComplexMessage(l)
@@ -326,7 +322,13 @@ func lexPattern(l *lexer) stateFn {
 			}
 
 			if l.prevType == itemQuotedPatternClose {
-				return l.emitItem(mkText(s))
+				itm := mk(itemText, s)
+
+				if isStringWhitespace(s) {
+					itm.typ = itemWhitespace
+				}
+
+				return l.emitItem(itm)
 			}
 
 			return l.emitItem(mk(itemText, s))
