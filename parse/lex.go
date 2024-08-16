@@ -138,6 +138,16 @@ func mkErr(format string, args ...any) item {
 	return item{typ: itemError, err: fmt.Errorf(format, args...)}
 }
 
+// mkText creates a new itemWhitespace if every rune in the val
+// is whitespace, itemText otherwise.
+func mkText(val string) item {
+	if isStringWhitespace(val) {
+		return mk(itemWhitespace, val)
+	}
+
+	return mk(itemText, val)
+}
+
 // lex creates a new lexer for the given input string.
 func lex(input string) *lexer {
 	return &lexer{
@@ -244,6 +254,8 @@ func (l *lexer) emitErrorf(s string, args ...any) stateFn {
 type stateFn func(*lexer) stateFn
 
 // lexPattern is the state function for lexing patterns.
+//
+//nolint:gocognit
 func lexPattern(l *lexer) stateFn {
 	var s string
 
@@ -267,6 +279,11 @@ func lexPattern(l *lexer) stateFn {
 		case r == '{':
 			if l.peek() == '{' { // complex message without declarations
 				l.backup()
+
+				if len(s) > 0 {
+					return l.emitItem(mkText(s))
+				}
+
 				return lexComplexMessage(l)
 			}
 
@@ -304,8 +321,8 @@ func lexPattern(l *lexer) stateFn {
 				return nil
 			}
 
-			if l.prevType == itemQuotedPatternClose && isStringWhitespace(s) {
-				return nil
+			if l.prevType == itemQuotedPatternClose {
+				return l.emitItem(mkText(s))
 			}
 
 			return l.emitItem(mk(itemText, s))
@@ -733,6 +750,7 @@ func isWhitespace(r rune) bool {
 	}
 }
 
+// isStringWhitespace returns true if every rune in the input `isWhitespace`.
 func isStringWhitespace(s string) bool {
 	for _, r := range s {
 		if !isWhitespace(r) {

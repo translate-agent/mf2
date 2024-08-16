@@ -546,6 +546,20 @@ func Test_lex(t *testing.T) {
 				mk(itemWhitespace, "  "),
 			},
 		},
+		{
+			name:  "no whitespace in simple message, unless inside expression",
+			input: "  { |simple| }  ",
+			want: []item{
+				mk(itemText, "  "),
+				mk(itemExpressionOpen, "{"),
+				mk(itemWhitespace, " "),
+				mk(itemQuotedLiteral, "simple"),
+				mk(itemWhitespace, " "),
+				mk(itemExpressionClose, "}"),
+				mk(itemText, "  "),
+				mk(itemEOF, ""),
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

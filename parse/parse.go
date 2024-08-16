@@ -95,7 +95,7 @@ func (p *parser) isComplexMessage() bool {
 	switch p.items[0].typ {
 	default:
 		return false
-	case itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen:
+	case itemWhitespace, itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen:
 		return true
 	}
 }
