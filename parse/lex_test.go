@@ -578,46 +578,43 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 
 	logItems := make([]func(), 0, len(want))
 
-	i := 0
+	got := make([]item, 0, len(want))
 
 	for {
-		got := l.nextItem()
+		itm := l.nextItem()
+		got = append(got, itm)
 
-		if i >= len(want) {
-			t.Errorf(`want nothing, got '%v'`, got)
-
-			for _, f := range logItems {
-				f()
-			}
-
-			return
+		if itm.typ == itemError || itm.typ == itemEOF {
+			break
 		}
+	}
 
-		wantItem := want[i]
+	if len(got) != len(want) {
+		t.Errorf(`want %d items, got %d`, len(want), len(got))
+
+		return
+	}
+
+	for i, wantItem := range want {
+		gotItem := got[i]
 
 		logItems = append(logItems, logItem(t, wantItem, *l))
 
 		if wantItem.typ == itemError {
-			if wantItem.err == nil || got.err == nil || wantItem.err.Error() != got.err.Error() {
-				t.Errorf(`want error '%v', got '%v'`, wantItem.err, got.err)
+			if wantItem.err == nil || gotItem.err == nil || wantItem.err.Error() != gotItem.err.Error() {
+				t.Errorf(`want error '%v', got '%v'`, wantItem.err, gotItem.err)
 			}
 
 			return
 		}
 
-		if wantItem != got {
-			t.Errorf(`want '%v', got '%v'`, wantItem, got)
+		if wantItem != gotItem {
+			t.Errorf(`want '%v', got '%v'`, wantItem, gotItem)
 
 			for _, f := range logItems {
 				f()
 			}
 		}
-
-		if got.typ == itemEOF {
-			break
-		}
-
-		i++
 	}
 }
 
