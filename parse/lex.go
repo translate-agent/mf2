@@ -299,6 +299,10 @@ func lexPattern(l *lexer) stateFn {
 		case !l.isComplexMessage && (len(s) == 0 || isStringWhitespace(s)) && r == '.':
 			l.backup()
 
+			if len(s) > 0 {
+				return l.emitItem(mkText(s))
+			}
+
 			return lexComplexMessage(l)
 		case r == '}':
 			if l.peek() != '}' { // pattern end in complex message?
@@ -332,6 +336,8 @@ func lexPattern(l *lexer) stateFn {
 
 // lexComplexMessage is the state function for lexing complex messages.
 func lexComplexMessage(l *lexer) stateFn {
+	l.isComplexMessage = true
+
 	for {
 		r := l.next()
 

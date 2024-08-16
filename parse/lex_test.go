@@ -552,6 +552,24 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
+			name:  "whitespace with declarations",
+			input: "\t.local $foo =bar {{}}\n",
+			want: []item{
+				mk(itemWhitespace, "\t"),
+				mk(itemLocalKeyword, "local"),
+				mk(itemWhitespace, " "),
+				mk(itemVariable, "foo"),
+				mk(itemWhitespace, " "),
+				mk(itemOperator, "="),
+				mk(itemUnquotedLiteral, "bar"),
+				mk(itemWhitespace, " "),
+				mk(itemQuotedPatternOpen, "{{"),
+				mk(itemQuotedPatternClose, "}}"),
+				mk(itemWhitespace, "\n"),
+				mk(itemEOF, ""),
+			},
+		},
+		{
 			name:  "no whitespace in simple message, unless inside expression",
 			input: "  { |simple| }  ",
 			want: []item{
