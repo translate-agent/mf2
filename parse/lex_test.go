@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"slices"
 	"testing"
 )
 
@@ -580,40 +581,54 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 
 	got := make([]item, 0, len(want))
 
+	i := 0
+
 	for {
 		itm := l.nextItem()
 		got = append(got, itm)
+
+		wantItem := mkErr("missing item")
+		if i < len(want) {
+			wantItem = want[i]
+
+			i++
+		}
+
+		logItems = append(logItems, logItem(t, wantItem, *l))
 
 		if itm.typ == itemError || itm.typ == itemEOF {
 			break
 		}
 	}
 
-	if len(got) != len(want) {
-		t.Errorf(`want %d items, got %d`, len(want), len(got))
+	var wantItem, gotItem item
+	if !slices.EqualFunc(want, got, func(a, b item) bool {
+		if a.typ == itemError {
+			if a.err == nil || b.err == nil || a.err.Error() != b.err.Error() {
+				wantItem = a
+				gotItem = b
 
-		return
-	}
-
-	for i, wantItem := range want {
-		gotItem := got[i]
-
-		logItems = append(logItems, logItem(t, wantItem, *l))
-
-		if wantItem.typ == itemError {
-			if wantItem.err == nil || gotItem.err == nil || wantItem.err.Error() != gotItem.err.Error() {
-				t.Errorf(`want error '%v', got '%v'`, wantItem.err, gotItem.err)
+				return false
 			}
-
-			return
 		}
 
-		if wantItem != gotItem {
-			t.Errorf(`want '%v', got '%v'`, wantItem, gotItem)
+		if !(a.typ == b.typ && a.val == b.val) {
+			wantItem = a
+			gotItem = b
 
-			for _, f := range logItems {
-				f()
-			}
+			return false
+		}
+
+		return true
+	}) {
+		if wantItem.typ == itemUnknown {
+			t.Errorf(`want %d items, got %d items`, len(want), len(got))
+		} else {
+			t.Errorf(`items not equal: want '%s'(%s), got '%s'(%s)`, wantItem.val, wantItem.typ, gotItem.val, gotItem.typ)
+		}
+
+		for _, f := range logItems {
+			f()
 		}
 	}
 }
