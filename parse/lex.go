@@ -296,14 +296,14 @@ func lexPattern(l *lexer) stateFn {
 			}
 
 			return lexExpr(l)
-		case !l.isComplexMessage && (len(s) == 0 || isStringWhitespace(s)) && r == '.':
+		case !l.isComplexMessage && len(s) == 0 && r == '.':
 			l.backup()
 
-			if len(s) > 0 {
-				return l.emitItem(mkText(s))
-			}
-
 			return lexComplexMessage(l)
+		case !l.isComplexMessage && len(s) > 0 && r == '.' && isStringWhitespace(s):
+			l.backup()
+
+			return l.emitItem(mk(itemWhitespace, s))
 		case r == '}':
 			if l.peek() != '}' { // pattern end in complex message?
 				return l.emitErrorf("unescaped } in pattern")
