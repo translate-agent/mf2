@@ -321,16 +321,6 @@ func lexPattern(l *lexer) stateFn {
 				return nil
 			}
 
-			if l.prevType == itemQuotedPatternClose {
-				itm := mk(itemText, s)
-
-				if isStringWhitespace(s) {
-					itm.typ = itemWhitespace
-				}
-
-				return l.emitItem(itm)
-			}
-
 			return l.emitItem(mk(itemText, s))
 		}
 	}
