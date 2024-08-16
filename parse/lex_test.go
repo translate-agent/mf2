@@ -453,6 +453,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionClose, "}"),
 				mk(itemText, " World!"),
 				mk(itemQuotedPatternClose, "}}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -462,6 +463,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "csv_filename"),
 				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -473,6 +475,7 @@ func Test_lex(t *testing.T) {
 				mk(itemVariable, "csv_filename"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -575,8 +578,22 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 
 	logItems := make([]func(), 0, len(want))
 
-	for _, wantItem := range want {
+	i := 0
+
+	for {
 		got := l.nextItem()
+
+		if i >= len(want) {
+			t.Errorf(`want nothing, got '%v'`, got)
+
+			for _, f := range logItems {
+				f()
+			}
+
+			return
+		}
+
+		wantItem := want[i]
 
 		logItems = append(logItems, logItem(t, wantItem, *l))
 
@@ -595,6 +612,12 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 				f()
 			}
 		}
+
+		if got.typ == itemEOF {
+			break
+		}
+
+		i++
 	}
 }
 
