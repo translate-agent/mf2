@@ -544,6 +544,7 @@ func Test_lex(t *testing.T) {
 				mk(itemQuotedPatternOpen, "{{"),
 				mk(itemQuotedPatternClose, "}}"),
 				mk(itemWhitespace, "  "),
+				mk(itemEOF, ""),
 			},
 		},
 		{
