@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -795,4 +796,14 @@ func requireEqualMF2String(t *testing.T, want, got string) {
 	if r.Replace(want) != r.Replace(got) {
 		t.Errorf("want '%s', got '%s'", want, got)
 	}
+}
+
+func BenchmarkParse(b *testing.B) {
+	var tree AST
+
+	for range b.N {
+		tree, _ = Parse(".input {$foo :number} .local $bar = {$foo} .match {$bar} one {{one}} * {{other}}")
+	}
+
+	runtime.KeepAlive(tree)
 }
