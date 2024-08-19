@@ -143,7 +143,7 @@ func lex(input string) *lexer {
 	return &lexer{
 		input:            input,
 		line:             1,
-		isComplexMessage: strings.HasPrefix(input, ".") || strings.HasPrefix(input, "{{"),
+		isComplexMessage: len(input) > 0 && input[:1] == "." || len(input) > 1 && input[:2] == "{{",
 	}
 }
 
@@ -328,13 +328,13 @@ func lexComplexMessage(l *lexer) stateFn {
 				l.isReservedBody = true
 
 				return lexReservedKeyword(l)
-			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
+			case l.input[l.pos:l.pos+len(keywordLocal)] == keywordLocal:
 				l.pos += len(keywordLocal)
 				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
-			case strings.HasPrefix(l.input[l.pos:], keywordInput):
+			case l.input[l.pos:l.pos+len(keywordInput)] == keywordInput:
 				l.pos += len(keywordInput)
 				return l.emitItem(mk(itemInputKeyword, keywordInput))
-			case strings.HasPrefix(l.input[l.pos:], keywordMatch):
+			case l.input[l.pos:l.pos+len(keywordMatch)] == keywordMatch:
 				l.pos += len(keywordMatch)
 				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
 			}
