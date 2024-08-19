@@ -245,7 +245,8 @@ type stateFn func(*lexer) stateFn
 
 // lexPattern is the state function for lexing patterns.
 func lexPattern(l *lexer) stateFn {
-	var s string
+	// var s string
+	sb := new(strings.Builder)
 
 	for {
 		r := l.next()
@@ -256,14 +257,16 @@ func lexPattern(l *lexer) stateFn {
 			l.backup()
 			l.isPattern = false
 
-			return l.emitItem(mk(itemText, s))
+			return l.emitItem(mk(itemText, sb.String()))
 		case r == '\\':
 			next := l.next()
 			if !isEscapedChar(next) {
 				return l.emitErrorf("unexpected escaped char in pattern: %s", string(next))
 			}
 
-			s += string(next)
+			sb.WriteRune(next)
+
+			// s += string(next)
 		case r == '{':
 			if l.peek() == '{' { // complex message without declarations
 				l.backup()
@@ -272,14 +275,14 @@ func lexPattern(l *lexer) stateFn {
 
 			l.backup()
 
-			if len(s) > 0 {
+			if sb.Len() > 0 {
 				l.isExpression = true
 
-				return l.emitItem(mk(itemText, s))
+				return l.emitItem(mk(itemText, sb.String()))
 			}
 
 			return lexExpr(l)
-		case !l.isComplexMessage && len(s) == 0 && r == '.':
+		case !l.isComplexMessage && sb.Len() == 0 && r == '.':
 			l.backup()
 
 			return lexComplexMessage(l)
@@ -291,17 +294,17 @@ func lexPattern(l *lexer) stateFn {
 			l.backup()
 			l.isPattern = false
 
-			if len(s) > 0 {
-				return l.emitItem(mk(itemText, s))
+			if sb.Len() > 0 {
+				return l.emitItem(mk(itemText, sb.String()))
 			}
 
 			return lexComplexMessage(l)
-		case !l.isComplexMessage && len(s) == 0 && isSimpleStart(r),
-			isText(r) && (l.isComplexMessage || len(s) >= 1):
-			s += string(r)
+		case !l.isComplexMessage && sb.Len() == 0 && isSimpleStart(r),
+			isText(r) && (l.isComplexMessage || sb.Len() >= 1):
+			sb.WriteRune(r)
 		case r == eof:
-			if len(s) > 0 {
-				return l.emitItem(mk(itemText, s))
+			if sb.Len() > 0 {
+				return l.emitItem(mk(itemText, sb.String()))
 			}
 
 			return nil
@@ -444,7 +447,8 @@ func lexExpr(l *lexer) stateFn {
 
 // lexQuotedLiteral is the state function for lexing quoted literals.
 func lexQuotedLiteral(l *lexer) stateFn {
-	var s string
+	// var s string
+	sb := new(strings.Builder)
 
 	if r := l.next(); r != '|' {
 		return l.emitErrorf(`unexpected opening character in quoted literal: "%s"`, string(r))
@@ -457,9 +461,9 @@ func lexQuotedLiteral(l *lexer) stateFn {
 		default:
 			return l.emitErrorf(`unknown character in quoted literal: "%s"`, string(r))
 		case isQuoted(r):
-			s += string(r)
+			sb.WriteRune(r)
 		case r == '|': // closing
-			return l.emitItem(mk(itemQuotedLiteral, s))
+			return l.emitItem(mk(itemQuotedLiteral, sb.String()))
 		case r == '\\':
 			next := l.next()
 
@@ -467,7 +471,7 @@ func lexQuotedLiteral(l *lexer) stateFn {
 			default:
 				return l.emitErrorf(`unexpected escaped character in quoted literal: "%s"`, string(r))
 			case '\\', '|':
-				s += string(next)
+				sb.WriteRune(next)
 			case eof:
 				return l.emitErrorf("unexpected eof in quoted literal")
 			}
@@ -477,77 +481,83 @@ func lexQuotedLiteral(l *lexer) stateFn {
 
 // lexUnquotedOrNumberLiteral is the state function for lexing names.
 func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
-	var s string
+	var hasPlus bool
+
+	sb := new(strings.Builder)
 
 	for r := l.next(); isName(r) || r == '+'; r = l.next() {
-		s += string(r)
+		if r == '+' {
+			hasPlus = true
+		}
+
+		sb.WriteRune(r)
 	}
 
 	l.backup()
 
 	var number float64
 
-	if err := json.Unmarshal([]byte(s), &number); err == nil {
-		return l.emitItem(mk(itemNumberLiteral, s))
+	if err := json.Unmarshal([]byte(sb.String()), &number); err == nil {
+		return l.emitItem(mk(itemNumberLiteral, sb.String()))
 	}
 
 	// "+" is not valid unquoted literal character
-	if strings.Contains(s, "+") {
-		return l.emitErrorf(`invalid unquoted literal "%s"`, s)
+	if hasPlus {
+		return l.emitErrorf(`invalid unquoted literal "%s"`, sb.String())
 	}
 
-	return l.emitItem(mk(itemUnquotedLiteral, s))
+	return l.emitItem(mk(itemUnquotedLiteral, sb.String()))
 }
 
 // lexLiteral is the state function for lexing variables.
 func lexVariable(l *lexer) stateFn {
-	var s string
+	sb := new(strings.Builder)
 
 	if r := l.next(); r != variablePrefix {
 		return l.emitErrorf(`invalid variable prefix "%s"`, string(r))
 	}
 
 	for r := l.next(); isName(r); r = l.next() {
-		s += string(r)
+		sb.WriteRune(r)
 	}
 
 	l.backup()
 
-	return l.emitItem(mk(itemVariable, s))
+	return l.emitItem(mk(itemVariable, sb.String()))
 }
 
 // lexLiteral is the state function for reserved keywords.
 func lexReservedKeyword(l *lexer) stateFn {
-	var s string
+	sb := new(strings.Builder)
 
 	if r := l.next(); r != '.' {
 		return l.emitErrorf(`invalid reserved keyword prefix "%s"`, string(r))
 	}
 
 	for r := l.next(); isName(r); r = l.next() {
-		s += string(r)
+		sb.WriteRune(r)
 	}
 
 	l.backup()
 
-	return l.emitItem(mk(itemReservedKeyword, s))
+	return l.emitItem(mk(itemReservedKeyword, sb.String()))
 }
 
 // lexWhitespace is the state function for lexing whitespace.
 func lexWhitespace(l *lexer) stateFn {
-	var ws []rune
+	sb := new(strings.Builder)
 
 	for {
-		v := l.next()
+		r := l.next()
 
 		switch {
 		default:
 			l.backup()
-			return l.emitItem(mk(itemWhitespace, string(ws)))
-		case v == eof:
-			return l.emitItem(mk(itemWhitespace, string(ws)))
-		case isWhitespace(v):
-			ws = append(ws, v)
+			return l.emitItem(mk(itemWhitespace, sb.String()))
+		case r == eof:
+			return l.emitItem(mk(itemWhitespace, sb.String()))
+		case isWhitespace(r):
+			sb.WriteRune(r)
 		}
 	}
 }
@@ -555,32 +565,34 @@ func lexWhitespace(l *lexer) stateFn {
 // lexIdentifier is the state function for lexing identifiers.
 func lexIdentifier(l *lexer) stateFn {
 	var (
-		s   string
 		ns  bool
 		typ itemType
 	)
+
+	sb := new(strings.Builder)
 
 	for {
 		r := l.next()
 
 		switch {
 		default:
-			if len(s) == 0 && typ != itemMarkupClose {
+			if sb.Len() == 0 && typ != itemMarkupClose {
 				return l.emitErrorf("missing %s name", typ)
 			}
 
-			if strings.HasSuffix(s, ":") {
-				return l.emitErrorf(`invalid %s name "%s"`, typ, s)
+			if sb.Len() > 0 && sb.String()[sb.Len()-1:] == ":" {
+				return l.emitErrorf(`invalid %s name "%s"`, typ, sb.String())
 			}
 
 			l.backup()
 
-			return l.emitItem(mk(typ, s))
+			return l.emitItem(mk(typ, sb.String()))
 		case typ == itemUnknown:
 			switch r {
 			default:
 				typ = itemOption
-				s += string(r)
+
+				sb.WriteRune(r)
 			case ':':
 				l.isFunction = true
 				typ = itemFunction
@@ -595,19 +607,20 @@ func lexIdentifier(l *lexer) stateFn {
 				typ = itemAttribute
 			}
 		case isName(r):
-			s += string(r)
-		case len(s) > 0 && r == ':':
+			sb.WriteRune(r)
+		case sb.Len() > 0 && r == ':':
 			if ns {
-				return l.emitErrorf("namespace already defined in identifier: %s", s)
+				return l.emitErrorf("namespace already defined in identifier: %s", sb.String())
 			}
 
 			ns = true
-			s += string(r)
+
+			sb.WriteRune(r)
 		case r == eof:
 			return l.emitErrorf("unexpected eof in identifier")
 
-		case len(s) == 0 && isNameStart(r):
-			s = string(r)
+		case sb.Len() == 0 && isNameStart(r):
+			sb.WriteRune(r)
 		}
 	}
 }
@@ -620,40 +633,40 @@ func lexIdentifier(l *lexer) stateFn {
 //	escaped-char       = backslash ( backslash / "{" / "|" / "}" )
 //	quoted             = "|" *(quoted-char / escaped-char) "|"
 func lexReservedBody(l *lexer) stateFn {
-	var s string
+	sb := new(strings.Builder)
 
 	for {
-		switch v := l.next(); {
-		case v == '{', v == '}', v == '@':
+		switch r := l.next(); {
+		case r == '{', r == '}', r == '@':
 			l.backup()
 			l.isReservedBody = false
 
-			if s == "" {
+			if sb.Len() == 0 {
 				return lexExpr(l)
 			}
 
-			return l.emitItem(mk(itemReservedText, s))
-		case isWhitespace(v):
+			return l.emitItem(mk(itemReservedText, sb.String()))
+		case isWhitespace(r):
 			l.backup()
 
-			if s == "" {
+			if sb.Len() == 0 {
 				return lexWhitespace(l)
 			}
 
-			return l.emitItem(mk(itemReservedText, s))
-		case v == '|':
+			return l.emitItem(mk(itemReservedText, sb.String()))
+		case r == '|':
 			l.backup()
 			return lexQuotedLiteral(l)
-		case v == '\\': // escaped character
+		case r == '\\': // escaped character
 			next := l.next()
 
 			if !isEscapedChar(next) {
-				return l.emitErrorf("unexpected escaped character in reserved body: %s", string(v))
+				return l.emitErrorf("unexpected escaped character in reserved body: %s", string(r))
 			}
 
-			s += string(next)
-		case isReserved(v):
-			s += string(v)
+			sb.WriteRune(next)
+		case isReserved(r):
+			sb.WriteRune(r)
 		}
 	}
 }
