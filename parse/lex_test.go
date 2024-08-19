@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"runtime"
 	"testing"
 )
 
@@ -599,4 +600,21 @@ func logItem(t *testing.T, want item, l lexer) func() {
 			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody), f(l.isMarkup),
 			"'"+l.input[l.pos:]+"'", "'"+wantVal+"'", want.typ, "'"+val+"'", l.item.typ)
 	}
+}
+
+func BenchmarkLex(b *testing.B) {
+	var itm item
+
+	for range b.N {
+		lexer := lex(".input {$foo :number} .local $bar = {$foo} .match {$bar} one {{one}} * {{other}}")
+
+		for {
+			itm = lexer.nextItem()
+			if itm.typ == itemEOF {
+				break
+			}
+		}
+	}
+
+	runtime.KeepAlive(itm)
 }
