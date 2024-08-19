@@ -143,7 +143,7 @@ func lex(input string) *lexer {
 	return &lexer{
 		input:            input,
 		line:             1,
-		isComplexMessage: len(input) > 0 && input[:1] == "." || len(input) > 1 && input[:2] == "{{",
+		isComplexMessage: strings.HasPrefix(input, ".") || strings.HasPrefix(input, "{{"),
 	}
 }
 
@@ -325,13 +325,13 @@ func lexComplexMessage(l *lexer) stateFn {
 				l.isReservedBody = true
 
 				return lexReservedKeyword(l)
-			case l.input[l.pos:l.pos+len(keywordLocal)] == keywordLocal:
+			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
 				l.pos += len(keywordLocal)
 				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
-			case l.input[l.pos:l.pos+len(keywordInput)] == keywordInput:
+			case strings.HasPrefix(l.input[l.pos:], keywordInput):
 				l.pos += len(keywordInput)
 				return l.emitItem(mk(itemInputKeyword, keywordInput))
-			case l.input[l.pos:l.pos+len(keywordMatch)] == keywordMatch:
+			case strings.HasPrefix(l.input[l.pos:], keywordMatch):
 				l.pos += len(keywordMatch)
 				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
 			}
@@ -573,7 +573,7 @@ func lexIdentifier(l *lexer) stateFn {
 				return l.emitErrorf("missing %s name", typ)
 			}
 
-			if sb.Len() > 0 && sb.String()[sb.Len()-1:] == ":" {
+			if strings.HasSuffix(sb.String(), ":") {
 				return l.emitErrorf(`invalid %s name "%s"`, typ, sb.String())
 			}
 
