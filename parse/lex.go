@@ -245,7 +245,6 @@ type stateFn func(*lexer) stateFn
 
 // lexPattern is the state function for lexing patterns.
 func lexPattern(l *lexer) stateFn {
-	// var s string
 	sb := new(strings.Builder)
 
 	for {
@@ -265,8 +264,6 @@ func lexPattern(l *lexer) stateFn {
 			}
 
 			sb.WriteRune(next)
-
-			// s += string(next)
 		case r == '{':
 			if l.peek() == '{' { // complex message without declarations
 				l.backup()
@@ -447,12 +444,10 @@ func lexExpr(l *lexer) stateFn {
 
 // lexQuotedLiteral is the state function for lexing quoted literals.
 func lexQuotedLiteral(l *lexer) stateFn {
-	// var s string
 	sb := new(strings.Builder)
 
-	if r := l.next(); r != '|' {
-		return l.emitErrorf(`unexpected opening character in quoted literal: "%s"`, string(r))
-	}
+	// discard opening quote |
+	l.next()
 
 	for {
 		r := l.next()
@@ -513,9 +508,8 @@ func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
 func lexVariable(l *lexer) stateFn {
 	sb := new(strings.Builder)
 
-	if r := l.next(); r != variablePrefix {
-		return l.emitErrorf(`invalid variable prefix "%s"`, string(r))
-	}
+	// discard variablePrefix $
+	l.next()
 
 	for r := l.next(); isName(r); r = l.next() {
 		sb.WriteRune(r)
@@ -530,9 +524,8 @@ func lexVariable(l *lexer) stateFn {
 func lexReservedKeyword(l *lexer) stateFn {
 	sb := new(strings.Builder)
 
-	if r := l.next(); r != '.' {
-		return l.emitErrorf(`invalid reserved keyword prefix "%s"`, string(r))
-	}
+	// discard reserved keyword starting sigil .
+	l.next()
 
 	for r := l.next(); isName(r); r = l.next() {
 		sb.WriteRune(r)
