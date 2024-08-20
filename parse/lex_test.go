@@ -602,6 +602,12 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 
 	got := make([]lexer, 0, len(want))
 
+	logN := func(n int) {
+		for i := range n {
+			logItem(t, want[i], got[i])
+		}
+	}
+
 	// collect all lexer states
 
 	for {
@@ -621,6 +627,7 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 
 	for i, wantItem := range want {
 		if i >= len(got) {
+			logN(i)
 			t.Fatalf("want %v, got nothing", wantItem)
 		}
 
@@ -628,18 +635,16 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 
 		if wantItem.typ == itemError {
 			if wantItem.err == nil || gotItem.err == nil || wantItem.err.Error() != gotItem.err.Error() {
-				t.Errorf(`want error '%v', got '%v'`, wantItem.err, gotItem.err)
+				logN(i + 1)
+				t.Fatalf(`want error '%v', got '%v'`, wantItem.err, gotItem.err)
 			}
 
 			return
 		}
 
 		if wantItem != gotItem {
-			t.Errorf(`want '%v', got '%v'`, wantItem, gotItem)
-
-			for j := range i + 1 {
-				logItem(t, want[j], got[j])
-			}
+			logN(i + 1)
+			t.Fatalf(`want '%v', got '%v'`, wantItem, gotItem)
 		}
 	}
 }
