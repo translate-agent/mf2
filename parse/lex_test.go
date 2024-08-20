@@ -600,16 +600,15 @@ func Test_lex(t *testing.T) {
 func assertItems(t *testing.T, want []item, l *lexer) {
 	t.Helper()
 
-	logItems := make([]func(), 0, len(want))
-	got := make([]item, 0, len(want))
+	got := make([]lexer, 0, len(want))
 
-	// collect all items
+	// collect all lexer states
 
 	for {
-		v := l.nextItem()
-		got = append(got, v)
+		itm := l.nextItem()
+		got = append(got, *l)
 
-		if v.typ == itemEOF || v.typ == itemError {
+		if itm.typ == itemEOF || itm.typ == itemError {
 			break
 		}
 	}
@@ -625,9 +624,7 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 			t.Fatalf("want %v, got nothing", wantItem)
 		}
 
-		gotItem := got[i]
-
-		logItems = append(logItems, logItem(t, wantItem, *l))
+		gotItem := got[i].item
 
 		if wantItem.typ == itemError {
 			if wantItem.err == nil || gotItem.err == nil || wantItem.err.Error() != gotItem.err.Error() {
@@ -638,41 +635,39 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 		}
 
 		if wantItem != gotItem {
-			t.Errorf(`want '%v', got '%v'`, wantItem, got)
+			t.Errorf(`want '%v', got '%v'`, wantItem, gotItem)
 
-			for _, f := range logItems {
-				f()
+			for j := range i + 1 {
+				logItem(t, want[j], got[j])
 			}
 		}
 	}
 }
 
-func logItem(t *testing.T, want item, l lexer) func() {
+func logItem(t *testing.T, want item, l lexer) {
 	t.Helper()
 
-	return func() {
-		f := func(b bool) string {
-			if b {
-				return "✓"
-			}
-
-			return " "
+	f := func(b bool) string {
+		if b {
+			return "✓"
 		}
 
-		wantVal := want.val
-		if want.typ == itemError {
-			wantVal = want.err.Error()
-		}
-
-		val := l.item.val
-		if l.item.typ == itemError {
-			val = l.item.err.Error()
-		}
-
-		t.Logf("c%s p%s e%s f%s r%s m%s %-30s e%s(%s) a%s(%s)\n",
-			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody), f(l.isMarkup),
-			"'"+l.input[l.pos:]+"'", "'"+wantVal+"'", want.typ, "'"+val+"'", l.item.typ)
+		return " "
 	}
+
+	wantVal := want.val
+	if want.typ == itemError {
+		wantVal = want.err.Error()
+	}
+
+	val := l.item.val
+	if l.item.typ == itemError {
+		val = l.item.err.Error()
+	}
+
+	t.Logf("c%s p%s e%s f%s r%s m%s %-30s e%s(%s) a%s(%s)\n",
+		f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody), f(l.isMarkup),
+		"'"+l.input[l.pos:]+"'", "'"+wantVal+"'", want.typ, "'"+val+"'", l.item.typ)
 }
 
 func BenchmarkLex(b *testing.B) {
