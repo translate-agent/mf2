@@ -273,7 +273,7 @@ func lexStart(l *lexer) stateFn {
 
 		switch {
 		default:
-			return l.emitErrorf(`unexpected start char "%s" in message`, string(r))
+			return l.emitErrorf(`unexpected start char "%s"`, string(r))
 		case isWhitespace(r):
 			sb.WriteRune(r)
 		case isSimpleStart(r):
