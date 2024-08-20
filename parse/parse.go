@@ -92,7 +92,7 @@ func (p *parser) collect() error {
 
 // isComplexMessage returns true if first token is one of the complex message tokens.
 func (p *parser) isComplexMessage() bool {
-	switch p.items[0].typ {
+	switch p.peekNonWS().typ {
 	default:
 		return false
 	case itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen:

@@ -19,10 +19,15 @@ func Test_lex(t *testing.T) {
 			want:  []item{mk(itemEOF, "")},
 		},
 		{
-			name:  "text",
-			input: `escaped text: \\ \} \{`,
+			name:  "whitespace simple message",
+			input: " ",
+			want:  []item{mk(itemText, " "), mk(itemEOF, "")},
+		},
+		{
+			name:  "escaped characters",
+			input: `\\ \} \{ \|`,
 			want: []item{
-				mk(itemText, `escaped text: \ } {`),
+				mk(itemText, `\ } { |`),
 				mk(itemEOF, ""),
 			},
 		},
@@ -30,7 +35,7 @@ func Test_lex(t *testing.T) {
 			name:  "unescaped }",
 			input: `}`,
 			want: []item{
-				mkErr("unescaped } in pattern"),
+				mkErr(`unexpected start char "}"`),
 			},
 		},
 		{
@@ -454,6 +459,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionClose, "}"),
 				mk(itemText, " World!"),
 				mk(itemQuotedPatternClose, "}}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -463,6 +469,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "csv_filename"),
 				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -474,6 +481,7 @@ func Test_lex(t *testing.T) {
 				mk(itemVariable, "csv_filename"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -537,6 +545,49 @@ func Test_lex(t *testing.T) {
 				mk(itemEOF, ""),
 			},
 		},
+		{
+			name:  "head and tail whitespaces",
+			input: "  {{}}  ",
+			want: []item{
+				mk(itemWhitespace, "  "),
+				mk(itemQuotedPatternOpen, "{{"),
+				mk(itemQuotedPatternClose, "}}"),
+				mk(itemWhitespace, "  "),
+				mk(itemEOF, ""),
+			},
+		},
+		{
+			name:  "whitespace with declarations",
+			input: "\t.local $foo =bar {{}}\n",
+			want: []item{
+				mk(itemWhitespace, "\t"),
+				mk(itemLocalKeyword, "local"),
+				mk(itemWhitespace, " "),
+				mk(itemVariable, "foo"),
+				mk(itemWhitespace, " "),
+				mk(itemOperator, "="),
+				mk(itemUnquotedLiteral, "bar"),
+				mk(itemWhitespace, " "),
+				mk(itemQuotedPatternOpen, "{{"),
+				mk(itemQuotedPatternClose, "}}"),
+				mk(itemWhitespace, "\n"),
+				mk(itemEOF, ""),
+			},
+		},
+		{
+			name:  "no whitespace in simple message, unless inside expression",
+			input: "  { |simple| }  ",
+			want: []item{
+				mk(itemText, "  "),
+				mk(itemExpressionOpen, "{"),
+				mk(itemWhitespace, " "),
+				mk(itemQuotedLiteral, "simple"),
+				mk(itemWhitespace, " "),
+				mk(itemExpressionClose, "}"),
+				mk(itemText, "  "),
+				mk(itemEOF, ""),
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -549,64 +600,86 @@ func Test_lex(t *testing.T) {
 func assertItems(t *testing.T, want []item, l *lexer) {
 	t.Helper()
 
-	logItems := make([]func(), 0, len(want))
+	got := make([]lexer, 0, len(want))
 
-	for _, wantItem := range want {
-		got := l.nextItem()
+	logN := func(n int) {
+		for i := range n {
+			logItem(t, want[i], got[i])
+		}
+	}
 
-		logItems = append(logItems, logItem(t, wantItem, *l))
+	// collect all lexer states
+
+	for {
+		itm := l.nextItem()
+		got = append(got, *l)
+
+		if itm.typ == itemEOF || itm.typ == itemError {
+			break
+		}
+	}
+
+	// asserts
+
+	if len(want) != len(got) {
+		t.Errorf("want %d items, got %d", len(want), len(got))
+	}
+
+	for i, wantItem := range want {
+		if i >= len(got) {
+			logN(i)
+			t.Fatalf("want %v, got nothing", wantItem)
+		}
+
+		gotItem := got[i].item
 
 		if wantItem.typ == itemError {
-			if wantItem.err == nil || got.err == nil || wantItem.err.Error() != got.err.Error() {
-				t.Errorf(`want error '%v', got '%v'`, wantItem.err, got.err)
+			if wantItem.err == nil || gotItem.err == nil || wantItem.err.Error() != gotItem.err.Error() {
+				logN(i + 1)
+				t.Fatalf(`want error '%v', got '%v'`, wantItem.err, gotItem.err)
 			}
 
 			return
 		}
 
-		if wantItem != got {
-			t.Errorf(`want '%v', got '%v'`, wantItem, got)
-
-			for _, f := range logItems {
-				f()
-			}
+		if wantItem != gotItem {
+			logN(i + 1)
+			t.Fatalf(`want '%v', got '%v'`, wantItem, gotItem)
 		}
 	}
 }
 
-func logItem(t *testing.T, want item, l lexer) func() {
+func logItem(t *testing.T, want item, l lexer) {
 	t.Helper()
 
-	return func() {
-		f := func(b bool) string {
-			if b {
-				return "✓"
-			}
-
-			return " "
+	f := func(b bool) string {
+		if b {
+			return "✓"
 		}
 
-		wantVal := want.val
-		if want.typ == itemError {
-			wantVal = want.err.Error()
-		}
-
-		val := l.item.val
-		if l.item.typ == itemError {
-			val = l.item.err.Error()
-		}
-
-		t.Logf("c%s p%s e%s f%s r%s m%s %-30s e%s(%s) a%s(%s)\n",
-			f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody), f(l.isMarkup),
-			"'"+l.input[l.pos:]+"'", "'"+wantVal+"'", want.typ, "'"+val+"'", l.item.typ)
+		return " "
 	}
+
+	wantVal := want.val
+	if want.typ == itemError {
+		wantVal = want.err.Error()
+	}
+
+	val := l.item.val
+	if l.item.typ == itemError {
+		val = l.item.err.Error()
+	}
+
+	t.Logf("c%s p%s e%s f%s r%s m%s %-30s e%s(%s) a%s(%s)\n",
+		f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody), f(l.isMarkup),
+		"'"+l.input[l.pos:]+"'", "'"+wantVal+"'", want.typ, "'"+val+"'", l.item.typ)
 }
 
 func BenchmarkLex(b *testing.B) {
 	var itm item
 
 	for range b.N {
-		lexer := lex(".input {$foo :number} .local $bar = {$foo} .match {$bar} one {{one}} * {{other}}")
+		lexer := lex("  .input {$foo :number} .local $bar = {$foo} .match {$bar} one {{one}} * {{other}}  ")
 
 		for {
 			itm = lexer.nextItem()
