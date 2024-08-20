@@ -151,7 +151,7 @@ func lex(input string) *lexer {
 // See ".message-format-wg/spec/message.abnf".
 type lexer struct {
 	input     string
-	item      item     // previous item or start char with optional start whitespaces in simple message
+	item      item     // previous item or start char with optional preceding whitespaces in simple message
 	prevType  itemType // previous non-whitespace item type
 	pos, line int
 
@@ -246,7 +246,7 @@ type stateFn func(*lexer) stateFn
 
 // lexStart is the state function to lex the start of the MF2.
 func lexStart(l *lexer) stateFn {
-	// Whitespaces at the start. When simple message, last char is start char of the simple message.
+	// Whitespaces at the start. When simple message, it is start char with optional preceding whitespaces.
 	sb := new(strings.Builder)
 
 	complexItem := func() stateFn {
@@ -304,7 +304,7 @@ func lexStart(l *lexer) stateFn {
 func lexPattern(l *lexer) stateFn {
 	sb := new(strings.Builder)
 
-	// write preceding whitespace and start character if simple message.
+	// write start character with optional preceding whitespaces if simple message.
 	if l.prevType == itemUnknown && l.item.typ == itemText {
 		sb.WriteString(l.item.val)
 	}
