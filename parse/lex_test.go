@@ -459,6 +459,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionClose, "}"),
 				mk(itemText, " World!"),
 				mk(itemQuotedPatternClose, "}}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -468,6 +469,7 @@ func Test_lex(t *testing.T) {
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "csv_filename"),
 				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -479,6 +481,7 @@ func Test_lex(t *testing.T) {
 				mk(itemVariable, "csv_filename"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionClose, "}"),
+				mk(itemEOF, ""),
 			},
 		},
 		{
@@ -598,21 +601,43 @@ func assertItems(t *testing.T, want []item, l *lexer) {
 	t.Helper()
 
 	logItems := make([]func(), 0, len(want))
+	got := make([]item, 0, len(want))
 
-	for _, wantItem := range want {
-		got := l.nextItem()
+	// collect all items
+
+	for {
+		v := l.nextItem()
+		got = append(got, v)
+
+		if v.typ == itemEOF || v.typ == itemError {
+			break
+		}
+	}
+
+	// asserts
+
+	if len(want) != len(got) {
+		t.Errorf("want %d items, got %d", len(want), len(got))
+	}
+
+	for i, wantItem := range want {
+		if i >= len(got) {
+			t.Fatalf("want %v, got nothing", wantItem)
+		}
+
+		gotItem := got[i]
 
 		logItems = append(logItems, logItem(t, wantItem, *l))
 
 		if wantItem.typ == itemError {
-			if wantItem.err == nil || got.err == nil || wantItem.err.Error() != got.err.Error() {
-				t.Errorf(`want error '%v', got '%v'`, wantItem.err, got.err)
+			if wantItem.err == nil || gotItem.err == nil || wantItem.err.Error() != gotItem.err.Error() {
+				t.Errorf(`want error '%v', got '%v'`, wantItem.err, gotItem.err)
 			}
 
 			return
 		}
 
-		if wantItem != got {
+		if wantItem != gotItem {
 			t.Errorf(`want '%v', got '%v'`, wantItem, got)
 
 			for _, f := range logItems {
