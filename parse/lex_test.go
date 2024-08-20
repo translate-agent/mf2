@@ -654,7 +654,7 @@ func BenchmarkLex(b *testing.B) {
 	var itm item
 
 	for range b.N {
-		lexer := lex(".input {$foo :number} .local $bar = {$foo} .match {$bar} one {{one}} * {{other}}")
+		lexer := lex("  .input {$foo :number} .local $bar = {$foo} .match {$bar} one {{one}} * {{other}}  ")
 
 		for {
 			itm = lexer.nextItem()
