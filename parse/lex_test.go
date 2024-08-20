@@ -35,7 +35,7 @@ func Test_lex(t *testing.T) {
 			name:  "unescaped }",
 			input: `}`,
 			want: []item{
-				mkErr(`unexpected start char "}" in message`),
+				mkErr(`unexpected start char "}"`),
 			},
 		},
 		{
