@@ -260,6 +260,14 @@ func lexStart(l *lexer) stateFn {
 		return lexComplexMessage(l)
 	}
 
+	simpleItem := func(r rune) stateFn {
+		sb.WriteRune(r)
+
+		l.item = mk(itemText, sb.String())
+
+		return lexPattern(l)
+	}
+
 	for {
 		r := l.next()
 
@@ -269,11 +277,14 @@ func lexStart(l *lexer) stateFn {
 		case isWhitespace(r):
 			sb.WriteRune(r)
 		case isSimpleStart(r):
-			sb.WriteRune(r)
+			return simpleItem(r)
+		case r == '\\':
+			next := l.next()
+			if !isEscapedChar(next) {
+				return l.emitErrorf(`unexpected escaped char "%s"`, string(next))
+			}
 
-			l.item = mk(itemText, sb.String())
-
-			return lexPattern(l)
+			return simpleItem(next)
 		case r == '.':
 			return complexItem()
 		case r == '{':

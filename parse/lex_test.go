@@ -24,10 +24,10 @@ func Test_lex(t *testing.T) {
 			want:  []item{mk(itemText, " "), mk(itemEOF, "")},
 		},
 		{
-			name:  "text",
-			input: `escaped text: \\ \} \{`,
+			name:  "escaped characters",
+			input: `\\ \} \{ \|`,
 			want: []item{
-				mk(itemText, `escaped text: \ } {`),
+				mk(itemText, `\ } { |`),
 				mk(itemEOF, ""),
 			},
 		},
