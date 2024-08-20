@@ -141,9 +141,8 @@ func mkErr(format string, args ...any) item {
 // lex creates a new lexer for the given input string.
 func lex(input string) *lexer {
 	return &lexer{
-		input:            input,
-		line:             1,
-		isComplexMessage: strings.HasPrefix(input, ".") || strings.HasPrefix(input, "{{"),
+		input: input,
+		line:  1,
 	}
 }
 
@@ -152,8 +151,8 @@ func lex(input string) *lexer {
 // See ".message-format-wg/spec/message.abnf".
 type lexer struct {
 	input     string
-	item      item
-	prevType  itemType // prev non-whitespace
+	item      item     // previous item or start char with optional start whitespaces in simple message
+	prevType  itemType // previous non-whitespace item type
 	pos, line int
 
 	isFunction,
@@ -215,6 +214,8 @@ func (l *lexer) nextItem() item {
 		state = lexPattern
 	case l.isComplexMessage:
 		state = lexComplexMessage
+	case l.pos == 0:
+		state = lexStart
 	}
 
 	for {
@@ -243,9 +244,70 @@ func (l *lexer) emitErrorf(s string, args ...any) stateFn {
 // stateFn is a function that returns the next state function.
 type stateFn func(*lexer) stateFn
 
+// lexStart is the state function to lex the start of the MF2.
+func lexStart(l *lexer) stateFn {
+	// Whitespaces at the start. When simple message, last char is start char of the simple message.
+	sb := new(strings.Builder)
+
+	complexItem := func() stateFn {
+		l.isComplexMessage = true
+		l.backup()
+
+		if sb.Len() > 0 {
+			return l.emitItem(mk(itemWhitespace, sb.String()))
+		}
+
+		return lexComplexMessage(l)
+	}
+
+	for {
+		r := l.next()
+
+		switch {
+		default:
+			return l.emitErrorf(`unexpected start char "%s" in message`, string(r))
+		case isWhitespace(r):
+			sb.WriteRune(r)
+		case isSimpleStart(r):
+			sb.WriteRune(r)
+
+			l.item = mk(itemText, sb.String())
+
+			return lexPattern(l)
+		case r == '.':
+			return complexItem()
+		case r == '{':
+			if l.peek() == '{' {
+				return complexItem()
+			}
+
+			// expression in simple message
+
+			l.backup()
+
+			if sb.Len() > 0 {
+				return l.emitItem(mk(itemText, sb.String()))
+			}
+
+			return lexPattern(l)
+		case r == eof:
+			if sb.Len() > 0 {
+				return l.emitItem(mk(itemText, sb.String()))
+			}
+
+			return nil
+		}
+	}
+}
+
 // lexPattern is the state function for lexing patterns.
 func lexPattern(l *lexer) stateFn {
 	sb := new(strings.Builder)
+
+	// write preceding whitespace and start character if simple message.
+	if l.prevType == itemUnknown && l.item.typ == itemText {
+		sb.WriteString(l.item.val)
+	}
 
 	for {
 		r := l.next()
@@ -279,10 +341,6 @@ func lexPattern(l *lexer) stateFn {
 			}
 
 			return lexExpr(l)
-		case !l.isComplexMessage && sb.Len() == 0 && r == '.':
-			l.backup()
-
-			return lexComplexMessage(l)
 		case r == '}':
 			if l.peek() != '}' { // pattern end in complex message?
 				return l.emitErrorf("unescaped } in pattern")
@@ -296,8 +354,7 @@ func lexPattern(l *lexer) stateFn {
 			}
 
 			return lexComplexMessage(l)
-		case !l.isComplexMessage && sb.Len() == 0 && isSimpleStart(r),
-			isText(r) && (l.isComplexMessage || sb.Len() >= 1):
+		case isText(r):
 			sb.WriteRune(r)
 		case r == eof:
 			if sb.Len() > 0 {

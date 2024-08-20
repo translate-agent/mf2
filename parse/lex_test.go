@@ -19,6 +19,11 @@ func Test_lex(t *testing.T) {
 			want:  []item{mk(itemEOF, "")},
 		},
 		{
+			name:  "whitespace simple message",
+			input: " ",
+			want:  []item{mk(itemText, " "), mk(itemEOF, "")},
+		},
+		{
 			name:  "text",
 			input: `escaped text: \\ \} \{`,
 			want: []item{
@@ -30,7 +35,7 @@ func Test_lex(t *testing.T) {
 			name:  "unescaped }",
 			input: `}`,
 			want: []item{
-				mkErr("unescaped } in pattern"),
+				mkErr(`unexpected start char "}" in message`),
 			},
 		},
 		{
@@ -534,6 +539,49 @@ func Test_lex(t *testing.T) {
 				mk(itemUnquotedLiteral, "b"),
 				mk(itemExpressionClose, "}"),
 				//
+				mk(itemEOF, ""),
+			},
+		},
+		{
+			name:  "head and tail whitespaces",
+			input: "  {{}}  ",
+			want: []item{
+				mk(itemWhitespace, "  "),
+				mk(itemQuotedPatternOpen, "{{"),
+				mk(itemQuotedPatternClose, "}}"),
+				mk(itemWhitespace, "  "),
+				mk(itemEOF, ""),
+			},
+		},
+		{
+			name:  "whitespace with declarations",
+			input: "\t.local $foo =bar {{}}\n",
+			want: []item{
+				mk(itemWhitespace, "\t"),
+				mk(itemLocalKeyword, "local"),
+				mk(itemWhitespace, " "),
+				mk(itemVariable, "foo"),
+				mk(itemWhitespace, " "),
+				mk(itemOperator, "="),
+				mk(itemUnquotedLiteral, "bar"),
+				mk(itemWhitespace, " "),
+				mk(itemQuotedPatternOpen, "{{"),
+				mk(itemQuotedPatternClose, "}}"),
+				mk(itemWhitespace, "\n"),
+				mk(itemEOF, ""),
+			},
+		},
+		{
+			name:  "no whitespace in simple message, unless inside expression",
+			input: "  { |simple| }  ",
+			want: []item{
+				mk(itemText, "  "),
+				mk(itemExpressionOpen, "{"),
+				mk(itemWhitespace, " "),
+				mk(itemQuotedLiteral, "simple"),
+				mk(itemWhitespace, " "),
+				mk(itemExpressionClose, "}"),
+				mk(itemText, "  "),
 				mk(itemEOF, ""),
 			},
 		},
