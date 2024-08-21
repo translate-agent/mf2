@@ -532,7 +532,7 @@ func lexQuotedLiteral(l *lexer) stateFn {
 
 			switch next {
 			default:
-				return l.emitErrorf(`unexpected escaped character "%c" in quoted literal`, r)
+				return l.emitErrorf(`unexpected escaped character "%c" in quoted literal`, next)
 			case '\\', '|':
 				sb.WriteRune(next)
 			case eof:
@@ -722,7 +722,7 @@ func lexReservedBody(l *lexer) stateFn {
 			next := l.next()
 
 			if !isEscapedChar(next) {
-				return l.emitErrorf(`unexpected escaped character "%c" in reserved body`, r)
+				return l.emitErrorf(`unexpected escaped character "%c" in reserved body`, next)
 			}
 
 			sb.WriteRune(next)
