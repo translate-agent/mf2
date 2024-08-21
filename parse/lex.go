@@ -273,7 +273,7 @@ func lexStart(l *lexer) stateFn {
 
 		switch {
 		default:
-			return l.emitErrorf(`unexpected start char "%s"`, string(r))
+			return l.emitErrorf(`unexpected start char "%c"`, r)
 		case isWhitespace(r):
 			sb.WriteRune(r)
 		case isSimpleStart(r):
@@ -281,7 +281,7 @@ func lexStart(l *lexer) stateFn {
 		case r == '\\':
 			next := l.next()
 			if !isEscapedChar(next) {
-				return l.emitErrorf(`unexpected escaped char "%s"`, string(next))
+				return l.emitErrorf(`unexpected escaped char "%c"`, next)
 			}
 
 			return simpleItem(next)
@@ -333,7 +333,7 @@ func lexPattern(l *lexer) stateFn {
 		case r == '\\':
 			next := l.next()
 			if !isEscapedChar(next) {
-				return l.emitErrorf("unexpected escaped char in pattern: %s", string(next))
+				return l.emitErrorf(`unexpected escaped char "%c" in pattern`, next)
 			}
 
 			sb.WriteRune(next)
@@ -384,7 +384,7 @@ func lexComplexMessage(l *lexer) stateFn {
 
 		switch {
 		default:
-			return l.emitErrorf("unknown character in complex message: %s", string(r))
+			return l.emitErrorf(`unknown character "%c" in complex message`, r)
 
 		case r == '.':
 			switch {
@@ -522,7 +522,7 @@ func lexQuotedLiteral(l *lexer) stateFn {
 
 		switch {
 		default:
-			return l.emitErrorf(`unknown character in quoted literal: "%s"`, string(r))
+			return l.emitErrorf(`unknown character "%c" in quoted literal`, r)
 		case isQuoted(r):
 			sb.WriteRune(r)
 		case r == '|': // closing
@@ -532,7 +532,7 @@ func lexQuotedLiteral(l *lexer) stateFn {
 
 			switch next {
 			default:
-				return l.emitErrorf(`unexpected escaped character in quoted literal: "%s"`, string(r))
+				return l.emitErrorf(`unexpected escaped character "%c" in quoted literal`, r)
 			case '\\', '|':
 				sb.WriteRune(next)
 			case eof:
@@ -722,7 +722,7 @@ func lexReservedBody(l *lexer) stateFn {
 			next := l.next()
 
 			if !isEscapedChar(next) {
-				return l.emitErrorf("unexpected escaped character in reserved body: %s", string(r))
+				return l.emitErrorf(`unexpected escaped character "%c" in reserved body`, r)
 			}
 
 			sb.WriteRune(next)
