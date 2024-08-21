@@ -531,7 +531,7 @@ func lexQuotedLiteral(l *lexer) stateFn {
 			next := l.next()
 
 			if !isEscapedChar(next) {
-				return l.emitErrorf(`unexpected escaped character "%c" in quoted literal`, r)
+				return l.emitErrorf(`unexpected escaped character "%c" in quoted literal`, next)
 			}
 
 			sb.WriteRune(next)
