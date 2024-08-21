@@ -530,14 +530,11 @@ func lexQuotedLiteral(l *lexer) stateFn {
 		case r == '\\':
 			next := l.next()
 
-			switch next {
-			default:
+			if !isEscapedChar(next) {
 				return l.emitErrorf(`unexpected escaped character "%c" in quoted literal`, next)
-			case '\\', '|':
-				sb.WriteRune(next)
-			case eof:
-				return l.emitErrorf("unexpected eof in quoted literal")
 			}
+
+			sb.WriteRune(next)
 		}
 	}
 }
