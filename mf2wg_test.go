@@ -81,6 +81,10 @@ func run(t *testing.T, test Test) {
 		options = append(options, template.WithLocale(*test.Locale))
 	}
 
+	if test.Description != "" {
+		t.Log(test.Description)
+	}
+
 	templ, err := template.New(options...).Parse(test.Src)
 	// The implementation returns error in two places:
 	// - when parsing the template
@@ -125,6 +129,8 @@ type Tests struct {
 type Test struct {
 	// The MF2 message to be tested.
 	Src string `json:"src"`
+	// Information about the test scenario.
+	Description string `json:"description"`
 	// The locale to use for formatting. Defaults to 'en-US'.
 	Locale *language.Tag `json:"locale"`
 	// Parameters to pass in to the formatter for resolving external variables.
