@@ -35,7 +35,7 @@ func Test_lex(t *testing.T) {
 			name:  "unescaped }",
 			input: `}`,
 			want: []item{
-				mkErr(`unexpected start char "}"`),
+				mkErrorf(`unexpected start char "}"`),
 			},
 		},
 		{
@@ -77,7 +77,7 @@ func Test_lex(t *testing.T) {
 			input: "{:func:}",
 			want: []item{
 				mk(itemExpressionOpen, "{"),
-				mkErr(`invalid function name "func:"`),
+				mkErrorf(`invalid function name "func:"`),
 			},
 		},
 		{
@@ -85,7 +85,7 @@ func Test_lex(t *testing.T) {
 			input: "{:}",
 			want: []item{
 				mk(itemExpressionOpen, "{"),
-				mkErr("missing function name"),
+				mkErrorf("missing function name"),
 			},
 		},
 		{
@@ -163,7 +163,7 @@ func Test_lex(t *testing.T) {
 			input: "{hello+world}",
 			want: []item{
 				mk(itemExpressionOpen, "{"),
-				mkErr(`invalid unquoted literal "hello+world"`),
+				mkErrorf(`invalid unquoted literal "hello+world"`),
 			},
 		},
 		{
@@ -445,7 +445,7 @@ func Test_lex(t *testing.T) {
 			want: []item{
 				mk(itemQuotedPatternOpen, "{{"),
 				mk(itemQuotedPatternClose, "}}"),
-				mkErr("unexpected } in complex message"),
+				mkErrorf("unexpected } in complex message"),
 			},
 		},
 		{
@@ -679,7 +679,7 @@ func BenchmarkLex(b *testing.B) {
 	var itm item
 
 	for range b.N {
-		lexer := lex("  .input {$foo :number} .local $bar = {$foo} .match {$bar} one {{one}} * {{other}}  ")
+		lexer := lex(`  .input {$foo :number} .local $bar = {$foo} .match {$bar} one {{\|one\|}} * {{\|other\|}}  `)
 
 		for {
 			itm = lexer.nextItem()
