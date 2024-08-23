@@ -133,8 +133,8 @@ func mk(typ itemType, val string) item {
 	return item{typ: typ, val: val}
 }
 
-// mkErr creates a new error item with the given format and args.
-func mkErr(format string, args ...any) item {
+// mkErrorf creates a new error item with the given format and args.
+func mkErrorf(format string, args ...any) item {
 	return item{typ: itemError, err: fmt.Errorf(format, args...)}
 }
 
@@ -165,16 +165,18 @@ type lexer struct {
 
 // peek peeks at the next rune.
 func (l *lexer) peek() rune {
-	pos := l.pos
-	r := l.next()
-	l.pos = pos
+	if l.pos < 0 || len(l.input) <= l.pos { // isSliceInBounds()
+		return eof
+	}
+
+	r, _ := utf8.DecodeRuneInString(l.input[l.pos:])
 
 	return r
 }
 
 // next returns the next rune.
 func (l *lexer) next() rune {
-	if len(l.input) <= l.pos {
+	if l.pos < 0 || len(l.input) <= l.pos { // isSliceInBounds()
 		return eof
 	}
 
@@ -201,7 +203,7 @@ func (l *lexer) backup() {
 
 // nextItem returns the next item in the input string.
 func (l *lexer) nextItem() item {
-	l.emitItem(mk(itemEOF, ""))
+	l.item = mk(itemEOF, "")
 
 	state := lexPattern
 
@@ -238,7 +240,7 @@ func (l *lexer) emitItem(i item) stateFn {
 
 // emitErrorf emits the error and returns the next state function.
 func (l *lexer) emitErrorf(s string, args ...any) stateFn {
-	return l.emitItem(mkErr(s, args...))
+	return l.emitItem(mkErrorf(s, args...))
 }
 
 // stateFn is a function that returns the next state function.
@@ -260,8 +262,8 @@ func lexStart(l *lexer) stateFn {
 		return lexComplexMessage(l)
 	}
 
-	simpleItem := func(r rune) stateFn {
-		sb.WriteRune(r)
+	simpleItem := func(startChar rune) stateFn {
+		sb.WriteRune(startChar)
 
 		l.item = mk(itemText, sb.String())
 
@@ -338,11 +340,6 @@ func lexPattern(l *lexer) stateFn {
 
 			sb.WriteRune(next)
 		case r == '{':
-			if l.peek() == '{' { // complex message without declarations
-				l.backup()
-				return lexComplexMessage(l)
-			}
-
 			l.backup()
 
 			if sb.Len() > 0 {
@@ -385,21 +382,22 @@ func lexComplexMessage(l *lexer) stateFn {
 		switch {
 		default:
 			return l.emitErrorf(`unknown character "%c" in complex message`, r)
-
 		case r == '.':
+			input := l.input[l.pos:]
+
 			switch {
 			default: // reserved keyword
 				l.backup()
 				l.isReservedBody = true
 
 				return lexReservedKeyword(l)
-			case strings.HasPrefix(l.input[l.pos:], keywordLocal):
+			case strings.HasPrefix(input, keywordLocal):
 				l.pos += len(keywordLocal)
 				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
-			case strings.HasPrefix(l.input[l.pos:], keywordInput):
+			case strings.HasPrefix(input, keywordInput):
 				l.pos += len(keywordInput)
 				return l.emitItem(mk(itemInputKeyword, keywordInput))
-			case strings.HasPrefix(l.input[l.pos:], keywordMatch):
+			case strings.HasPrefix(input, keywordMatch):
 				l.pos += len(keywordMatch)
 				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
 			}
@@ -411,7 +409,6 @@ func lexComplexMessage(l *lexer) stateFn {
 			return lexVariable(l)
 		case isWhitespace(r):
 			l.backup()
-
 			return lexWhitespace(l)
 		case r == '=':
 			return l.emitItem(mk(itemOperator, "="))
@@ -460,8 +457,6 @@ func lexExpr(l *lexer) stateFn {
 	case l.isReservedBody:
 		l.backup()
 		return lexReservedBody(l)
-	case v == eof:
-		return l.emitErrorf("unexpected eof in expression")
 	case v == variablePrefix:
 		l.backup()
 		return lexVariable(l)
@@ -507,6 +502,8 @@ func lexExpr(l *lexer) stateFn {
 		return l.emitItem(mk(itemPrivateStart, string(v)))
 	case v == '=':
 		return l.emitItem(mk(itemOperator, "="))
+	case v == eof:
+		return l.emitErrorf("unexpected eof in expression")
 	}
 }
 
@@ -612,10 +609,10 @@ func lexWhitespace(l *lexer) stateFn {
 		default:
 			l.backup()
 			return l.emitItem(mk(itemWhitespace, sb.String()))
-		case r == eof:
-			return l.emitItem(mk(itemWhitespace, sb.String()))
 		case isWhitespace(r):
 			sb.WriteRune(r)
+		case r == eof:
+			return l.emitItem(mk(itemWhitespace, sb.String()))
 		}
 	}
 }
@@ -625,45 +622,40 @@ func lexIdentifier(l *lexer) stateFn {
 	var (
 		ns  bool
 		typ itemType
+		sb  = new(strings.Builder)
 	)
 
-	sb := new(strings.Builder)
+	switch r := l.next(); r {
+	default:
+		typ = itemOption
+
+		sb.WriteRune(r)
+	case ':':
+		l.isFunction = true
+		typ = itemFunction
+	case '#':
+		l.isMarkup = true
+		typ = itemMarkupOpen
+	case '/':
+		l.isMarkup = true
+		typ = itemMarkupClose
+	case '@':
+		l.isFunction = false
+		typ = itemAttribute
+	case eof:
+		return l.emitErrorf("unexpected eof in identifier")
+	}
 
 	for {
 		r := l.next()
 
 		switch {
 		default:
-			if sb.Len() == 0 && typ != itemMarkupClose {
-				return l.emitErrorf("missing %s name", typ)
-			}
-
-			if strings.HasSuffix(sb.String(), ":") {
-				return l.emitErrorf(`invalid %s name "%s"`, typ, sb.String())
-			}
-
 			l.backup()
 
 			return l.emitItem(mk(typ, sb.String()))
-		case typ == itemUnknown:
-			switch r {
-			default:
-				typ = itemOption
-
-				sb.WriteRune(r)
-			case ':':
-				l.isFunction = true
-				typ = itemFunction
-			case '#':
-				l.isMarkup = true
-				typ = itemMarkupOpen
-			case '/':
-				l.isMarkup = true
-				typ = itemMarkupClose
-			case '@':
-				l.isFunction = false
-				typ = itemAttribute
-			}
+		case sb.Len() == 0 && isNameStart(r):
+			sb.WriteRune(r)
 		case isName(r):
 			sb.WriteRune(r)
 		case sb.Len() > 0 && r == ':':
@@ -674,11 +666,12 @@ func lexIdentifier(l *lexer) stateFn {
 			ns = true
 
 			sb.WriteRune(r)
+		case sb.Len() == 0 && typ != itemMarkupClose:
+			return l.emitErrorf("missing %s name", typ)
+		case strings.HasSuffix(sb.String(), ":"):
+			return l.emitErrorf(`invalid %s name "%s"`, typ, sb.String())
 		case r == eof:
 			return l.emitErrorf("unexpected eof in identifier")
-
-		case sb.Len() == 0 && isNameStart(r):
-			sb.WriteRune(r)
 		}
 	}
 }
@@ -829,7 +822,12 @@ func isReserved(r rune) bool {
 //
 //	escaped-char = backslash ( backslash / "{" / "|" / "}" )
 func isEscapedChar(r rune) bool {
-	return r == '\\' || r == '{' || r == '|' || r == '}'
+	switch r {
+	default:
+		return false
+	case '\\', '{', '|', '}':
+		return true
+	}
 }
 
 // isSimpleStart returns true if r is simple start character.
