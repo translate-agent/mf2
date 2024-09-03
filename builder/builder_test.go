@@ -107,6 +107,11 @@ func Test_Builder(t *testing.T) {
 			".local $var = { greeting }\n{{}}",
 		},
 		{
+			"complex message, local declaration followed by expr",
+			NewBuilder().Local("var", Var("greeting")).Expr(Var("greeting")),
+			".local $var = { $greeting }\n{{{ $greeting }}}",
+		},
+		{
 			"complex message all declarations",
 			NewBuilder().
 				Local("hostName", Var("host")).
