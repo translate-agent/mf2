@@ -154,9 +154,8 @@ func (b *Builder) Expr(expr *Expression) *Builder {
 	case parse.ComplexMessage:
 		switch body := msg.ComplexBody.(type) {
 		default:
-			b.tree.Message = parse.ComplexMessage{
-				ComplexBody: parse.QuotedPattern{expr.expression},
-			}
+			msg.ComplexBody = parse.QuotedPattern{expr.expression}
+			b.tree.Message = msg
 		case parse.QuotedPattern:
 			body = append(body, expr.expression)
 			msg.ComplexBody = body
