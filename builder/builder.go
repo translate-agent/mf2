@@ -23,6 +23,11 @@ func (b *Builder) Build() (string, error) {
 		return "", b.err
 	}
 
+	if msg, ok := b.tree.Message.(parse.ComplexMessage); ok && msg.ComplexBody == nil {
+		msg.ComplexBody = parse.QuotedPattern{}
+		b.tree.Message = msg
+	}
+
 	return b.tree.String(), nil
 }
 
@@ -54,6 +59,9 @@ func (b *Builder) Text(s string) *Builder {
 		b.tree.Message = msg
 	case parse.ComplexMessage:
 		switch body := msg.ComplexBody.(type) {
+		default:
+			msg.ComplexBody = parse.QuotedPattern{txt}
+			b.tree.Message = msg
 		case parse.QuotedPattern:
 			body = append(body, txt)
 			msg.ComplexBody = body
@@ -90,7 +98,6 @@ func (b *Builder) Local(v string, expr *Expression) *Builder {
 	default:
 		b.tree.Message = parse.ComplexMessage{
 			Declarations: []parse.Declaration{local},
-			ComplexBody:  parse.QuotedPattern{},
 		}
 	case parse.SimpleMessage:
 		b.tree.Message = parse.ComplexMessage{
