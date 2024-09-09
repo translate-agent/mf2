@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 
 	"go.expect.digital/mf2"
@@ -47,13 +48,13 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 				s = "-"
 			}
 
-			s += strconv.Itoa(int(v))
+			s += strconv.Itoa(int(math.Floor(math.Abs(v))))
 
 			if opts.decimalPlaces == 0 {
 				return s
 			}
 
-			return s + "." + strconv.Itoa(int((v-float64(int(v)))*10)) //nolint:mnd
+			return s + "." + strconv.Itoa(int((math.Abs(v)-float64(int(math.Floor(math.Abs(v)))))*10)) //nolint:mnd
 		}
 
 		s := func(keys []string) string {
