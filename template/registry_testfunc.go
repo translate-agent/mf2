@@ -26,9 +26,7 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 			return errorf("%w", mf2.ErrBadOption)
 		}
 
-		switch opts.fails {
-		default:
-			// noop
+		switch opts.fails { //nolint:exhaustive
 		case alwaysFail:
 			return errorf("%w", mf2.ErrBadOperand)
 		case formatFail:
@@ -41,7 +39,7 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 			}
 		}
 
-		f := func() string {
+		format := func() string {
 			var s string
 
 			if v < 0 {
@@ -57,13 +55,14 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 			return s + "." + strconv.Itoa(int((math.Abs(v)-float64(int(math.Floor(math.Abs(v)))))*10)) //nolint:mnd
 		}
 
-		s := func(keys []string) string {
+		selectKey := func(keys []string) string {
 			if opts.fails == alwaysFail || opts.fails == selectFail {
 				return ""
 			}
 
+			key := format()
 			for _, k := range keys {
-				if k == f() {
+				if k == key {
 					return k
 				}
 			}
@@ -71,7 +70,7 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 			return ""
 		}
 
-		return NewResolvedValue(v, WithSelectKey(s), WithFormat(f)), nil
+		return NewResolvedValue(v, WithSelectKey(selectKey), WithFormat(format)), nil
 	}
 }
 
@@ -104,15 +103,15 @@ func parseTestFunctionOptions(options Options) (TestFunctionOptions, error) {
 
 			switch int(n) {
 			default:
-				return opts, fmt.Errorf("invalid value for decimalPlaces: %v", n)
+				return opts, fmt.Errorf("invalid decimalPlaces: %v", n)
 			case 0, 1:
 				opts.decimalPlaces = int(n)
 			}
 		case "fails":
-			switch v.String() {
+			switch failsWhen(v.String()) {
 			default:
-				return opts, fmt.Errorf("bad value given for fails: %s", v)
-			case string(neverFail), string(selectFail), string(formatFail), string(alwaysFail):
+				return opts, fmt.Errorf("invalid fails: %s", v)
+			case neverFail, selectFail, formatFail, alwaysFail:
 				opts.fails = failsWhen(v.String())
 			}
 		}
