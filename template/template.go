@@ -97,7 +97,6 @@ func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
 	if !ok {
 		r = &ResolvedValue{
 			value:     value,
-			format:    func() string { return defaultFormat(value) },
 			selectKey: func(keys []string) string { return defaultSelectKey(value, keys) },
 		}
 	}

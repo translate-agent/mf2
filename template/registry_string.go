@@ -13,13 +13,26 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 		return nil, fmt.Errorf("exec string function: "+format, args...)
 	}
 
-	if operand.value == nil {
-		return NewResolvedValue(""), nil
-	}
-
 	if len(options) > 0 {
 		return errorf("want no options")
 	}
 
-	return operand, nil
+	format := func() string {
+		switch v := operand.value.(type) {
+		default:
+			// TODO(jhorsts): if underlying type is not string, return errorf("unsupported value type: %T: %w", r.value, err)
+			s, _ := v.(string)
+			return s
+		case nil:
+			return ""
+		case fmt.Stringer:
+			return v.String()
+		case string, []byte, []rune, int, int8, int16, int32, int64,
+			uint, uint8, uint16, uint32, uint64, float32, float64, bool,
+			complex64, complex128, error:
+			return fmt.Sprint(v)
+		}
+	}
+
+	return NewResolvedValue(operand, WithFormat(format)), nil
 }
