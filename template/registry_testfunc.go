@@ -2,31 +2,76 @@ package template
 
 import (
 	"fmt"
+	"strconv"
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
 )
 
 // RegistryTestFunc is the implementation of the :test:function.
-func RegistryTestFunc(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
-	errorf := func(format string, args ...any) (*ResolvedValue, error) {
-		return nil, fmt.Errorf("exec string function: "+format, args...)
+func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
+	return func(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
+		errorf := func(format string, args ...any) (*ResolvedValue, error) {
+			return nil, fmt.Errorf("exec string function: "+format, args...)
+		}
+
+		v, err := parseNumberOperand(operand)
+		if err != nil {
+			return errorf("bad operand: %w", mf2.ErrBadOperand)
+		}
+
+		opts, err := parseTestFunctionOptions(options)
+		if err != nil {
+			return errorf("bad option: %w", mf2.ErrBadOption)
+		}
+
+		switch opts.fails {
+		default:
+			// noop
+		case alwaysFail:
+			return errorf("bad operand: %w", mf2.ErrBadOperand)
+		case formatFail:
+			if usage == "format" {
+				return errorf("bad operand: %w", mf2.ErrBadOperand)
+			}
+		case selectFail:
+			if usage == "select" {
+				return errorf("bad operand: %w", mf2.ErrBadOperand)
+			}
+		}
+
+		f := func() string {
+			var s string
+
+			if v < 0 {
+				s = "-"
+			}
+
+			s += strconv.Itoa(int(v))
+
+			if opts.decimalPlaces == 0 {
+				return s
+			}
+
+			return s + "." + strconv.Itoa(int((v-float64(int(v)))*10)) //nolint:mnd
+		}
+
+		s := func(keys []string) string {
+			if opts.fails == alwaysFail || opts.fails == selectFail {
+				return ""
+			}
+
+			for _, k := range keys {
+				if k == f() {
+					return k
+				}
+			}
+
+			return ""
+		}
+
+		return NewResolvedValue(v, WithSelectKey(s), WithFormat(f)), nil
 	}
-
-	v, err := parseNumberOperand(operand)
-	if err != nil {
-		return errorf("bad operand: %w", mf2.ErrBadOperand)
-	}
-
-	opts, err := parseTestFunctionOptions(options)
-	if err != nil {
-		return errorf("bad option: %w", mf2.ErrBadOption)
-	}
-
-	_ = v
-	_ = opts
-
-	return operand, nil
 }
 
 type failsWhen string

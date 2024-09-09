@@ -31,8 +31,8 @@ func init() {
 		// "TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 		// "TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select}_{0_:test:select}_1_1_{{1,1}}_1_*_{{1,*}}_*_1_{{*,1}}_*_*_{{*,*}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select}_{1_:test:format}_1_1_{{1,1}}_1_*_{{1,*}}_*_1_{{*,1}}_*_*_{{*,*}}",
-		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select_decimalPlaces=1}_1_{{1}}_1.0_{{1.0}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select_decimalPlaces=1}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
+		// "TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select_decimalPlaces=1}_1_{{1}}_1.0_{{1.0}}_*_{{other}}",
+		// "TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select_decimalPlaces=1}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select_decimalPlaces=9}_1.0_{{1.0}}_1_{{1}}_*_{{bad-option-value}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select_fails=select}_{1_:test:select}_1_1_{{1,1}}_1_*_{{1,*}}_*_1_{{*,1}}_*_*_{{*,*}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{1_:test:select_fails=select}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
@@ -41,7 +41,7 @@ func init() {
 		// "TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{$x_:test:select}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 		// "TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{$x_:test:select}_1.0_{{1.0}}_1_{{1}}_*_{{other}}#01",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.match_{$x_:test:select}_1.0_{{1.0}}_1_{{1}}_*_{{other}}#02",
-		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.input_{$x_:test:select}_.match_{$x_:test:select_decimalPlaces=1}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
+		// "TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.input_{$x_:test:select}_.match_{$x_:test:select_decimalPlaces=1}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.input_{$x_:test:select_decimalPlaces=1}_.match_{$x_:test:select}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.input_{$x_:test:select}_.local_$y_=_{$x_:test:select_decimalPlaces=1}_.match_{$y}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.input_{$x_:test:select}_.local_$y_=_{$x}_.match_{$y}_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
@@ -112,7 +112,10 @@ func run(t *testing.T, test Test) {
 	}
 
 	if strings.Contains(test.Src, ":test:select") {
-		options = append(options, template.WithFunc("select", template.RegistryTestFunc))
+		options = append(options, template.WithFuncs(map[string]template.Func{
+			"select": template.RegistryTestFunc("select"),
+			"format": template.RegistryTestFunc("format"),
+		}))
 	}
 
 	if test.Description != "" {
