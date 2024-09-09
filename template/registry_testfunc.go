@@ -12,31 +12,31 @@ import (
 func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
 	return func(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
 		errorf := func(format string, args ...any) (*ResolvedValue, error) {
-			return nil, fmt.Errorf("exec string function: "+format, args...)
+			return nil, fmt.Errorf("exec test function: "+format, args...)
 		}
 
 		v, err := parseNumberOperand(operand)
 		if err != nil {
-			return errorf("bad operand: %w", mf2.ErrBadOperand)
+			return errorf("%w", mf2.ErrBadOperand)
 		}
 
 		opts, err := parseTestFunctionOptions(options)
 		if err != nil {
-			return errorf("bad option: %w", mf2.ErrBadOption)
+			return errorf("%w", mf2.ErrBadOption)
 		}
 
 		switch opts.fails {
 		default:
 			// noop
 		case alwaysFail:
-			return errorf("bad operand: %w", mf2.ErrBadOperand)
+			return errorf("%w", mf2.ErrBadOperand)
 		case formatFail:
 			if usage == "format" {
-				return errorf("bad operand: %w", mf2.ErrBadOperand)
+				return errorf("%w", mf2.ErrBadOperand)
 			}
 		case selectFail:
 			if usage == "select" {
-				return errorf("bad operand: %w", mf2.ErrBadOperand)
+				return errorf("%w", mf2.ErrBadOperand)
 			}
 		}
 
