@@ -13,7 +13,7 @@ import (
 func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
 	return func(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
 		errorf := func(format string, args ...any) (*ResolvedValue, error) {
-			return nil, fmt.Errorf("exec test function: "+format, args...)
+			return nil, fmt.Errorf("exec test:"+usage+" function: "+format, args...)
 		}
 
 		v, err := parseNumberOperand(operand)
