@@ -60,10 +60,10 @@ var (
 	// ErrBadOption is an error that occurs when there is
 	// an implementation-defined error with an option or its value.
 	ErrBadOption = errors.New("bad option")
-	// ErrBadVariantKey is an error that occurs when a variant key
-	// does not match the expected implementation-defined format.
-	ErrBadVariantKey = errors.New("bad variant key")
 	// ErrBadSelector error occurs when a message includes a selector
 	// with a resolved value which does not support selection.
 	ErrBadSelector = errors.New("bad selector")
+	// ErrBadVariantKey is an error that occurs when a variant key
+	// does not match the expected implementation-defined format.
+	ErrBadVariantKey = errors.New("bad variant key")
 )

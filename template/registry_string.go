@@ -3,7 +3,6 @@ package template
 import (
 	"fmt"
 
-	ast "go.expect.digital/mf2/parse"
 	"golang.org/x/text/language"
 )
 
@@ -24,10 +23,10 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 			// TODO(jhorsts): if underlying type is not string, return errorf("unsupported value type: %T: %w", r.value, err)
 			s, _ := v.(string)
 			return s
-		case nil:
-			return ""
 		case fmt.Stringer:
 			return v.String()
+		case nil:
+			return ""
 		case string, []byte, []rune, int, int8, int16, int32, int64,
 			uint, uint8, uint16, uint32, uint64, float32, float64, bool,
 			complex64, complex128, error:
@@ -35,7 +34,7 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 		}
 	}
 
-	sel := func(keys []string) string {
+	selectKey := func(keys []string) string {
 		value := format()
 
 		for _, key := range keys {
@@ -44,8 +43,8 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 			}
 		}
 
-		return ast.CatchAllKey{}.String()
+		return ""
 	}
 
-	return NewResolvedValue(operand, WithFormat(format), WithSelectKey(sel)), nil
+	return NewResolvedValue(operand, WithFormat(format), WithSelectKey(selectKey)), nil
 }

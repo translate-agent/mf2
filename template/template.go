@@ -64,14 +64,16 @@ func (r *ResolvedValue) String() string {
 // ResolvedValueOpt is a function to apply to the ResolvedValue.
 type ResolvedValueOpt func(*ResolvedValue)
 
-// WithFormat applies a custom format() function to the ResolvedValue.
+// WithFormat applies a formatting function to the ResolvedValue.
+// The formatting function is called in the formatting context.
 func WithFormat(format func() string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.format = format
 	}
 }
 
-// WithSelectKey applies a custom format() function to the ResolvedValue.
+// WithSelectKey applies a selection function to the ResolvedValue.
+// The selection function is called in the selection context.
 func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.selectKey = selectKey
@@ -83,10 +85,7 @@ func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
 	r, ok := value.(*ResolvedValue)
 	if !ok {
-		r = &ResolvedValue{
-			value: value,
-			// selectKey: func(keys []string) string { return defaultSelectKey(value, keys) },
-		}
+		r = &ResolvedValue{value: value}
 	}
 
 	for _, f := range options {
