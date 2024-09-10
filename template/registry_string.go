@@ -35,15 +35,18 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 	}
 
 	selectKey := func(keys []string) string {
-		value := format()
+		res, value := "", format()
 
 		for _, key := range keys {
-			if key == value {
+			switch key {
+			case value:
 				return key
+			case "*":
+				res = "*"
 			}
 		}
 
-		return ""
+		return res
 	}
 
 	return NewResolvedValue(operand, WithFormat(format), WithSelectKey(selectKey)), nil
