@@ -10,6 +10,8 @@ import (
 )
 
 // RegistryTestFunc is the implementation of the :test:function.
+//
+//nolint:gocognit
 func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
 	return func(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
 		errorf := func(format string, args ...any) (*ResolvedValue, error) {
@@ -28,14 +30,14 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 
 		switch opts.fails { //nolint:exhaustive
 		case alwaysFail:
-			return errorf("%w", mf2.ErrBadOperand)
+			return errorf("%w", mf2.ErrBadSelector)
 		case formatFail:
 			if usage == "format" {
-				return errorf("%w", mf2.ErrBadOperand)
+				return errorf("%w", mf2.ErrBadSelector)
 			}
 		case selectFail:
 			if usage == "select" {
-				return errorf("%w", mf2.ErrBadOperand)
+				return errorf("%w", mf2.ErrBadSelector)
 			}
 		}
 
@@ -70,7 +72,14 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 			return ""
 		}
 
-		return NewResolvedValue(v, WithSelectKey(selectKey), WithFormat(format)), nil
+		switch usage {
+		default:
+			return NewResolvedValue(v), nil
+		case "select":
+			return NewResolvedValue(v, WithSelectKey(selectKey)), nil
+		case "format":
+			return NewResolvedValue(v, WithFormat(format)), nil
+		}
 	}
 }
 

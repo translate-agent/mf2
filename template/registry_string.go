@@ -3,6 +3,7 @@ package template
 import (
 	"fmt"
 
+	ast "go.expect.digital/mf2/parse"
 	"golang.org/x/text/language"
 )
 
@@ -34,5 +35,17 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 		}
 	}
 
-	return NewResolvedValue(operand, WithFormat(format)), nil
+	sel := func(keys []string) string {
+		value := format()
+
+		for _, key := range keys {
+			if key == value {
+				return key
+			}
+		}
+
+		return ast.CatchAllKey{}.String()
+	}
+
+	return NewResolvedValue(operand, WithFormat(format), WithSelectKey(sel)), nil
 }
