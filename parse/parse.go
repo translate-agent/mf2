@@ -994,29 +994,27 @@ func (p *parser) parseIdentifier() Identifier {
 
 // UnexpectedTokenError is returned when parser encounters unexpected token.
 // It contains information about expected token types and actual token type.
-//
-// TODO(jhorsts): exposed fields should not use private types.
 type UnexpectedTokenError struct {
-	Expected []itemType
-	Actual   item
+	expected []itemType
+	actual   item
 }
 
 func (u UnexpectedTokenError) Error() string {
-	if len(u.Expected) == 0 {
-		return "want no items, got " + u.Actual.String()
+	if len(u.expected) == 0 {
+		return "want no items, got " + u.actual.String()
 	}
 
-	r := `"` + u.Expected[0].String() + `"`
-	for _, typ := range u.Expected[1:] {
+	r := `"` + u.expected[0].String() + `"`
+	for _, typ := range u.expected[1:] {
 		r += `, "` + typ.String() + `"`
 	}
 
-	return "want item " + r + `, got ` + u.Actual.String()
+	return "want item " + r + `, got ` + u.actual.String()
 }
 
 func unexpectedErr(actual item, expected ...itemType) UnexpectedTokenError {
 	return UnexpectedTokenError{
-		Actual:   actual,
-		Expected: expected,
+		actual:   actual,
+		expected: expected,
 	}
 }
