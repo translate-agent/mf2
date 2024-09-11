@@ -60,7 +60,9 @@ func Test_String(t *testing.T) {
 					t.Error("want error, got nil")
 				}
 
-				// TODO(jhorsts): assert got value
+				if v != nil {
+					t.Errorf("want nil, got %v", v)
+				}
 
 				return
 			}
