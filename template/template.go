@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -37,18 +38,45 @@ type ResolvedValue struct {
 	err       error
 }
 
+// defaultFormat returns formatted string value for any type.
 func defaultFormat(value any) string {
 	switch v := value.(type) {
 	default:
-		// TODO(jhorsts): if underlying type is not string, return errorf("unsupported value type: %T: %w", r.value, err)
-		s, _ := v.(string)
-		return s
+		return fmt.Sprint(v)
 	case fmt.Stringer:
 		return v.String()
-	case string, []byte, []rune, int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64, float32, float64, bool,
-		complex64, complex128, error:
-		return fmt.Sprint(v)
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	case []rune:
+		return string(v)
+	case int:
+		return strconv.Itoa(v)
+	case int8:
+		return strconv.Itoa(int(v))
+	case int16:
+		return strconv.Itoa(int(v))
+	case int32:
+		return strconv.Itoa(int(v))
+	case int64:
+		return strconv.Itoa(int(v))
+	case uint: // byte
+		return strconv.FormatUint(uint64(v), 10)
+	case uint8:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint16:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint32:
+		return strconv.FormatUint(uint64(v), 10)
+	case uint64:
+		return strconv.FormatUint(v, 10)
+	case float32:
+		return strconv.FormatFloat(float64(v), 'f', -1, 32)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case bool:
+		return strconv.FormatBool(v)
 	}
 }
 

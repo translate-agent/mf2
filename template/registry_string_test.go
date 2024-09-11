@@ -30,13 +30,13 @@ func Test_String(t *testing.T) {
 			options: nil,
 			want:    "2021-01-01 00:00:00 +0000 UTC",
 		},
-		// negative
 		{
-			name:    "illegal type", // does not implement stringer, and is not castable to string
+			name:    "empty struct",
 			input:   struct{}{},
 			options: nil,
-			want:    "",
+			want:    "{}",
 		},
+		// negative
 		{
 			name:    "illegal options", // string function does not support any options
 			input:   2,
