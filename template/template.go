@@ -17,13 +17,6 @@ import (
 
 // Template represents a MessageFormat2 template.
 type Template struct {
-	// TODO: locale field. Can change the output of some functions.
-	// e.g. number formatting, given example { $num :number }:
-	//  - "en-US" -> 1,234.56
-	//  - "lv-LV" -> 1234,56
-	// e.g. date formatting, given example { $date :datetime }:
-	//  - "en-US" -> 1/2/2023
-	//  - "lv-LV" -> 2.1.2023
 	ast      *ast.AST
 	registry Registry
 	locale   language.Tag
@@ -409,10 +402,9 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 
 	if funcName == "" {
 		switch t := value.(type) {
-		default: // TODO(jhorsts): how is unknown type formatted?
+		default:
 			return newFallbackValue(expr), resolutionErr
-		case *ResolvedValue:
-			// the expression has already been resolved before
+		case *ResolvedValue: // the expression has already been resolved before
 			return t, resolutionErr
 		case string:
 			funcName = "string"
