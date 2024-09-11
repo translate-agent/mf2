@@ -13,13 +13,28 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 		return nil, fmt.Errorf("exec string function: "+format, args...)
 	}
 
-	if operand.value == nil {
-		return NewResolvedValue(""), nil
-	}
-
 	if len(options) > 0 {
 		return errorf("want no options")
 	}
 
-	return operand, nil
+	format := func() string {
+		return defaultFormat(operand.value)
+	}
+
+	selectKey := func(keys []string) string {
+		res, value := "", format()
+
+		for _, key := range keys {
+			switch key {
+			case value:
+				return key
+			case "*":
+				res = "*"
+			}
+		}
+
+		return res
+	}
+
+	return NewResolvedValue(operand, WithFormat(format), WithSelectKey(selectKey)), nil
 }

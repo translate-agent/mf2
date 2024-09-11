@@ -10,10 +10,16 @@ import (
 )
 
 // RegistryTestFunc is the implementation of the :test:function.
-func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
+//
+//nolint:gocognit
+func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
+	if name != "format" && name != "select" {
+		panic(`want "format" or "select" func name in ":test" namespace`)
+	}
+
 	return func(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
 		errorf := func(format string, args ...any) (*ResolvedValue, error) {
-			return nil, fmt.Errorf("exec test:"+usage+" function: "+format, args...)
+			return nil, fmt.Errorf("exec test:"+name+" function: "+format, args...)
 		}
 
 		v, err := parseNumberOperand(operand)
@@ -28,14 +34,14 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 
 		switch opts.fails { //nolint:exhaustive
 		case alwaysFail:
-			return errorf("%w", mf2.ErrBadOperand)
+			return errorf("%w", mf2.ErrBadSelector)
 		case formatFail:
-			if usage == "format" {
-				return errorf("%w", mf2.ErrBadOperand)
+			if name == "format" {
+				return errorf("%w", mf2.ErrBadSelector)
 			}
 		case selectFail:
-			if usage == "select" {
-				return errorf("%w", mf2.ErrBadOperand)
+			if name == "select" {
+				return errorf("%w", mf2.ErrBadSelector)
 			}
 		}
 
@@ -55,6 +61,10 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 			return s + "." + strconv.Itoa(int((math.Abs(v)-float64(int(math.Floor(math.Abs(v)))))*10)) //nolint:mnd
 		}
 
+		if name == "format" {
+			return NewResolvedValue(v, WithFormat(format)), nil
+		}
+
 		selectKey := func(keys []string) string {
 			if opts.fails == alwaysFail || opts.fails == selectFail {
 				return ""
@@ -70,7 +80,7 @@ func RegistryTestFunc(usage string) func(*ResolvedValue, Options, language.Tag) 
 			return ""
 		}
 
-		return NewResolvedValue(v, WithSelectKey(selectKey), WithFormat(format)), nil
+		return NewResolvedValue(v, WithSelectKey(selectKey)), nil
 	}
 }
 

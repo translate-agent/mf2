@@ -52,19 +52,7 @@ func defaultFormat(value any) string {
 	}
 }
 
-func defaultSelectKey(value any, keys []string) string {
-	v := defaultFormat(value)
-
-	for _, k := range keys {
-		if v == k {
-			return k
-		}
-	}
-
-	return ast.CatchAllKey{}.String()
-}
-
-// String makes the ResolvedValue implement the fmt.Stringer interface.
+// String returns formatted string value.
 func (r *ResolvedValue) String() string {
 	if r.format != nil {
 		return r.format()
@@ -76,14 +64,16 @@ func (r *ResolvedValue) String() string {
 // ResolvedValueOpt is a function to apply to the ResolvedValue.
 type ResolvedValueOpt func(*ResolvedValue)
 
-// WithFormat applies a custom format() function to the ResolvedValue.
+// WithFormat applies a formatting function to the ResolvedValue.
+// The formatting function is called in the formatting context.
 func WithFormat(format func() string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.format = format
 	}
 }
 
-// WithSelectKey applies a custom format() function to the ResolvedValue.
+// WithSelectKey applies a selection function to the ResolvedValue.
+// The selection function is called in the selection context.
 func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.selectKey = selectKey
@@ -95,11 +85,7 @@ func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
 	r, ok := value.(*ResolvedValue)
 	if !ok {
-		r = &ResolvedValue{
-			value:     value,
-			format:    func() string { return defaultFormat(value) },
-			selectKey: func(keys []string) string { return defaultSelectKey(value, keys) },
-		}
+		r = &ResolvedValue{value: value}
 	}
 
 	for _, f := range options {
@@ -460,7 +446,8 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 
 	switch {
 	case errors.Is(matcherErr, mf2.ErrUnknownFunction),
-		errors.Is(matcherErr, mf2.ErrUnresolvedVariable): // noop
+		errors.Is(matcherErr, mf2.ErrUnresolvedVariable),
+		errors.Is(matcherErr, mf2.ErrBadSelector): // noop
 	case matcherErr != nil:
 		return fmt.Errorf("matcher: %w", matcherErr)
 	}
@@ -573,7 +560,12 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 
 		rslt, err := f(NewResolvedValue(input), opts, e.template.locale)
 		if err != nil {
-			addErr(err)
+			addErr(errors.Join(err, mf2.ErrBadSelector))
+			continue
+		}
+
+		if rslt.selectKey == nil {
+			addErr(mf2.ErrBadSelector)
 			continue
 		}
 
@@ -731,6 +723,10 @@ func hasDuplicateVariants(variants []ast.Variant) bool {
 
 func matchSelectorKeys(rv any, keys []string) []string {
 	if v, ok := rv.(*ResolvedValue); ok {
+		if v.selectKey == nil {
+			return []string{ast.CatchAllKey{}.String()}
+		}
+
 		rv = v.selectKey(keys)
 	}
 
