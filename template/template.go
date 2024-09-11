@@ -52,7 +52,7 @@ func defaultFormat(value any) string {
 	}
 }
 
-// String makes the ResolvedValue implement the fmt.Stringer interface.
+// String returns formatted string value.
 func (r *ResolvedValue) String() string {
 	if r.format != nil {
 		return r.format()

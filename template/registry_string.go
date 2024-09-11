@@ -18,20 +18,7 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 	}
 
 	format := func() string {
-		switch v := operand.value.(type) {
-		default:
-			// TODO(jhorsts): if underlying type is not string, return errorf("unsupported value type: %T: %w", r.value, err)
-			s, _ := v.(string)
-			return s
-		case fmt.Stringer:
-			return v.String()
-		case nil:
-			return ""
-		case string, []byte, []rune, int, int8, int16, int32, int64,
-			uint, uint8, uint16, uint32, uint64, float32, float64, bool,
-			complex64, complex128, error:
-			return fmt.Sprint(v)
-		}
+		return defaultFormat(operand.value)
 	}
 
 	selectKey := func(keys []string) string {
