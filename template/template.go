@@ -144,6 +144,11 @@ func New(options ...Option) *Template {
 type Option func(t *Template)
 
 // WithFunc adds a single function to function registry.
+//
+// Example:
+//
+//	WithFunc("bar", f)     // function ":bar"
+//	WithFunc("foo:bar", f) // function with namespace ":foo:bar"
 func WithFunc(name string, f Func) Option {
 	return func(t *Template) {
 		t.registry[name] = f
@@ -151,6 +156,13 @@ func WithFunc(name string, f Func) Option {
 }
 
 // WithFuncs adds functions to function registry.
+//
+// Example:
+//
+//	WithFuncs(Registry{
+//		"bar": f,     // function ":bar"
+//		"foo:bar": f, // function with namespace ":foo:bar"
+//	})
 func WithFuncs(reg Registry) Option {
 	return func(t *Template) {
 		for k, f := range reg {
@@ -342,7 +354,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 	default:
 		return newFallbackValue(expr), fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnsupportedExpression)
 	case ast.Function:
-		funcName = v.Identifier.Name
+		funcName = v.Identifier.String()
 
 		if options, err = e.resolveOptions(v.Options); err != nil {
 			return newFallbackValue(expr), fmt.Errorf("expression: %w", err)
@@ -381,7 +393,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 		}
 	}
 
-	f, ok := e.template.registry[funcName] // TODO(jhorsts): lookup by namespace and name
+	f, ok := e.template.registry[funcName]
 	if !ok {
 		err = fmt.Errorf(`expression: %w "%s"`, mf2.ErrUnknownFunction, funcName)
 		return newFallbackValue(expr), errors.Join(resolutionErr, err)
@@ -540,7 +552,7 @@ func (e *executer) resolveSelector(matcher ast.Matcher) ([]any, error) {
 			function = annotation
 		}
 
-		f, ok := e.template.registry[function.Identifier.Name]
+		f, ok := e.template.registry[function.Identifier.String()]
 		if !ok {
 			addErr(fmt.Errorf(`%w "%s"`, mf2.ErrUnknownFunction, function.Identifier.Name))
 			continue

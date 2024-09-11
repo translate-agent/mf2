@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
-	"strings"
 	"testing"
 
 	"go.expect.digital/mf2"
@@ -85,16 +84,15 @@ func TestMF2WG(t *testing.T) {
 
 // run runs single test by Message Format Working Group.
 func run(t *testing.T, test Test) {
-	var options []template.Option
-	if test.Locale != nil {
-		options = append(options, template.WithLocale(*test.Locale))
+	options := []template.Option{
+		template.WithFuncs(map[string]template.Func{
+			"test:select": template.RegistryTestFunc("select"),
+			"test:format": template.RegistryTestFunc("format"),
+		}),
 	}
 
-	if strings.Contains(test.Src, ":test:") {
-		options = append(options, template.WithFuncs(map[string]template.Func{
-			"select": template.RegistryTestFunc("select"),
-			"format": template.RegistryTestFunc("format"),
-		}))
+	if test.Locale != nil {
+		options = append(options, template.WithLocale(*test.Locale))
 	}
 
 	if test.Description != "" {
