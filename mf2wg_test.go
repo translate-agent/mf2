@@ -240,12 +240,12 @@ func assertErr(t *testing.T, want Errors, err error) {
 		switch v.Type {
 		default:
 			t.Errorf("asserting error '%s' is not implemented", v)
-		case "bad-selector":
-			wantErr(mf2.ErrBadSelector)
 		case "bad-operand":
 			wantErr(mf2.ErrBadOperand)
 		case "bad-option":
 			wantErr(mf2.ErrBadOption)
+		case "bad-selector":
+			wantErr(mf2.ErrBadSelector)
 		case "duplicate-declaration":
 			wantErr(mf2.ErrDuplicateDeclaration)
 		case "duplicate-option-name":
