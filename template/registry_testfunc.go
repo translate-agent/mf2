@@ -2,7 +2,6 @@ package template
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 
 	"go.expect.digital/mf2"
@@ -10,8 +9,6 @@ import (
 )
 
 // RegistryTestFunc is the implementation of the :test:function.
-//
-//nolint:gocognit
 func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
 	if name != "format" && name != "select" {
 		panic(`want "format" or "select" func name in ":test" namespace`)
@@ -46,19 +43,11 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 		}
 
 		format := func() string {
-			var s string
-
-			if v < 0 {
-				s = "-"
-			}
-
-			s += strconv.Itoa(int(math.Floor(math.Abs(v))))
-
 			if opts.decimalPlaces == 0 {
-				return s
+				return strconv.Itoa(int(v))
 			}
 
-			return s + "." + strconv.Itoa(int((math.Abs(v)-float64(int(math.Floor(math.Abs(v)))))*10)) //nolint:mnd
+			return fmt.Sprintf("%.1f", v)
 		}
 
 		if name == "format" {
