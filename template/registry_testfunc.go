@@ -10,8 +10,6 @@ import (
 )
 
 // RegistryTestFunc is the implementation of the :test:function.
-//
-//nolint:gocognit
 func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
 	if name != "format" && name != "select" {
 		panic(`want "format" or "select" func name in ":test" namespace`)
@@ -46,19 +44,17 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 		}
 
 		format := func() string {
-			var s string
-
-			if v < 0 {
-				s = "-"
-			}
-
-			s += strconv.Itoa(int(math.Floor(math.Abs(v))))
-
+			// 1. If Input is less than 0, the character - U+002D Hyphen-Minus.
+			// 2. The truncated absolute integer value of Input, i.e. floor(abs(Input)),
+			//    formatted as a sequence of decimal digit characters (U+0030...U+0039).
+			// 3. If DecimalPlaces is 1, then
+			//   i.  The character . U+002E Full Stop.
+			//   ii. The single decimal digit character representing the value floor((abs(Input) - floor(abs(Input))) * 10)
 			if opts.decimalPlaces == 0 {
-				return s
+				return strconv.Itoa(int(v))
 			}
 
-			return s + "." + strconv.Itoa(int((math.Abs(v)-float64(int(math.Floor(math.Abs(v)))))*10)) //nolint:mnd
+			return fmt.Sprintf("%.1f", math.Trunc(v*10)/10) //nolint:mnd
 		}
 
 		if name == "format" {
