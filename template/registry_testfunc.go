@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 
 	"go.expect.digital/mf2"
@@ -43,11 +44,17 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 		}
 
 		format := func() string {
+			// 1. If Input is less than 0, the character - U+002D Hyphen-Minus.
+			// 2. The truncated absolute integer value of Input, i.e. floor(abs(Input)),
+			//    formatted as a sequence of decimal digit characters (U+0030...U+0039).
+			// 3. If DecimalPlaces is 1, then
+			//   i.  The character . U+002E Full Stop.
+			//   ii. The single decimal digit character representing the value floor((abs(Input) - floor(abs(Input))) * 10)
 			if opts.decimalPlaces == 0 {
 				return strconv.Itoa(int(v))
 			}
 
-			return fmt.Sprintf("%.1f", v)
+			return fmt.Sprintf("%.1f", math.Trunc(v*10)/10) //nolint:mnd
 		}
 
 		if name == "format" {
