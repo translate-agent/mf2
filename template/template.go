@@ -130,11 +130,6 @@ func newFallbackValue(expr ast.Expression) *ResolvedValue {
 			return wrap(f.String())
 		case ast.Function:
 			return wrap(":" + f.Identifier.String())
-		case ast.ReservedAnnotation:
-			return wrap(string(f.Start))
-		case ast.PrivateUseAnnotation:
-			// NOTE(mvilks): currently all private use is unsupported
-			return wrap(string(f.Start))
 		}
 	case ast.QuotedLiteral:
 		return wrap(v.String())
@@ -203,7 +198,7 @@ func WithLocale(locale language.Tag) Option {
 func (t *Template) Parse(input string) (*Template, error) {
 	ast, err := ast.Parse(input)
 	if err != nil {
-		return nil, err //nolint:wrapcheck
+		return nil, errors.Join(err, mf2.ErrSyntax)
 	}
 
 	t.ast = &ast
@@ -303,11 +298,9 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 	return resolutionErr
 }
 
-func (e *executer) resolveDeclarations(declarations []ast.Declaration) error {
+func (e *executer) resolveDeclarations(declarations []ast.Declaration) error { //nolint:unparam
 	for _, decl := range declarations {
 		switch d := decl.(type) {
-		case ast.ReservedStatement:
-			return fmt.Errorf("%w", mf2.ErrUnsupportedStatement)
 		case ast.LocalDeclaration:
 			r, err := e.resolveExpression(d.Expression)
 			if err != nil {
@@ -379,23 +372,6 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 
 		if options, err = e.resolveOptions(v.Options); err != nil {
 			return newFallbackValue(expr), fmt.Errorf("expression: %w", err)
-		}
-	case ast.PrivateUseAnnotation:
-		// See ".message-format-wg/spec/formatting.md".
-		//
-		// Supported private-use annotation with no operand: the annotation starting sigil, optionally followed by
-		// implementation-defined details conforming with patterns in the other cases (such as quoting literals).
-		// If details are provided, they SHOULD NOT leak potentially private information.
-		resolutionErr = fmt.Errorf(`expression: private use annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
-
-		if value == nil {
-			return newFallbackValue(expr), resolutionErr
-		}
-	case ast.ReservedAnnotation:
-		resolutionErr = fmt.Errorf(`expression: reserved annotation "%s": %w`, v, mf2.ErrUnsupportedExpression)
-
-		if value == nil {
-			return newFallbackValue(expr), resolutionErr
 		}
 	case nil: // noop, no annotation
 	}

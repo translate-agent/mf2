@@ -12,35 +12,11 @@ func TestExpression_String(t *testing.T) {
 		{"{}", Expression{}},
 		{"{ a }", Expression{Operand: NameLiteral("a")}},
 		{"{ :f }", Expression{Annotation: Function{Identifier: Identifier{Name: "f"}}}},
-		{"{ ^ }", Expression{Annotation: PrivateUseAnnotation{Start: '^'}}},
 	} {
 		t.Run(test.want, func(t *testing.T) {
 			t.Parallel()
 
 			if s := test.expr.String(); s != test.want {
-				t.Errorf("want '%s', got '%s'", test.want, s)
-			}
-		})
-	}
-}
-
-func TestPrivateUseAnnotation_String(t *testing.T) {
-	t.Parallel()
-
-	for _, test := range []struct {
-		want                 string
-		privateUseAnnotation PrivateUseAnnotation
-	}{
-		{"^", PrivateUseAnnotation{Start: '^'}},
-		{
-			"& hello |world|",
-			PrivateUseAnnotation{Start: '&', ReservedBody: []ReservedBody{ReservedText("hello"), QuotedLiteral("world")}},
-		},
-	} {
-		t.Run(test.want, func(t *testing.T) {
-			t.Parallel()
-
-			if s := test.privateUseAnnotation.String(); s != test.want {
 				t.Errorf("want '%s', got '%s'", test.want, s)
 			}
 		})
@@ -70,7 +46,7 @@ func TestMarkup_String(t *testing.T) {
 
 func BenchmarkComplexMessage_String(b *testing.B) {
 	//nolint:dupword
-	tree, err := Parse(".match {$foo :number} {$bar :number} one one {{one one}} one * {{one other}} * * {{other}}")
+	tree, err := Parse(".input {$foo :number} .input {$bar :number} .match $foo $bar one one {{one { $foo } one}} one * {{one other}} * * {{other}}") //nolint:lll
 	if err != nil {
 		b.Error(err)
 	}

@@ -243,16 +243,6 @@ func Test_ExecuteErrors(t *testing.T) {
 			want: want{execErr: mf2.ErrDuplicateOptionName, text: "Hello, {:number}!"},
 		},
 		{
-			name: "unsupported expression",
-			text: "Hello, { 12 ^private }!",
-			want: want{execErr: mf2.ErrUnsupportedExpression, text: "Hello, 12!"},
-		},
-		{
-			name: "unsupported declaration",
-			text: ".reserved { name } {{Hello!}}",
-			want: want{execErr: mf2.ErrUnsupportedStatement, text: "Hello!"},
-		},
-		{
 			name:  "duplicate input declaration",
 			text:  ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
 			input: map[string]any{"var": "22"},
@@ -269,12 +259,6 @@ func Test_ExecuteErrors(t *testing.T) {
 			text:  ".input {$n} .match $n 0 {{no apples}} 1 {{apple}} * {{apples}}",
 			input: map[string]any{"n": "1"},
 			want:  want{text: "apples", execErr: mf2.ErrMissingSelectorAnnotation},
-		},
-		{
-			name:  "Selection with Reserved Annotation",
-			text:  ".input {$count ^string} .match $count one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
-			input: map[string]any{"count": "1"},
-			want:  want{text: "Other match", execErr: mf2.ErrUnsupportedExpression},
 		},
 	}
 

@@ -83,11 +83,6 @@ type VariantKey interface {
 	variantKey()
 }
 
-type ReservedBody interface {
-	Node
-	reservedBody()
-}
-
 // ---------------------------------Types------------------------------------
 //
 // Here we define the types that implement the interfaces defined above.
@@ -189,11 +184,10 @@ func (l QuotedLiteral) String() string {
 	return "|" + r.Replace(string(l)) + "|"
 }
 
-func (QuotedLiteral) node()         {}
-func (QuotedLiteral) literal()      {}
-func (QuotedLiteral) value()        {}
-func (QuotedLiteral) variantKey()   {}
-func (QuotedLiteral) reservedBody() {}
+func (QuotedLiteral) node()       {}
+func (QuotedLiteral) literal()    {}
+func (QuotedLiteral) value()      {}
+func (QuotedLiteral) variantKey() {}
 
 type NameLiteral string
 
@@ -236,34 +230,6 @@ func (f Function) String() string {
 func (Function) node()       {}
 func (Function) annotation() {}
 
-type PrivateUseAnnotation struct {
-	ReservedBody []ReservedBody // QuotedLiteral or ReservedText
-	Start        rune
-}
-
-// String returns MF2 formatted string.
-func (p PrivateUseAnnotation) String() string {
-	body := sliceToString(p.ReservedBody, " ")
-	if len(body) > 0 {
-		return string(p.Start) + " " + body
-	}
-
-	return string(p.Start)
-}
-
-func (PrivateUseAnnotation) node()       {}
-func (PrivateUseAnnotation) annotation() {}
-
-type ReservedAnnotation PrivateUseAnnotation
-
-// String returns MF2 formatted string.
-func (p ReservedAnnotation) String() string {
-	return PrivateUseAnnotation(p).String()
-}
-
-func (ReservedAnnotation) node()       {}
-func (ReservedAnnotation) annotation() {}
-
 // --------------------------------Declaration---------------------------------
 
 type InputDeclaration Expression // Only VariableExpression, i.e. operand is type Variable.
@@ -288,24 +254,6 @@ func (d LocalDeclaration) String() string {
 
 func (LocalDeclaration) node()        {}
 func (LocalDeclaration) declaration() {}
-
-type ReservedStatement struct {
-	Keyword      string
-	ReservedBody []ReservedBody // QuotedLiteral or ReservedText
-	Expressions  []Expression   // At least one
-}
-
-// String returns MF2 formatted string.
-func (s ReservedStatement) String() string {
-	if len(s.ReservedBody) > 0 {
-		return "." + s.Keyword + " " + sliceToString(s.ReservedBody, " ") + " " + sliceToString(s.Expressions, " ")
-	}
-
-	return "." + s.Keyword + " " + sliceToString(s.Expressions, " ")
-}
-
-func (ReservedStatement) node()        {}
-func (ReservedStatement) declaration() {}
 
 // --------------------------------VariantKey----------------------------------
 
@@ -359,21 +307,6 @@ func (v Variable) String() string {
 
 func (Variable) node()  {}
 func (Variable) value() {}
-
-type ReservedText string
-
-// String returns MF2 formatted string.
-func (t ReservedText) String() string {
-	return strings.NewReplacer(
-		`\`, `\\`,
-		`{`, `\{`,
-		`}`, `\}`,
-		`|`, `\|`,
-	).Replace(string(t))
-}
-
-func (ReservedText) node()         {}
-func (ReservedText) reservedBody() {}
 
 type Identifier struct {
 	Node

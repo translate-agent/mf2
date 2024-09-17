@@ -29,7 +29,6 @@ const (
 	itemInputKeyword
 	itemLocalKeyword
 	itemMatchKeyword
-	itemReservedKeyword
 	itemCatchAllKey
 	itemNumberLiteral
 	itemQuotedLiteral
@@ -38,9 +37,6 @@ const (
 	itemAttribute
 	itemWhitespace
 	itemOperator
-	itemPrivateStart
-	itemReservedStart
-	itemReservedText
 )
 
 // String returns a string representation of the item type.
@@ -72,8 +68,6 @@ func (t itemType) String() string {
 		return "local keyword"
 	case itemMatchKeyword:
 		return "match keyword"
-	case itemReservedKeyword:
-		return "reserved keyword"
 	case itemNumberLiteral:
 		return "number literal"
 	case itemOperator:
@@ -94,12 +88,6 @@ func (t itemType) String() string {
 		return "variable"
 	case itemWhitespace:
 		return "whitespace"
-	case itemPrivateStart:
-		return "private start"
-	case itemReservedStart:
-		return "reserved start"
-	case itemReservedText:
-		return "reserved text"
 	}
 
 	return "<invalid type>"
@@ -157,7 +145,6 @@ type lexer struct {
 
 	isFunction,
 	isMarkup,
-	isReservedBody,
 	isExpression,
 	isPattern,
 	isComplexMessage bool
@@ -386,11 +373,10 @@ func lexComplexMessage(l *lexer) stateFn {
 			input := l.input[l.pos:]
 
 			switch {
-			default: // reserved keyword
+			default:
 				l.backup()
-				l.isReservedBody = true
 
-				return lexReservedKeyword(l)
+				return l.emitErrorf(`invalid keyword`)
 			case strings.HasPrefix(input, keywordLocal):
 				l.pos += len(keywordLocal)
 				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
@@ -401,9 +387,6 @@ func lexComplexMessage(l *lexer) stateFn {
 				l.pos += len(keywordMatch)
 				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
 			}
-		case l.isReservedBody:
-			l.backup()
-			return lexReservedBody(l)
 		case r == variablePrefix:
 			l.backup()
 			return lexVariable(l)
@@ -454,9 +437,6 @@ func lexExpr(l *lexer) stateFn {
 		l.backup()
 
 		return lexUnquotedOrNumberLiteral(l)
-	case l.isReservedBody:
-		l.backup()
-		return lexReservedBody(l)
 	case v == variablePrefix:
 		l.backup()
 		return lexVariable(l)
@@ -492,14 +472,6 @@ func lexExpr(l *lexer) stateFn {
 				l.prevType == itemVariable):
 		l.backup()
 		return lexIdentifier(l)
-	case isReservedStart(v):
-		l.isReservedBody = true
-
-		return l.emitItem(mk(itemReservedStart, string(v)))
-	case isPrivateStart(v):
-		l.isReservedBody = true
-
-		return l.emitItem(mk(itemPrivateStart, string(v)))
 	case v == '=':
 		return l.emitItem(mk(itemOperator, "="))
 	case v == eof:
@@ -582,22 +554,6 @@ func lexVariable(l *lexer) stateFn {
 	return l.emitItem(mk(itemVariable, sb.String()))
 }
 
-// lexLiteral is the state function for reserved keywords.
-func lexReservedKeyword(l *lexer) stateFn {
-	sb := new(strings.Builder)
-
-	// discard reserved keyword starting sigil .
-	l.next()
-
-	for r := l.next(); isName(r); r = l.next() {
-		sb.WriteRune(r)
-	}
-
-	l.backup()
-
-	return l.emitItem(mk(itemReservedKeyword, sb.String()))
-}
-
 // lexWhitespace is the state function for lexing whitespace.
 func lexWhitespace(l *lexer) stateFn {
 	sb := new(strings.Builder)
@@ -676,52 +632,6 @@ func lexIdentifier(l *lexer) stateFn {
 	}
 }
 
-// ABNF:
-//
-//	reserved-body      = reserved-body-part *([s] reserved-body-part)
-//	reserved-body-part = reserved-char / escaped-char / quoted
-//	reserved-char      = content-char / "."
-//	escaped-char       = backslash ( backslash / "{" / "|" / "}" )
-//	quoted             = "|" *(quoted-char / escaped-char) "|"
-func lexReservedBody(l *lexer) stateFn {
-	sb := new(strings.Builder)
-
-	for {
-		switch r := l.next(); {
-		case r == '{', r == '}', r == '@':
-			l.backup()
-			l.isReservedBody = false
-
-			if sb.Len() == 0 {
-				return lexExpr(l)
-			}
-
-			return l.emitItem(mk(itemReservedText, sb.String()))
-		case isWhitespace(r):
-			l.backup()
-
-			if sb.Len() == 0 {
-				return lexWhitespace(l)
-			}
-
-			return l.emitItem(mk(itemReservedText, sb.String()))
-		case r == '|':
-			l.backup()
-			return lexQuotedLiteral(l)
-		case r == '\\': // escaped character
-			next := l.next()
-
-			if !isEscapedChar(next) {
-				return l.emitErrorf(`unexpected escaped character "%c" in reserved body`, next)
-			}
-
-			sb.WriteRune(next)
-		case isReserved(r):
-			sb.WriteRune(r)
-		}
-	}
-}
-
 // helpers
 
 // isAlpha returns true if r is alphabetic character.
@@ -745,7 +655,8 @@ func isNameStart(r rune) bool {
 		0xD8 <= r && r <= 0xF6 ||
 		0xF8 <= r && r <= 0x2FF ||
 		0x370 <= r && r <= 0x37D ||
-		0x37F <= r && r <= 0x1FFF ||
+		0x37F <= r && r <= 0x61B ||
+		0x61D <= r && r <= 0x1FFF ||
 		0x200C <= r && r <= 0x200D ||
 		0x2070 <= r && r <= 0x218F ||
 		0x2C00 <= r && r <= 0x2FEF ||
@@ -788,32 +699,12 @@ func isWhitespace(r rune) bool {
 	switch r {
 	default:
 		return false
+	case '\u061C', '\u200E', '\u200F', '\u2066', '\u2067', '\u2068', '\u2069':
+		// TODO: should we separate it into `bidi`?
+		return true
 	case ' ', '\t', '\r', '\n', '\u3000':
 		return true
 	}
-}
-
-// isReservedStart returns true if r is the first reserved annotation character.
-//
-// ABNF:
-//
-//	reserved-annotation-start = "!" / "%" / "*" / "+" / "<" / ">" / "?" / "~"
-func isReservedStart(r rune) bool {
-	switch r {
-	default:
-		return false
-	case '!', '%', '*', '+', '<', '>', '?', '~':
-		return true
-	}
-}
-
-// isReserved returns true if r is reserved character.
-//
-// ABNF:
-//
-//	reserved-char = content-char / ".".
-func isReserved(r rune) bool {
-	return isContent(r) || r == '.'
 }
 
 // isEscapedChar returns true if r is an escaped character.
@@ -846,15 +737,6 @@ func isSimpleStart(r rune) bool {
 //	text-char = content-char / s / "." / "@" / "|"
 func isText(r rune) bool {
 	return isContent(r) || isWhitespace(r) || r == '.' || r == '@' || r == '|'
-}
-
-// isPrivateStart returns true if r is private start character.
-//
-// ABNF:
-//
-//	private-start = "^" / "&".
-func isPrivateStart(r rune) bool {
-	return r == '^' || r == '&'
 }
 
 // isContent returns true if r is content character.

@@ -167,110 +167,6 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
-			name:  "reserved annotations",
-			input: `{!a}{%b c}{* \{}{+txt |quoted| txt}{ <r }{>}{?a b c}{ ~ a b c }text`,
-			want: []item{
-				// 1
-				mk(itemExpressionOpen, "{"),
-				mk(itemReservedStart, "!"),
-				mk(itemReservedText, "a"),
-				mk(itemExpressionClose, "}"),
-				// 2
-				mk(itemExpressionOpen, "{"),
-				mk(itemReservedStart, "%"),
-				mk(itemReservedText, "b"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "c"),
-				mk(itemExpressionClose, "}"),
-				// 3
-				mk(itemExpressionOpen, "{"),
-				mk(itemReservedStart, "*"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "{"),
-				mk(itemExpressionClose, "}"),
-				// 4
-				mk(itemExpressionOpen, "{"),
-				mk(itemReservedStart, "+"),
-				mk(itemReservedText, "txt"),
-				mk(itemWhitespace, " "),
-				mk(itemQuotedLiteral, "quoted"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "txt"),
-				mk(itemExpressionClose, "}"),
-				// 5
-				mk(itemExpressionOpen, "{"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedStart, "<"),
-				mk(itemReservedText, "r"),
-				mk(itemWhitespace, " "),
-				mk(itemExpressionClose, "}"),
-				// 6
-				mk(itemExpressionOpen, "{"),
-				mk(itemReservedStart, ">"),
-				mk(itemExpressionClose, "}"),
-				// 7
-				mk(itemExpressionOpen, "{"),
-				mk(itemReservedStart, "?"),
-				mk(itemReservedText, "a"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "b"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "c"),
-				mk(itemExpressionClose, "}"),
-				// 8
-				mk(itemExpressionOpen, "{"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedStart, "~"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "a"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "b"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "c"),
-				mk(itemWhitespace, " "),
-				mk(itemExpressionClose, "}"),
-				//
-				mk(itemText, "text"),
-				mk(itemEOF, ""),
-			},
-		},
-		{
-			name:  "private use annotations",
-			input: "{ ^ .body }{&|body| a}{^ \\|body \\}}{&hey}",
-			want: []item{
-				// 1
-				mk(itemExpressionOpen, "{"),
-				mk(itemWhitespace, " "),
-				mk(itemPrivateStart, "^"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, ".body"),
-				mk(itemWhitespace, " "),
-				mk(itemExpressionClose, "}"),
-				// 2
-				mk(itemExpressionOpen, "{"),
-				mk(itemPrivateStart, "&"),
-				mk(itemQuotedLiteral, "body"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "a"),
-				mk(itemExpressionClose, "}"),
-				// 3
-				mk(itemExpressionOpen, "{"),
-				mk(itemPrivateStart, "^"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "|body"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "}"),
-				mk(itemExpressionClose, "}"),
-				// 4 Without whitespace
-				mk(itemExpressionOpen, "{"),
-				mk(itemPrivateStart, "&"),
-				mk(itemReservedText, "hey"),
-				mk(itemExpressionClose, "}"),
-				//
-				mk(itemEOF, ""),
-			},
-		},
-		{
 			name:  "local declaration",
 			input: ".local $hostName = {$host} .local $h = {|host| :func @a=1}",
 			want: []item{
@@ -306,7 +202,7 @@ func Test_lex(t *testing.T) {
 		},
 		{
 			name:  "input declaration",
-			input: ".input {$host} .input {$user :func @a} .input {$num ^private}",
+			input: ".input {$host} .input {$user :func @a} .input {$num :func2}",
 			want: []item{
 				// .input {$host}
 				mk(itemInputKeyword, "input"),
@@ -326,76 +222,14 @@ func Test_lex(t *testing.T) {
 				mk(itemAttribute, "a"),
 				mk(itemExpressionClose, "}"),
 				mk(itemWhitespace, " "),
-				// .input {$num ^private}
+				// .input {$num :func2}
 				mk(itemInputKeyword, "input"),
 				mk(itemWhitespace, " "),
 				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "num"),
 				mk(itemWhitespace, " "),
-				mk(itemPrivateStart, "^"),
-				mk(itemReservedText, "private"),
+				mk(itemFunction, "func2"),
 				mk(itemExpressionClose, "}"),
-				mk(itemEOF, ""),
-			},
-		},
-		//nolint:dupword
-		{
-			name: "reserved statement",
-			input: ".first {$var} " +
-				".second body1 |body2| {|quoted| ^exprBody} " +
-				".third ho ho ho {$var !reserved} {:func @a} {2} {{.}}",
-			want: []item{
-				// .first {$var} // 1 expression
-				mk(itemReservedKeyword, "first"),
-				mk(itemWhitespace, " "),
-				mk(itemExpressionOpen, "{"),
-				mk(itemVariable, "var"),
-				mk(itemExpressionClose, "}"),
-				mk(itemWhitespace, " "),
-				// .second body1 |body2| {|quoted| ^exprBody} // reservedBody + expression
-				mk(itemReservedKeyword, "second"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "body1"),
-				mk(itemWhitespace, " "),
-				mk(itemQuotedLiteral, "body2"),
-				mk(itemWhitespace, " "),
-				mk(itemExpressionOpen, "{"),
-				mk(itemQuotedLiteral, "quoted"),
-				mk(itemWhitespace, " "),
-				mk(itemPrivateStart, "^"),
-				mk(itemReservedText, "exprBody"),
-				mk(itemExpressionClose, "}"),
-				mk(itemWhitespace, " "),
-				// .third ho ho ho {$var !reserved} {:func @a} {2} // reservedBody + 3 expressions
-				mk(itemReservedKeyword, "third"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "ho"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "ho"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedText, "ho"),
-				mk(itemWhitespace, " "),
-				mk(itemExpressionOpen, "{"),
-				mk(itemVariable, "var"),
-				mk(itemWhitespace, " "),
-				mk(itemReservedStart, "!"),
-				mk(itemReservedText, "reserved"),
-				mk(itemExpressionClose, "}"),
-				mk(itemWhitespace, " "),
-				mk(itemExpressionOpen, "{"),
-				mk(itemFunction, "func"),
-				mk(itemWhitespace, " "),
-				mk(itemAttribute, "a"),
-				mk(itemExpressionClose, "}"),
-				mk(itemWhitespace, " "),
-				mk(itemExpressionOpen, "{"),
-				mk(itemNumberLiteral, "2"),
-				mk(itemExpressionClose, "}"),
-				mk(itemWhitespace, " "),
-				//
-				mk(itemQuotedPatternOpen, "{{"),
-				mk(itemText, "."),
-				mk(itemQuotedPatternClose, "}}"),
 				mk(itemEOF, ""),
 			},
 		},
@@ -668,8 +502,8 @@ func logItem(t *testing.T, want item, l lexer) {
 		val = l.item.err.Error()
 	}
 
-	t.Logf("c%s p%s e%s f%s r%s m%s %-30s e%s(%s) a%s(%s)\n",
-		f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isReservedBody), f(l.isMarkup),
+	t.Logf("c%s p%s e%s f%s m%s %-30s e%s(%s) a%s(%s)\n",
+		f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isMarkup),
 		"'"+l.input[l.pos:]+"'", "'"+wantVal+"'", want.typ, "'"+val+"'", l.item.typ)
 }
 

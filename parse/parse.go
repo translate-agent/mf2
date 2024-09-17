@@ -95,7 +95,7 @@ func (p *parser) isComplexMessage() bool {
 	switch p.peekNonWS().typ {
 	default:
 		return false
-	case itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemReservedKeyword, itemQuotedPatternOpen:
+	case itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemQuotedPatternOpen:
 		return true
 	}
 }
@@ -223,13 +223,6 @@ declarationsLoop:
 			}
 
 			message.Declarations = append(message.Declarations, declaration)
-		case itemReservedKeyword:
-			declaration, err := p.parseReservedStatement()
-			if err != nil {
-				return errorf("%w", err)
-			}
-
-			message.Declarations = append(message.Declarations, declaration)
 		}
 	}
 
@@ -238,7 +231,7 @@ declarationsLoop:
 	switch itm := p.nextNonWS(); itm.typ {
 	default:
 		err := unexpectedErr(
-			itm, itemInputKeyword, itemLocalKeyword, itemReservedKeyword, itemMatchKeyword, itemQuotedPatternOpen)
+			itm, itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemQuotedPatternOpen)
 		return errorf("%w", err)
 	case itemQuotedPatternOpen:
 		pattern, err := p.parsePattern()
@@ -417,7 +410,7 @@ func (p *parser) parseExpression() (Expression, error) {
 	default:
 		err = unexpectedErr(itm,
 			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-			itemFunction, itemPrivateStart, itemReservedStart, itemExpressionClose)
+			itemFunction, itemExpressionClose)
 
 		return errorf("%w: %w", mf2.ErrBadOperand, err)
 	case itemVariable:
@@ -445,7 +438,7 @@ func (p *parser) parseExpression() (Expression, error) {
 		if expr.Operand, err = p.parseLiteral(); err != nil {
 			return errorf("%w", err)
 		}
-	case itemFunction, itemPrivateStart, itemReservedStart:
+	case itemFunction:
 		p.backup()
 	case itemExpressionClose: // empty expression
 		return errorf("missing operand or annotation")
@@ -467,17 +460,9 @@ func (p *parser) parseExpression() (Expression, error) {
 
 	switch itm := p.next(); itm.typ {
 	default:
-		return errorf("%w", unexpectedErr(itm, itemFunction, itemPrivateStart, itemReservedStart, itemAttribute))
+		return errorf("%w", unexpectedErr(itm, itemFunction, itemAttribute))
 	case itemFunction:
 		if expr.Annotation, err = p.parseFunction(); err != nil {
-			return errorf("%w", err)
-		}
-	case itemReservedStart:
-		if expr.Annotation, err = p.parseReservedAnnotation(); err != nil {
-			return errorf("%w", err)
-		}
-	case itemPrivateStart:
-		if expr.Annotation, err = p.parsePrivateUseAnnotation(); err != nil {
 			return errorf("%w", err)
 		}
 	case itemAttribute:
@@ -555,87 +540,6 @@ func (p *parser) parseFunction() (Function, error) {
 	}
 }
 
-func (p *parser) parsePrivateUseAnnotation() (PrivateUseAnnotation, error) {
-	annotation := PrivateUseAnnotation{Start: rune(p.current().val[0])}
-	errorf := func(format string, args ...any) (PrivateUseAnnotation, error) {
-		return PrivateUseAnnotation{}, fmt.Errorf("private use annotation: "+format, args...)
-	}
-
-	switch itm := p.next(); itm.typ {
-	default:
-		err := unexpectedErr(itm, itemWhitespace, itemReservedText, itemQuotedLiteral, itemExpressionClose)
-		return errorf("%w", err)
-	case itemWhitespace: // noop
-	case itemReservedText, itemQuotedLiteral:
-		p.backup()
-	case itemExpressionClose:
-		p.backup()
-
-		return annotation, nil
-	}
-
-	var err error
-
-	if annotation.ReservedBody, err = p.parseReservedBody(); err != nil {
-		return errorf("%w", err)
-	}
-
-	return annotation, nil
-}
-
-func (p *parser) parseReservedAnnotation() (ReservedAnnotation, error) {
-	annotation := ReservedAnnotation{Start: rune(p.current().val[0])}
-	errorf := func(format string, args ...any) (ReservedAnnotation, error) {
-		return ReservedAnnotation{}, fmt.Errorf("reserved annotation: "+format, args...)
-	}
-
-	switch itm := p.next(); itm.typ {
-	default:
-		return errorf("%w", unexpectedErr(itm, itemWhitespace, itemExpressionClose))
-	case itemWhitespace: // noop
-	case itemReservedText, itemQuotedLiteral:
-		p.backup()
-	case itemExpressionClose:
-		p.backup()
-
-		return annotation, nil
-	}
-
-	var err error
-
-	if annotation.ReservedBody, err = p.parseReservedBody(); err != nil {
-		return errorf("%w", err)
-	}
-
-	return annotation, nil
-}
-
-func (p *parser) parseReservedBody() ([]ReservedBody, error) {
-	var parts []ReservedBody
-
-	for {
-		switch itm := p.next(); itm.typ {
-		default:
-			err := unexpectedErr(itm, itemWhitespace, itemReservedText, itemQuotedLiteral, itemAttribute, itemExpressionClose)
-			return nil, fmt.Errorf("reserved body: %w", err)
-		case itemWhitespace: // noop
-		case itemReservedText:
-			parts = append(parts, ReservedText(itm.val))
-		case itemQuotedLiteral:
-			parts = append(parts, QuotedLiteral(itm.val))
-		case itemAttribute: // end of reserved body, attributes are next
-			p.backup()
-			p.backup()
-
-			return parts, nil
-		case itemExpressionClose:
-			p.backup()
-
-			return parts, nil
-		}
-	}
-}
-
 // ------------------------------Declaration------------------------------
 
 func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
@@ -704,37 +608,6 @@ func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
 	}
 
 	return InputDeclaration(expression), nil
-}
-
-func (p *parser) parseReservedStatement() (ReservedStatement, error) {
-	statement := ReservedStatement{Keyword: p.current().val}
-	errorf := func(format string, args ...any) (ReservedStatement, error) {
-		return ReservedStatement{}, fmt.Errorf("reserved statement: "+format, args...)
-	}
-
-	for {
-		switch itm := p.nextNonWS(); itm.typ {
-		// Ending tokens
-		default:
-			return errorf("%w", unexpectedErr(itm, itemReservedText, itemQuotedLiteral, itemExpressionOpen))
-		case itemReservedKeyword, itemInputKeyword, itemLocalKeyword, // Another declaration
-			itemQuotedPatternOpen, itemMatchKeyword: // End of declarations
-			p.backup()
-			return statement, nil
-		// Non-ending tokens
-		case itemReservedText:
-			statement.ReservedBody = append(statement.ReservedBody, ReservedText(itm.val))
-		case itemQuotedLiteral:
-			statement.ReservedBody = append(statement.ReservedBody, QuotedLiteral(itm.val))
-		case itemExpressionOpen:
-			expression, err := p.parseExpression()
-			if err != nil {
-				return errorf("%w", err)
-			}
-
-			statement.Expressions = append(statement.Expressions, expression)
-		}
-	}
 }
 
 // ---------------------------------------------------------------------
