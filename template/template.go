@@ -690,7 +690,12 @@ func hasDuplicateVariants(variants []ast.Variant) bool {
 
 	for _, v := range variants {
 		for _, c := range checked {
-			if slicesEqual(c, v.Keys) {
+			if slices.EqualFunc(c, v.Keys, func(a, b ast.VariantKey) bool {
+				_, okA := a.(ast.CatchAllKey)
+				_, okB := b.(ast.CatchAllKey)
+
+				return okA == okB && keyString(a) == keyString(b)
+			}) {
 				return true
 			}
 		}
@@ -699,27 +704,6 @@ func hasDuplicateVariants(variants []ast.Variant) bool {
 	}
 
 	return false
-}
-
-func slicesEqual(a, b []ast.VariantKey) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i := range a {
-		_, okA := a[i].(ast.CatchAllKey)
-		_, okB := b[i].(ast.CatchAllKey)
-
-		if okA != okB {
-			return false
-		}
-
-		if keyString(a[i]) != keyString(b[i]) {
-			return false
-		}
-	}
-
-	return true
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {
