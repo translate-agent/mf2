@@ -505,17 +505,19 @@ func TestParseComplexMessage(t *testing.T) {
 		// Matcher
 		{
 			name:  "simple matcher one line",
-			input: ".match { $variable :number } 1 {{Hello { $variable} world}} * {{Hello { $variable } worlds}}",
+			input: ".input { $variable :number } .match $variable 1 {{Hello { $variable} world}} * {{Hello { $variable } worlds}}", //nolint:lll
 			want: ComplexMessage{
-				Declarations: nil,
-				ComplexBody: Matcher{
-					Selectors: []Expression{
-						{
-							Operand: Variable("variable"),
-							Annotation: Function{
-								Identifier: Identifier{Namespace: "", Name: "number"},
-							},
+				Declarations: []Declaration{
+					InputDeclaration{
+						Operand: Variable("variable"),
+						Annotation: Function{
+							Identifier: Identifier{Namespace: "", Name: "number"},
 						},
+					},
+				},
+				ComplexBody: Matcher{
+					Selectors: []Variable{
+						Variable("variable"),
 					},
 					Variants: []Variant{
 						{
@@ -540,19 +542,21 @@ func TestParseComplexMessage(t *testing.T) {
 		},
 		{
 			name: "simple matcher with newline variants",
-			input: `.match { $variable :number }
+			input: `.input { $variable :number } .match $variable
 1 {{Hello { $variable } world}}
 * {{Hello { $variable } worlds}}`,
 			want: ComplexMessage{
-				Declarations: nil,
-				ComplexBody: Matcher{
-					Selectors: []Expression{
-						{
-							Operand: Variable("variable"),
-							Annotation: Function{
-								Identifier: Identifier{Namespace: "", Name: "number"},
-							},
+				Declarations: []Declaration{
+					InputDeclaration{
+						Operand: Variable("variable"),
+						Annotation: Function{
+							Identifier: Identifier{Namespace: "", Name: "number"},
 						},
+					},
+				},
+				ComplexBody: Matcher{
+					Selectors: []Variable{
+						Variable("variable"),
 					},
 					Variants: []Variant{
 						{
@@ -577,19 +581,21 @@ func TestParseComplexMessage(t *testing.T) {
 		},
 		{
 			name: "simple matcher with newline variants in one line",
-			input: `.match { $variable :number }
+			input: `.input { $variable :number } .match $variable
 
 1 {{Hello { $variable} world}}* {{Hello { $variable } worlds}}`,
 			want: ComplexMessage{
-				Declarations: nil,
-				ComplexBody: Matcher{
-					Selectors: []Expression{
-						{
-							Operand: Variable("variable"),
-							Annotation: Function{
-								Identifier: Identifier{Namespace: "", Name: "number"},
-							},
+				Declarations: []Declaration{
+					InputDeclaration{
+						Operand: Variable("variable"),
+						Annotation: Function{
+							Identifier: Identifier{Namespace: "", Name: "number"},
 						},
+					},
+				},
+				ComplexBody: Matcher{
+					Selectors: []Variable{
+						Variable("variable"),
 					},
 					Variants: []Variant{
 						{
@@ -616,7 +622,8 @@ func TestParseComplexMessage(t *testing.T) {
 			name: "matcher with declarations",
 			input: `.local $var1 = { male }
 .local $var2 = { |female| }
-.match { :gender }
+.local $var3 = { :gender }
+.match $var3
 male {{Hello sir!}}
 |female| {{Hello madam!}}
 * {{Hello { $var1 } or { $var2 }!}}`,
@@ -630,17 +637,14 @@ male {{Hello sir!}}
 						Variable:   Variable("var2"),
 						Expression: Expression{Operand: QuotedLiteral("female")},
 					},
+					LocalDeclaration{
+						Variable:   Variable("var3"),
+						Expression: Expression{Annotation: Function{Identifier: Identifier{Namespace: "", Name: "gender"}}},
+					},
 				},
 				ComplexBody: Matcher{
-					Selectors: []Expression{
-						{
-							Annotation: Function{
-								Identifier: Identifier{
-									Namespace: "",
-									Name:      "gender",
-								},
-							},
-						},
+					Selectors: []Variable{
+						Variable("var3"),
 					},
 					Variants: []Variant{
 						{
@@ -672,7 +676,7 @@ male {{Hello sir!}}
 		{
 			name: "double matcher",
 			//nolint:dupword
-			input: `.match { $var1 } { $var2 }
+			input: `.match $var1 $var2
 yes yes {{Hello beautiful world!}}
 yes no {{Hello beautiful!}}
 no yes {{Hello world!}}
@@ -680,9 +684,9 @@ no yes {{Hello world!}}
 			want: ComplexMessage{
 				Declarations: nil,
 				ComplexBody: Matcher{
-					Selectors: []Expression{
-						{Operand: Variable("var1")},
-						{Operand: Variable("var2")},
+					Selectors: []Variable{
+						Variable("var1"),
+						Variable("var2"),
 					},
 					Variants: []Variant{
 						{
@@ -759,11 +763,11 @@ func TestParseErrors(t *testing.T) {
 		in, wantErr string
 	}{
 		{
-			in:      ".match {|foo| :x} {|bar| :x} ** {{foo}}",
+			in:      ".local $foo={|foo| :x} .local $bar ={|bar| :x} .match $foo $bar ** {{foo}}",
 			wantErr: "parse MF2: syntax error: complex message: matcher: variant keys: missing space between keys * and *",
 		},
 		{
-			in:      ".match {|foo| :x} {|bar| :x} *1 {{foo}}",
+			in:      ".local $foo= {|foo| :x} .local $bar = {|bar| :x} .match $foo $bar *1 {{foo}}",
 			wantErr: "parse MF2: syntax error: complex message: matcher: variant keys: missing space between keys * and 1",
 		},
 		{

@@ -333,8 +333,8 @@ func (QuotedPattern) node()        {}
 func (QuotedPattern) complexBody() {}
 
 type Matcher struct {
-	Selectors []Expression // At least one
-	Variants  []Variant    // At least one
+	Selectors []Variable // At least one
+	Variants  []Variant  // At least one
 }
 
 // String returns MF2 formatted string.

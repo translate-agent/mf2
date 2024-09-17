@@ -3,6 +3,8 @@ package builder
 import (
 	"runtime"
 	"testing"
+
+	"go.expect.digital/mf2/parse"
 )
 
 func Test_Builder(t *testing.T) {
@@ -129,14 +131,14 @@ func Test_Builder(t *testing.T) {
 			"complex message, matcher with multiple keys",
 			NewBuilder().
 				Match(
-					Var("i"),
-					Var("j"),
+					parse.Variable("i"),
+					parse.Variable("j"),
 				).
 				Keys(1, 2).Text("{first}").
 				Keys(2, 0).Text("second ").Expr(Var("i")).
 				Keys(3, 0).Expr(Literal("\\a|")).
 				Keys("*", "*").Expr(Literal(1)),
-			".match { $i } { $j }\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
+			".match $i $j\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
 		},
 		{
 			"complex message, matcher with multiple keys and local declarations",
@@ -144,14 +146,14 @@ func Test_Builder(t *testing.T) {
 				Input(Var("i")).
 				Local("hostName", Var("i")).
 				Match(
-					Var("i"),
-					Var("j"),
+					parse.Variable("i"),
+					parse.Variable("j"),
 				).
 				Keys(1, 2).Text("{first}").
 				Keys(2, 0).Text("second ").Expr(Var("i")).
 				Keys(3, 0).Expr(Literal("\\a|")).
 				Keys("*", "*").Expr(Literal(1)),
-			".input { $i }\n.local $hostName = { $i }\n.match { $i } { $j }\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
+			".input { $i }\n.local $hostName = { $i }\n.match $i $j\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
 		},
 		{
 			"attributes",
@@ -219,8 +221,8 @@ func BenchmarkBuildMatch(b *testing.B) {
 			Input(Var("i")).
 			Local("hostName", Var("i")).
 			Match(
-				Var("i"),
-				Var("j"),
+				parse.Variable("i"),
+				parse.Variable("j"),
 			).
 			Keys(1, 2).Text("{first}").
 			Keys(2, 0).Text("second ").Expr(Var("i")).

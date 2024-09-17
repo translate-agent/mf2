@@ -176,17 +176,12 @@ func (b *Builder) Expr(expr *Expression) *Builder {
 	return b
 }
 
-func (b *Builder) Match(selector *Expression, selectors ...*Expression) *Builder {
+func (b *Builder) Match(selector parse.Variable, selectors ...parse.Variable) *Builder {
 	if b.err != nil {
 		return b
 	}
 
-	parseSelectors := make([]parse.Expression, 0, len(selectors)+1)
-
-	parseSelectors = append(parseSelectors, selector.expression)
-	for _, v := range selectors {
-		parseSelectors = append(parseSelectors, v.expression)
-	}
+	parseSelectors := append([]parse.Variable{selector}, selectors...)
 
 	switch msg := b.tree.Message.(type) {
 	default:

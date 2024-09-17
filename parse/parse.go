@@ -769,13 +769,8 @@ selectorsLoop:
 			break selectorsLoop
 		case itemEOF:
 			return errorf("%w", unexpectedErr(itm))
-		case itemExpressionOpen:
-			selector, err := p.parseExpression()
-			if err != nil {
-				return errorf("%w", err)
-			}
-
-			matcher.Selectors = append(matcher.Selectors, selector)
+		case itemVariable:
+			matcher.Selectors = append(matcher.Selectors, Variable(itm.val))
 		}
 	}
 
