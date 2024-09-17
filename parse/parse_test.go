@@ -242,46 +242,6 @@ func TestParseSimpleMessage(t *testing.T) {
 			},
 		},
 		{
-			name:  "private use and reserved annotation",
-			input: `Hello { $hey ^private }{ !|reserved| \|hey\| \{ @v @k=2 @l:l=$s} World!`,
-			want: SimpleMessage{
-				Text("Hello "),
-				Expression{
-					Operand: Variable("hey"),
-					Annotation: PrivateUseAnnotation{
-						Start: '^',
-						ReservedBody: []ReservedBody{
-							ReservedText("private"),
-						},
-					},
-				},
-				Expression{
-					Annotation: ReservedAnnotation{
-						Start: '!',
-						ReservedBody: []ReservedBody{
-							QuotedLiteral("reserved"),
-							ReservedText("|hey|"),
-							ReservedText("{"),
-						},
-					},
-					Attributes: []Attribute{
-						{
-							Identifier: Identifier{Name: "v"},
-						},
-						{
-							Identifier: Identifier{Name: "k"},
-							Value:      NumberLiteral("2"),
-						},
-						{
-							Identifier: Identifier{Namespace: "l", Name: "l"},
-							Value:      Variable("s"),
-						},
-					},
-				},
-				Text(" World!"),
-			},
-		},
-		{
 			name:  "markup",
 			input: `It is a {#button opt1=val1 @attr1=val1 } button { /button } this is a { #br /} something else, {#ns:tag1}{#tag2}text{ #img /}{/tag2}{/ns:tag1}`, //nolint:lll
 			want: SimpleMessage{
@@ -377,21 +337,10 @@ func TestParseComplexMessage(t *testing.T) {
 				},
 			},
 		},
-		//nolint:dupword
 		{
-			name: "all declarations",
-			input: `.input{$input :number @a}
-.input { $input2 ^|quot| @b=c}
-.input { $input3 ! hey hey @c=1 @d=2}
-.local $local1={1}
-.local $local2={|2| ^private @a @b=2}
-.local $local3 = { > reserved}
-.reserved1 {$reserved1}
-.reserved2 hey |quot| hey { |reserved| :func }
-.reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
-{{Text}}`,
+			name:  "all declarations",
+			input: `.input{$input :number @a} .local $local1={1} {{Text}}`,
 			want: ComplexMessage{
-				ComplexBody: QuotedPattern{Text("Text")},
 				Declarations: []Declaration{
 					// .input{$input :number @a}
 					InputDeclaration{
@@ -399,107 +348,13 @@ func TestParseComplexMessage(t *testing.T) {
 						Annotation: Function{Identifier: Identifier{Name: "number"}},
 						Attributes: []Attribute{{Identifier: Identifier{Name: "a"}}},
 					},
-					// .input { $input2 ^|quot| @b=c}
-					InputDeclaration{
-						Operand: Variable("input2"),
-						Annotation: PrivateUseAnnotation{
-							Start:        '^',
-							ReservedBody: []ReservedBody{QuotedLiteral("quot")},
-						},
-						Attributes: []Attribute{{Identifier: Identifier{Name: "b"}, Value: NameLiteral("c")}},
-					},
-					// .input { $input3 ! hey hey @c=1 @d=2}
-					InputDeclaration{
-						Operand: Variable("input3"),
-						Annotation: ReservedAnnotation{
-							Start: '!',
-							ReservedBody: []ReservedBody{
-								ReservedText("hey"),
-								ReservedText("hey"),
-							},
-						},
-						Attributes: []Attribute{
-							{Identifier: Identifier{Name: "c"}, Value: NumberLiteral("1")},
-							{Identifier: Identifier{Name: "d"}, Value: NumberLiteral("2")},
-						},
-					},
 					// .local $local1={1}
 					LocalDeclaration{
 						Variable:   Variable("local1"),
 						Expression: Expression{Operand: NumberLiteral("1")},
 					},
-					// .local $local2={|2| ^private @a @b=2}
-					LocalDeclaration{
-						Variable: Variable("local2"),
-						Expression: Expression{
-							Operand: QuotedLiteral("2"),
-							Annotation: PrivateUseAnnotation{
-								Start:        '^',
-								ReservedBody: []ReservedBody{ReservedText("private")},
-							},
-							Attributes: []Attribute{
-								{Identifier: Identifier{Name: "a"}},
-								{Identifier: Identifier{Name: "b"}, Value: NumberLiteral("2")},
-							},
-						},
-					},
-					// .local $local3 = { > reserved}
-					LocalDeclaration{
-						Variable: Variable("local3"),
-						Expression: Expression{
-							Annotation: ReservedAnnotation{
-								Start:        '>',
-								ReservedBody: []ReservedBody{ReservedText("reserved")},
-							},
-						},
-					},
-					// .reserved1 {$reserved1}
-					ReservedStatement{
-						Keyword: "reserved1",
-						Expressions: []Expression{
-							{Operand: Variable("reserved1")},
-						},
-					},
-					// .reserved2 hey |quot| hey { |reserved| :func }
-					ReservedStatement{
-						Keyword: "reserved2",
-						ReservedBody: []ReservedBody{
-							ReservedText("hey"),
-							QuotedLiteral("quot"),
-							ReservedText("hey"),
-						},
-						Expressions: []Expression{
-							{
-								Operand:    QuotedLiteral("reserved"),
-								Annotation: Function{Identifier: Identifier{Name: "func"}},
-							},
-						},
-					},
-					// .reserved3 |body| |body2| {$expr1} {|expr2|} { :expr3 } { $expr4 ^hey @beep @boop}
-					ReservedStatement{
-						Keyword: "reserved3",
-						ReservedBody: []ReservedBody{
-							QuotedLiteral("body"),
-							QuotedLiteral("body2"),
-						},
-						Expressions: []Expression{
-							{Operand: Variable("expr1")},
-							{Operand: QuotedLiteral("expr2")},
-							{Annotation: Function{Identifier: Identifier{Name: "expr3"}}},
-							{
-								Operand: Variable("expr4"),
-								Annotation: PrivateUseAnnotation{
-									Start:        '^',
-									ReservedBody: []ReservedBody{ReservedText("hey")},
-								},
-								Attributes: []Attribute{
-									{Identifier: Identifier{Name: "beep"}},
-									{Identifier: Identifier{Name: "boop"}},
-								},
-							},
-						},
-					},
 				},
+				ComplexBody: QuotedPattern{Text("Text")},
 			},
 		},
 		// Matcher
@@ -806,7 +661,7 @@ func BenchmarkParse(b *testing.B) {
 	var tree AST
 
 	for range b.N {
-		tree, _ = Parse(`  .input {$foo :number} .local $bar = {$foo} .match {$bar} one {{\|one\|}} * {{\|other\|}}  `)
+		tree, _ = Parse(`  .input {$foo :number} .local $bar = {$foo} .match $bar one {{\|one\|}} * {{\|other\|}}  `)
 	}
 
 	runtime.KeepAlive(tree)
