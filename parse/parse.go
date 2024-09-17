@@ -636,6 +636,11 @@ func (p *parser) parseMatcher() (Matcher, error) {
 
 selectorsLoop:
 	for {
+		itm := p.next()
+		if itm.typ != itemWhitespace {
+			return errorf("%w", unexpectedErr(itm, itemWhitespace))
+		}
+
 		switch itm := p.nextNonWS(); itm.typ {
 		default:
 			p.backup()
@@ -643,13 +648,6 @@ selectorsLoop:
 		case itemEOF:
 			return errorf("%w", unexpectedErr(itm))
 		case itemVariable:
-			p.backup()
-			if v := p.current(); v.typ != itemWhitespace {
-				// there should be a whitespace before each selector
-				return errorf("%w", mf2.ErrSyntax)
-			}
-			p.next()
-
 			matcher.Selectors = append(matcher.Selectors, Variable(itm.val))
 		}
 	}
