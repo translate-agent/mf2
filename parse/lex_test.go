@@ -401,13 +401,11 @@ func Test_lex(t *testing.T) {
 		},
 		{
 			name:  "matcher",
-			input: ".match {$n} 0 {{no apples}} 1 {{{$n} apple}} * {{{$n} apples}}",
+			input: ".match $n 0 {{no apples}} 1 {{{$n} apple}} * {{{$n} apples}}",
 			want: []item{
 				mk(itemMatchKeyword, "match"),
 				mk(itemWhitespace, " "),
-				mk(itemExpressionOpen, "{"),
 				mk(itemVariable, "n"),
-				mk(itemExpressionClose, "}"),
 				mk(itemWhitespace, " "),
 				// 0 {{no apples}}
 				mk(itemNumberLiteral, "0"),
@@ -679,7 +677,7 @@ func BenchmarkLex(b *testing.B) {
 	var itm item
 
 	for range b.N {
-		lexer := lex(`  .input {$foo :number} .local $bar = {$foo} .match {$bar} one {{\|one\|}} * {{\|other\|}}  `)
+		lexer := lex(`  .input {$foo :number} .local $bar = {$foo} .match $bar one {{\|one\|}} * {{\|other\|}}  `)
 
 		for {
 			itm = lexer.nextItem()

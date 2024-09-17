@@ -146,7 +146,7 @@ func Test_Matcher(t *testing.T) {
 	}{
 		{
 			name: "matcher string",
-			text: `.match { $n :string } no {{no apples}} one {{{ $n } apple}} * {{{ $n } apples}}`,
+			text: `.input { $n :string } .match $n no {{no apples}} one {{{ $n } apple}} * {{{ $n } apples}}`,
 			inputs: []map[string]any{
 				{"n": "no"},
 				{"n": "one"},
@@ -157,7 +157,7 @@ func Test_Matcher(t *testing.T) {
 		{
 			name: "Pattern Selection with string annotation",
 			//nolint:dupword
-			text: ".match {$foo :string} {$bar :string} bar bar {{All bar}} foo foo {{All foo}} * * {{Otherwise}}",
+			text: ".input {$foo :string} .input {$bar :string} .match $foo $bar bar bar {{All bar}} foo foo {{All foo}} * * {{Otherwise}}", //nolint:lll
 			inputs: []map[string]any{
 				{"foo": "foo", "bar": "bar"},
 			},
@@ -165,13 +165,13 @@ func Test_Matcher(t *testing.T) {
 		},
 		{
 			name:   "Pattern Selection with Multiple Variants",
-			text:   ".match {$foo :string} {$bar :string} * bar {{Any and bar}}foo * {{Foo and any}} foo bar {{Foo and bar}} * * {{Otherwise}}", //nolint:lll
+			text:   ".input {$foo :string} .input {$bar :string} .match $foo $bar * bar {{Any and bar}}foo * {{Foo and any}} foo bar {{Foo and bar}} * * {{Otherwise}}", //nolint:lll
 			inputs: []map[string]any{{"foo": "foo", "bar": "bar"}},
 			want:   []string{"Foo and bar"},
 		},
 		{
 			name:   "Plural Format Selection",
-			text:   ".match {$count :string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+			text:   ".input {$count :string} .match $count one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
 			inputs: []map[string]any{{"count": "1"}},
 			want:   []string{"Exact match"},
 		},
@@ -266,15 +266,15 @@ func Test_ExecuteErrors(t *testing.T) {
 		},
 		{
 			name:  "Selection Error No Annotation",
-			text:  ".match {$n} 0 {{no apples}} 1 {{apple}} * {{apples}}",
+			text:  ".input {$n} .match $n 0 {{no apples}} 1 {{apple}} * {{apples}}",
 			input: map[string]any{"n": "1"},
-			want:  want{execErr: mf2.ErrMissingSelectorAnnotation},
+			want:  want{text: "apples", execErr: mf2.ErrMissingSelectorAnnotation},
 		},
 		{
-			name:  "Selection with Reversed Annotation",
-			text:  ".match {$count ^string} one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
+			name:  "Selection with Reserved Annotation",
+			text:  ".input {$count ^string} .match $count one {{Category match}} 1 {{Exact match}} *   {{Other match}}",
 			input: map[string]any{"count": "1"},
-			want:  want{execErr: mf2.ErrUnsupportedExpression},
+			want:  want{text: "Other match", execErr: mf2.ErrUnsupportedExpression},
 		},
 	}
 
