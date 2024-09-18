@@ -636,7 +636,12 @@ func (p *parser) parseMatcher() (Matcher, error) {
 
 selectorsLoop:
 	for {
-		switch itm := p.nextNonWS(); itm.typ {
+		itm := p.next()
+		if itm.typ != itemWhitespace {
+			return errorf("missing whitespace before selector: %w", unexpectedErr(itm, itemWhitespace))
+		}
+
+		switch itm := p.next(); itm.typ {
 		default:
 			p.backup()
 			break selectorsLoop
@@ -645,6 +650,11 @@ selectorsLoop:
 		case itemVariable:
 			matcher.Selectors = append(matcher.Selectors, Variable(itm.val))
 		}
+	}
+
+	if v := p.current(); v.typ != itemWhitespace {
+		// there should be a whitespace between selectors and variants
+		return errorf("missing whitespace between selectors and variants: %w", mf2.ErrSyntax)
 	}
 
 	// parse one or more variants

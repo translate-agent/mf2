@@ -31,10 +31,6 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.local_$x_=_{1_:test:format}_.match_$x_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.input_{$x_:test:select_decimalPlaces=1}_.local_$y_=_{$x_:test:select}_.match_$y_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 
-		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/.input_{$x_:x}_.match_$x*_{{foo}}",
-		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/.input_{$x_:x}_.match_$x|x|_{{foo}}_*_{{foo}}",
-		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/.input_{$x_:x}_.local_$y_=_{y_:y}_.match_$x$y_*_*_{{foo}}",
-		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/.input_{$x_:x}_.match$x_*_{{foo}}",
 		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/bad_{:placeholder_@attribute=$foo}",
 	}
 }
