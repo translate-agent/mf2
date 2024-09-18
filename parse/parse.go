@@ -638,7 +638,7 @@ selectorsLoop:
 	for {
 		itm := p.next()
 		if itm.typ != itemWhitespace {
-			return errorf("%w", unexpectedErr(itm, itemWhitespace))
+			return errorf("missing whitespace before selector: %w", unexpectedErr(itm, itemWhitespace))
 		}
 
 		switch itm := p.next(); itm.typ {
