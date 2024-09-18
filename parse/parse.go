@@ -15,6 +15,7 @@ type parser struct {
 	declaration      string   // input or local or empty
 	lexer            *lexer
 	items            []item
+	annotations      map[string]struct{} // which variables has direct or indirect declarations with annotation
 	variables        []Variable
 	pos              int
 }
@@ -392,12 +393,25 @@ optionsLoop:
 	}
 }
 
+func (p *parser) markHasAnnotation(variable string) {
+	if variable == "" {
+		return
+	}
+
+	if p.annotations == nil {
+		p.annotations = make(map[string]struct{})
+	}
+
+	p.annotations[variable] = struct{}{}
+}
+
 // ------------------------------Expression------------------------------
 
 func (p *parser) parseExpression() (Expression, error) {
 	var (
-		expr Expression
-		err  error
+		expr    Expression
+		err     error
+		varName string
 	)
 
 	errorf := func(format string, args ...any) (Expression, error) { //nolint:unparam
@@ -415,6 +429,7 @@ func (p *parser) parseExpression() (Expression, error) {
 		return errorf("%w: %w", mf2.ErrBadOperand, err)
 	case itemVariable:
 		variable := Variable(itm.val)
+		varName = itm.val
 
 		switch p.declaration {
 		case "local":
@@ -445,7 +460,14 @@ func (p *parser) parseExpression() (Expression, error) {
 	}
 
 	if p.peekNonWS().typ == itemExpressionClose { // expression with operand only
+		if _, ok := p.annotations[varName]; ok {
+			// if the referenced expression operand has direct or indirect annotation,
+			// also mark the `p.reservedVariable` as having annotation
+			p.markHasAnnotation(string(p.reservedVariable))
+		}
+
 		p.nextNonWS()
+
 		return expr, nil
 	}
 
@@ -473,6 +495,9 @@ func (p *parser) parseExpression() (Expression, error) {
 		p.backup() // attribute
 		p.backup() // whitespace
 	}
+
+	p.markHasAnnotation(varName)
+	p.markHasAnnotation(string(p.reservedVariable))
 
 	if p.peekNonWS().typ == itemExpressionClose {
 		p.nextNonWS()
@@ -625,6 +650,7 @@ func isFallback(keys []VariantKey) bool {
 	return true
 }
 
+//nolint:gocognit
 func (p *parser) parseMatcher() (Matcher, error) {
 	var matcher Matcher
 
@@ -648,6 +674,10 @@ selectorsLoop:
 		case itemEOF:
 			return errorf("%w", unexpectedErr(itm))
 		case itemVariable:
+			if _, ok := p.annotations[itm.val]; !ok {
+				return errorf(`missing direct or indirect annotation for selector "%s": %w`, itm.val, mf2.ErrMissingSelectorAnnotation) //nolint:lll
+			}
+
 			matcher.Selectors = append(matcher.Selectors, Variable(itm.val))
 		}
 	}

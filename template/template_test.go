@@ -254,12 +254,6 @@ func Test_ExecuteErrors(t *testing.T) {
 			input: map[string]any{"ext": "22"},
 			want:  want{parseErr: mf2.ErrDuplicateDeclaration},
 		},
-		{
-			name:  "Selection Error No Annotation",
-			text:  ".input {$n} .match $n 0 {{no apples}} 1 {{apple}} * {{apples}}",
-			input: map[string]any{"n": "1"},
-			want:  want{text: "apples", execErr: mf2.ErrMissingSelectorAnnotation},
-		},
 	}
 
 	for _, test := range tests {

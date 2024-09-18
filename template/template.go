@@ -488,11 +488,6 @@ func (e *executer) resolveSelectors(m ast.Matcher) ([]*ResolvedValue, error) {
 			err = errors.Join(err, fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v))
 		}
 
-		if !e.hasAnnotation(selector) {
-			err = errors.Join(err, mf2.ErrMissingSelectorAnnotation)
-			v.err = errors.Join(v.err, mf2.ErrMissingSelectorAnnotation)
-		}
-
 		err = errors.Join(err, v.err)
 
 		res = append(res, v)
@@ -503,38 +498,6 @@ func (e *executer) resolveSelectors(m ast.Matcher) ([]*ResolvedValue, error) {
 	}
 
 	return res, err
-}
-
-func (e *executer) hasAnnotation(operand ast.Value) bool {
-	m, ok := e.template.ast.Message.(ast.ComplexMessage)
-	if !ok {
-		return false
-	}
-
-	for _, decl := range m.Declarations {
-		switch v := decl.(type) {
-		default:
-			return false
-		case ast.LocalDeclaration:
-			if v.Variable.String() != operand.String() {
-				continue
-			}
-
-			if v.Expression.Annotation != nil {
-				return true
-			}
-
-			return e.hasAnnotation(v.Expression.Operand)
-		case ast.InputDeclaration:
-			if v.Operand.String() != operand.String() {
-				continue
-			}
-
-			return v.Annotation != nil
-		}
-	}
-
-	return false
 }
 
 func (e *executer) resolvePreferences(m ast.Matcher, res []*ResolvedValue) [][]string {
