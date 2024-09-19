@@ -699,6 +699,7 @@ selectorsLoop:
 	}
 
 	// parse one or more variants
+	keysLookup := make([][]VariantKey, 0)
 
 	for {
 		switch itm := p.nextNonWS(); itm.typ {
@@ -725,6 +726,19 @@ selectorsLoop:
 			if len(keys) != len(matcher.Selectors) {
 				return errorf("%w: %d selectors and %d keys", mf2.ErrVariantKeyMismatch, len(matcher.Selectors), len(keys))
 			}
+
+			for _, v := range keysLookup {
+				if slices.EqualFunc(v, keys, func(a, b VariantKey) bool {
+					_, okA := a.(CatchAllKey)
+					_, okB := b.(CatchAllKey)
+
+					return okA == okB && keyString(a) == keyString(b)
+				}) {
+					return errorf("%w", mf2.ErrDuplicateVariant)
+				}
+			}
+
+			keysLookup = append(keysLookup, keys)
 
 			pattern, err := p.parsePattern()
 			if err != nil {
@@ -935,5 +949,20 @@ func unexpectedErr(actual item, expected ...itemType) UnexpectedTokenError {
 	return UnexpectedTokenError{
 		actual:   actual,
 		expected: expected,
+	}
+}
+
+func keyString(key VariantKey) string {
+	switch k := key.(type) {
+	default:
+		return ""
+	case CatchAllKey:
+		return "*"
+	case QuotedLiteral:
+		return string(k)
+	case NameLiteral:
+		return string(k)
+	case NumberLiteral:
+		return string(k)
 	}
 }

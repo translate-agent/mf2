@@ -455,10 +455,6 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 		return fmt.Errorf("matcher: %w", matcherErr)
 	}
 
-	if hasDuplicateVariants(m.Variants) {
-		return fmt.Errorf("matcher: %w", mf2.ErrDuplicateVariant)
-	}
-
 	pref := e.resolvePreferences(m, res)
 
 	filteredVariants := e.filterVariants(m, pref)
@@ -617,27 +613,6 @@ func keyString(key ast.VariantKey) string {
 	case ast.NumberLiteral:
 		return string(k)
 	}
-}
-
-func hasDuplicateVariants(variants []ast.Variant) bool {
-	checked := make([][]ast.VariantKey, 0, len(variants))
-
-	for _, v := range variants {
-		for _, c := range checked {
-			if slices.EqualFunc(c, v.Keys, func(a, b ast.VariantKey) bool {
-				_, okA := a.(ast.CatchAllKey)
-				_, okB := b.(ast.CatchAllKey)
-
-				return okA == okB && keyString(a) == keyString(b)
-			}) {
-				return true
-			}
-		}
-
-		checked = append(checked, v.Keys)
-	}
-
-	return false
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {

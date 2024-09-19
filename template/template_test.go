@@ -243,16 +243,19 @@ func Test_ExecuteErrors(t *testing.T) {
 			want: want{parseErr: mf2.ErrDuplicateOptionName},
 		},
 		{
-			name:  "duplicate input declaration",
-			text:  ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
-			input: map[string]any{"var": "22"},
-			want:  want{parseErr: mf2.ErrDuplicateDeclaration},
+			name: "duplicate input declaration",
+			text: ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
+			want: want{parseErr: mf2.ErrDuplicateDeclaration},
 		},
 		{
-			name:  "duplicate input and local declaration",
-			text:  ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
-			input: map[string]any{"ext": "22"},
-			want:  want{parseErr: mf2.ErrDuplicateDeclaration},
+			name: "duplicate input and local declaration",
+			text: ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
+			want: want{parseErr: mf2.ErrDuplicateDeclaration},
+		},
+		{
+			name: "duplicate variant",
+			text: ".input {$foo :number} .match $foo 1 {{one}} |1| {{also one}} * {{other}}",
+			want: want{parseErr: mf2.ErrDuplicateVariant},
 		},
 	}
 
