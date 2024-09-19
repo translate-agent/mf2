@@ -46,7 +46,15 @@ func TestMarkup_String(t *testing.T) {
 
 func BenchmarkComplexMessage_String(b *testing.B) {
 	//nolint:dupword
-	tree, err := Parse(".input {$foo :number} .input {$bar :number} .match $foo $bar one one {{one { $foo } one}} one * {{one other}} * * {{other}}") //nolint:lll
+	tree, err := Parse(`
+.input {$foo :number}
+.input {$bar :number}
+
+.match $foo $bar
+one one {{one { $foo } one}}
+one * {{one other}}
+* * {{other}}
+`)
 	if err != nil {
 		b.Error(err)
 	}
