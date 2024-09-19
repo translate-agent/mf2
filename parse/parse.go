@@ -152,12 +152,7 @@ func Parse(input string) (AST, error) {
 		default:
 			// syntax errors
 			return AST{}, fmt.Errorf("parse MF2: %w: "+format, mf2.ErrSyntax, err)
-		case errors.Is(err, mf2.ErrDuplicateDeclaration),
-			errors.Is(err, mf2.ErrDuplicateOptionName),
-			errors.Is(err, mf2.ErrDuplicateVariant),
-			errors.Is(err, mf2.ErrMissingFallbackVariant),
-			errors.Is(err, mf2.ErrMissingSelectorAnnotation),
-			errors.Is(err, mf2.ErrVariantKeyMismatch):
+		case errors.Is(err, mf2.ErrDataModel):
 			// data model errors
 			return AST{}, fmt.Errorf("parse MF2: "+format, err)
 		}

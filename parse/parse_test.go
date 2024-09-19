@@ -638,15 +638,15 @@ func TestParseErrors(t *testing.T) {
 		},
 		{
 			in:      ".input {$foo} .input {$foo} {{ }}",
-			wantErr: `parse MF2: complex message: input declaration: expression: duplicate declaration: $foo`,
+			wantErr: "parse MF2: complex message: input declaration: expression: data model\nduplicate declaration: $foo",
 		},
 		{
 			in:      ".input {$foo} .match $foo * {{}}",
-			wantErr: `parse MF2: complex message: matcher: missing selector annotation`,
+			wantErr: "parse MF2: complex message: matcher: data model\nmissing selector annotation",
 		},
 		{
 			in:      "Hello, { :number style=decimal style=percent }!",
-			wantErr: `parse MF2: simple message: pattern: expression: function: duplicate option name`,
+			wantErr: "parse MF2: simple message: pattern: expression: function: data model\nduplicate option name",
 		},
 	} {
 		t.Run(test.in, func(t *testing.T) {
