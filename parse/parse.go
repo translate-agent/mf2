@@ -148,13 +148,19 @@ Examples:
 */
 func Parse(input string) (AST, error) {
 	errorf := func(format string, err error) (AST, error) {
-		// TODO(jhorsts): improve error handling, add MF2 syntax error as early as possible.
-		if errors.Is(err, mf2.ErrDuplicateDeclaration) {
+		switch {
+		default:
+			// syntax errors
+			return AST{}, fmt.Errorf("parse MF2: %w: "+format, mf2.ErrSyntax, err)
+		case errors.Is(err, mf2.ErrDuplicateDeclaration),
+			errors.Is(err, mf2.ErrDuplicateOptionName),
+			errors.Is(err, mf2.ErrDuplicateVariant),
+			errors.Is(err, mf2.ErrMissingFallbackVariant),
+			errors.Is(err, mf2.ErrMissingSelectorAnnotation),
+			errors.Is(err, mf2.ErrVariantKeyMismatch):
+			// data model errors
 			return AST{}, fmt.Errorf("parse MF2: "+format, err)
 		}
-
-		// fallback to syntax error unless one of MF2 errors is returned
-		return AST{}, fmt.Errorf("parse MF2: %w: "+format, mf2.ErrSyntax, err)
 	}
 
 	p := &parser{lexer: lex(input), pos: -1}
@@ -245,7 +251,7 @@ declarationsLoop:
 
 		message.ComplexBody = QuotedPattern(pattern)
 	case itemMatchKeyword:
-		matcher, err := p.parseMatcher()
+		matcher, err := p.parseMatcher(message.Declarations)
 		if err != nil {
 			return errorf("%w", err)
 		}
@@ -506,11 +512,12 @@ func (p *parser) parseFunction() (Function, error) {
 		return function, nil
 	}
 
-	errorf := func(format string, args ...any) (Function, error) {
+	errorf := func(format string, args ...any) (Function, error) { //nolint:unparam
 		return Function{}, fmt.Errorf("function: "+format, args...)
 	}
 
 	// parse options
+	opts := make(map[string]struct{})
 
 	for {
 		if itm := p.next(); itm.typ != itemWhitespace {
@@ -525,6 +532,12 @@ func (p *parser) parseFunction() (Function, error) {
 			if err != nil {
 				return errorf("%w", err)
 			}
+
+			if _, ok := opts[option.Identifier.String()]; ok {
+				return errorf("%w", mf2.ErrDuplicateOptionName)
+			}
+
+			opts[option.Identifier.String()] = struct{}{}
 
 			function.Options = append(function.Options, option)
 		case itemAttribute: // end of function, attributes are next
@@ -625,7 +638,35 @@ func isFallback(keys []VariantKey) bool {
 	return true
 }
 
-func (p *parser) parseMatcher() (Matcher, error) {
+func hasAnnotation(variable Variable, declarations []Declaration) bool {
+	for _, v := range declarations {
+		switch t := v.(type) {
+		case InputDeclaration:
+			if t.Operand != variable {
+				continue
+			}
+
+			return t.Annotation != nil
+		case LocalDeclaration:
+			if t.Variable != variable {
+				continue
+			}
+
+			if t.Expression.Annotation != nil {
+				return true
+			}
+
+			if u, ok := t.Expression.Operand.(Variable); ok {
+				return hasAnnotation(u, declarations)
+			}
+		}
+	}
+
+	return false
+}
+
+//nolint:gocognit
+func (p *parser) parseMatcher(declarations []Declaration) (Matcher, error) {
 	var matcher Matcher
 
 	errorf := func(format string, args ...any) (Matcher, error) {
@@ -648,6 +689,10 @@ selectorsLoop:
 		case itemEOF:
 			return errorf("%w", unexpectedErr(itm))
 		case itemVariable:
+			if !hasAnnotation(Variable(itm.val), declarations) {
+				return errorf("%w", mf2.ErrMissingSelectorAnnotation)
+			}
+
 			matcher.Selectors = append(matcher.Selectors, Variable(itm.val))
 		}
 	}
@@ -658,6 +703,7 @@ selectorsLoop:
 	}
 
 	// parse one or more variants
+	keysLookup := make([][]VariantKey, 0)
 
 	for {
 		switch itm := p.nextNonWS(); itm.typ {
@@ -684,6 +730,19 @@ selectorsLoop:
 			if len(keys) != len(matcher.Selectors) {
 				return errorf("%w: %d selectors and %d keys", mf2.ErrVariantKeyMismatch, len(matcher.Selectors), len(keys))
 			}
+
+			for _, v := range keysLookup {
+				if slices.EqualFunc(v, keys, func(a, b VariantKey) bool {
+					_, okA := a.(CatchAllKey)
+					_, okB := b.(CatchAllKey)
+
+					return okA == okB && keyString(a) == keyString(b)
+				}) {
+					return errorf("%w", mf2.ErrDuplicateVariant)
+				}
+			}
+
+			keysLookup = append(keysLookup, keys)
 
 			pattern, err := p.parsePattern()
 			if err != nil {
@@ -894,5 +953,20 @@ func unexpectedErr(actual item, expected ...itemType) UnexpectedTokenError {
 	return UnexpectedTokenError{
 		actual:   actual,
 		expected: expected,
+	}
+}
+
+func keyString(key VariantKey) string {
+	switch k := key.(type) {
+	default:
+		return ""
+	case CatchAllKey:
+		return "*"
+	case QuotedLiteral:
+		return string(k)
+	case NameLiteral:
+		return string(k)
+	case NumberLiteral:
+		return string(k)
 	}
 }

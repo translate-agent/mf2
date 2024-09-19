@@ -240,25 +240,22 @@ func Test_ExecuteErrors(t *testing.T) {
 		{
 			name: "duplicate option name",
 			text: "Hello, { :number style=decimal style=percent }!",
-			want: want{execErr: mf2.ErrDuplicateOptionName, text: "Hello, {:number}!"},
+			want: want{parseErr: mf2.ErrDuplicateOptionName},
 		},
 		{
-			name:  "duplicate input declaration",
-			text:  ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
-			input: map[string]any{"var": "22"},
-			want:  want{parseErr: mf2.ErrDuplicateDeclaration},
+			name: "duplicate input declaration",
+			text: ".input {$var} .input {$var} {{Redeclaration of the same variable}}",
+			want: want{parseErr: mf2.ErrDuplicateDeclaration},
 		},
 		{
-			name:  "duplicate input and local declaration",
-			text:  ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
-			input: map[string]any{"ext": "22"},
-			want:  want{parseErr: mf2.ErrDuplicateDeclaration},
+			name: "duplicate input and local declaration",
+			text: ".local $var = {$ext} .input {$var} {{Redeclaration of a local variable}}",
+			want: want{parseErr: mf2.ErrDuplicateDeclaration},
 		},
 		{
-			name:  "Selection Error No Annotation",
-			text:  ".input {$n} .match $n 0 {{no apples}} 1 {{apple}} * {{apples}}",
-			input: map[string]any{"n": "1"},
-			want:  want{text: "apples", execErr: mf2.ErrMissingSelectorAnnotation},
+			name: "duplicate variant",
+			text: ".input {$foo :number} .match $foo 1 {{one}} |1| {{also one}} * {{other}}",
+			want: want{parseErr: mf2.ErrDuplicateVariant},
 		},
 	}
 

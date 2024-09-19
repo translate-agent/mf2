@@ -433,17 +433,12 @@ func (e *executer) resolveOptions(options []ast.Option) (Options, error) {
 	m := make(Options, len(options))
 
 	for _, opt := range options {
-		name := opt.Identifier.Name
-		if _, ok := m[name]; ok {
-			return nil, fmt.Errorf(`%w "%s"`, mf2.ErrDuplicateOptionName, name)
-		}
-
 		value, err := e.resolveValue(opt.Value)
 		if err != nil {
 			return nil, fmt.Errorf("option: %w", err)
 		}
 
-		m[name] = NewResolvedValue(value)
+		m[opt.Identifier.Name] = NewResolvedValue(value)
 	}
 
 	return m, nil
@@ -458,10 +453,6 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 		errors.Is(matcherErr, mf2.ErrBadSelector): // noop
 	case matcherErr != nil:
 		return fmt.Errorf("matcher: %w", matcherErr)
-	}
-
-	if hasDuplicateVariants(m.Variants) {
-		return fmt.Errorf("matcher: %w", mf2.ErrDuplicateVariant)
 	}
 
 	pref := e.resolvePreferences(m, res)
@@ -488,11 +479,6 @@ func (e *executer) resolveSelectors(m ast.Matcher) ([]*ResolvedValue, error) {
 			err = errors.Join(err, fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v))
 		}
 
-		if !e.hasAnnotation(selector) {
-			err = errors.Join(err, mf2.ErrMissingSelectorAnnotation)
-			v.err = errors.Join(v.err, mf2.ErrMissingSelectorAnnotation)
-		}
-
 		err = errors.Join(err, v.err)
 
 		res = append(res, v)
@@ -503,38 +489,6 @@ func (e *executer) resolveSelectors(m ast.Matcher) ([]*ResolvedValue, error) {
 	}
 
 	return res, err
-}
-
-func (e *executer) hasAnnotation(operand ast.Value) bool {
-	m, ok := e.template.ast.Message.(ast.ComplexMessage)
-	if !ok {
-		return false
-	}
-
-	for _, decl := range m.Declarations {
-		switch v := decl.(type) {
-		default:
-			return false
-		case ast.LocalDeclaration:
-			if v.Variable.String() != operand.String() {
-				continue
-			}
-
-			if v.Expression.Annotation != nil {
-				return true
-			}
-
-			return e.hasAnnotation(v.Expression.Operand)
-		case ast.InputDeclaration:
-			if v.Operand.String() != operand.String() {
-				continue
-			}
-
-			return v.Annotation != nil
-		}
-	}
-
-	return false
 }
 
 func (e *executer) resolvePreferences(m ast.Matcher, res []*ResolvedValue) [][]string {
@@ -659,27 +613,6 @@ func keyString(key ast.VariantKey) string {
 	case ast.NumberLiteral:
 		return string(k)
 	}
-}
-
-func hasDuplicateVariants(variants []ast.Variant) bool {
-	checked := make([][]ast.VariantKey, 0, len(variants))
-
-	for _, v := range variants {
-		for _, c := range checked {
-			if slices.EqualFunc(c, v.Keys, func(a, b ast.VariantKey) bool {
-				_, okA := a.(ast.CatchAllKey)
-				_, okB := b.(ast.CatchAllKey)
-
-				return okA == okB && keyString(a) == keyString(b)
-			}) {
-				return true
-			}
-		}
-
-		checked = append(checked, v.Keys)
-	}
-
-	return false
 }
 
 func matchSelectorKeys(rv any, keys []string) []string {

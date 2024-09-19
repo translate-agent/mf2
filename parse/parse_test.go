@@ -531,13 +531,24 @@ male {{Hello sir!}}
 		{
 			name: "double matcher",
 			//nolint:dupword
-			input: `.match $var1 $var2
+			input: `.input {$var1 :string}
+.input {$var2 :string}
+.match $var1 $var2
 yes yes {{Hello beautiful world!}}
 yes no {{Hello beautiful!}}
 no yes {{Hello world!}}
 * * {{Hello!}}`,
 			want: ComplexMessage{
-				Declarations: nil,
+				Declarations: []Declaration{
+					InputDeclaration{
+						Operand:    Variable("var1"),
+						Annotation: Function{Identifier: Identifier{Name: "string"}},
+					},
+					InputDeclaration{
+						Operand:    Variable("var2"),
+						Annotation: Function{Identifier: Identifier{Name: "string"}},
+					},
+				},
 				ComplexBody: Matcher{
 					Selectors: []Variable{
 						Variable("var1"),
@@ -597,7 +608,7 @@ no yes {{Hello world!}}
 
 			// Check that AST message is equal to expected one.
 			if test.want.String() != got.Message.String() {
-				t.Errorf("want '%s', got '%s'", test.want, test.want)
+				t.Errorf("want '%s', got '%s'", test.want, got.Message.String())
 			}
 
 			// Check that AST message converted back to string is equal to input.
@@ -628,6 +639,14 @@ func TestParseErrors(t *testing.T) {
 		{
 			in:      ".input {$foo} .input {$foo} {{ }}",
 			wantErr: `parse MF2: complex message: input declaration: expression: duplicate declaration: $foo`,
+		},
+		{
+			in:      ".input {$foo} .match $foo * {{}}",
+			wantErr: `parse MF2: complex message: matcher: missing selector annotation`,
+		},
+		{
+			in:      "Hello, { :number style=decimal style=percent }!",
+			wantErr: `parse MF2: simple message: pattern: expression: function: duplicate option name`,
 		},
 	} {
 		t.Run(test.in, func(t *testing.T) {
