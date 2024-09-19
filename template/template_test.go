@@ -286,7 +286,13 @@ func Test_ExecuteErrors(t *testing.T) {
 
 func BenchmarkTemplate_Sprint(b *testing.B) {
 	//nolint:dupword
-	tmpl, err := New().Parse(".match {$foo :string} {$bar :number} one one {{one one}} one * {{one other}} * * {{other}}")
+	tmpl, err := New().Parse(`.input {$foo :string}
+.input {$bar :number}
+.local $var = {$bar}
+.match $foo $var
+one one {{one one}}
+one * {{one other}}
+* * {{other}}`)
 	if err != nil {
 		b.Error(err)
 	}
