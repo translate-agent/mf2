@@ -77,7 +77,7 @@ func (p *parser) collect() error {
 	for range 1000 {
 		itm := p.lexer.nextItem()
 		if itm.typ == itemError {
-			return itm.err
+			return fmt.Errorf("%w: %w", mf2.ErrSyntax, itm.err)
 		}
 
 		p.items = append(p.items, itm)
@@ -147,20 +147,13 @@ Examples:
 	}
 */
 func Parse(input string) (AST, error) {
-	errorf := func(format string, err error) (AST, error) {
-		switch {
-		default:
-			// syntax errors
-			return AST{}, fmt.Errorf("parse MF2: %w: "+format, mf2.ErrSyntax, err)
-		case errors.Is(err, mf2.ErrDataModel):
-			// data model errors
-			return AST{}, fmt.Errorf("parse MF2: "+format, err)
-		}
+	errorf := func(err error) (AST, error) {
+		return AST{}, fmt.Errorf("parse MF2: %w", err)
 	}
 
 	p := &parser{lexer: lex(input), pos: -1}
 	if err := p.collect(); err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	if len(p.items) == 1 && p.items[0].typ == itemEOF {
@@ -174,11 +167,11 @@ func Parse(input string) (AST, error) {
 
 	message, err := parse()
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	if itm := p.nextNonWS(); itm.typ != itemEOF {
-		return errorf("%w", unexpectedErr(itm, itemEOF))
+		return errorf(unexpectedErr(itm, itemEOF))
 	}
 
 	return AST{Message: message}, nil
@@ -773,14 +766,14 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 			continue
 		case itemCatchAllKey:
 			if !spaced && len(keys) > 0 {
-				return errorf("missing space between keys %v and *", keys[len(keys)-1])
+				return errorf("%w: missing space between keys %v and *", mf2.ErrSyntax, keys[len(keys)-1])
 			}
 
 			keys = append(keys, CatchAllKey{})
 			spaced = false
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			if !spaced && len(keys) > 0 {
-				return errorf("missing space between keys %v and %s", keys[len(keys)-1], itm.val)
+				return errorf("%w: missing space between keys %v and %s", mf2.ErrSyntax, keys[len(keys)-1], itm.val)
 			}
 
 			literal, err := p.parseLiteral()
