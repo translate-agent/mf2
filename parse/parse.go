@@ -15,7 +15,6 @@ type parser struct {
 	declaration      string   // input or local or empty
 	lexer            *lexer
 	items            []item
-	annotations      map[string]struct{} // which variables has direct or indirect declarations with annotation
 	variables        []Variable
 	pos              int
 }
@@ -248,7 +247,7 @@ declarationsLoop:
 
 		message.ComplexBody = QuotedPattern(pattern)
 	case itemMatchKeyword:
-		matcher, err := p.parseMatcher()
+		matcher, err := p.parseMatcher(message.Declarations)
 		if err != nil {
 			return errorf("%w", err)
 		}
@@ -395,25 +394,12 @@ optionsLoop:
 	}
 }
 
-func (p *parser) markHasAnnotation(variable string) {
-	if variable == "" || !p.lexer.isComplexMessage {
-		return
-	}
-
-	if p.annotations == nil {
-		p.annotations = make(map[string]struct{})
-	}
-
-	p.annotations[variable] = struct{}{}
-}
-
 // ------------------------------Expression------------------------------
 
 func (p *parser) parseExpression() (Expression, error) {
 	var (
-		expr    Expression
-		err     error
-		varName string
+		expr Expression
+		err  error
 	)
 
 	errorf := func(format string, args ...any) (Expression, error) { //nolint:unparam
@@ -431,7 +417,6 @@ func (p *parser) parseExpression() (Expression, error) {
 		return errorf("%w: %w", mf2.ErrBadOperand, err)
 	case itemVariable:
 		variable := Variable(itm.val)
-		varName = itm.val
 
 		switch p.declaration {
 		case "local":
@@ -462,14 +447,7 @@ func (p *parser) parseExpression() (Expression, error) {
 	}
 
 	if p.peekNonWS().typ == itemExpressionClose { // expression with operand only
-		if _, ok := p.annotations[varName]; ok {
-			// if the referenced expression operand has direct or indirect annotation,
-			// also mark the `p.reservedVariable` as having annotation
-			p.markHasAnnotation(string(p.reservedVariable))
-		}
-
 		p.nextNonWS()
-
 		return expr, nil
 	}
 
@@ -497,9 +475,6 @@ func (p *parser) parseExpression() (Expression, error) {
 		p.backup() // attribute
 		p.backup() // whitespace
 	}
-
-	p.markHasAnnotation(varName)
-	p.markHasAnnotation(string(p.reservedVariable))
 
 	if p.peekNonWS().typ == itemExpressionClose {
 		p.nextNonWS()
@@ -659,8 +634,35 @@ func isFallback(keys []VariantKey) bool {
 	return true
 }
 
+func hasAnnotation(variable Variable, declarations []Declaration) bool {
+	for _, v := range declarations {
+		switch t := v.(type) {
+		case InputDeclaration:
+			if t.Operand != variable {
+				continue
+			}
+
+			return t.Annotation != nil
+		case LocalDeclaration:
+			if t.Variable != variable {
+				continue
+			}
+
+			if t.Expression.Annotation != nil {
+				return true
+			}
+
+			if u, ok := t.Expression.Operand.(Variable); ok {
+				return hasAnnotation(u, declarations)
+			}
+		}
+	}
+
+	return false
+}
+
 //nolint:gocognit
-func (p *parser) parseMatcher() (Matcher, error) {
+func (p *parser) parseMatcher(declarations []Declaration) (Matcher, error) {
 	var matcher Matcher
 
 	errorf := func(format string, args ...any) (Matcher, error) {
@@ -683,7 +685,7 @@ selectorsLoop:
 		case itemEOF:
 			return errorf("%w", unexpectedErr(itm))
 		case itemVariable:
-			if _, ok := p.annotations[itm.val]; !ok {
+			if !hasAnnotation(Variable(itm.val), declarations) {
 				return errorf("%w", mf2.ErrMissingSelectorAnnotation)
 			}
 
