@@ -433,17 +433,12 @@ func (e *executer) resolveOptions(options []ast.Option) (Options, error) {
 	m := make(Options, len(options))
 
 	for _, opt := range options {
-		name := opt.Identifier.Name
-		if _, ok := m[name]; ok {
-			return nil, fmt.Errorf(`%w "%s"`, mf2.ErrDuplicateOptionName, name)
-		}
-
 		value, err := e.resolveValue(opt.Value)
 		if err != nil {
 			return nil, fmt.Errorf("option: %w", err)
 		}
 
-		m[name] = NewResolvedValue(value)
+		m[opt.Identifier.Name] = NewResolvedValue(value)
 	}
 
 	return m, nil

@@ -150,12 +150,14 @@ Examples:
 func Parse(input string) (AST, error) {
 	errorf := func(format string, err error) (AST, error) {
 		// TODO(jhorsts): improve error handling, add MF2 syntax error as early as possible.
-		if errors.Is(err, mf2.ErrDuplicateDeclaration) {
+		switch {
+		default:
+			return AST{}, fmt.Errorf("parse MF2: %w: "+format, mf2.ErrSyntax, err)
+		case errors.Is(err, mf2.ErrDuplicateDeclaration),
+			errors.Is(err, mf2.ErrDuplicateOptionName),
+			errors.Is(err, mf2.ErrMissingSelectorAnnotation):
 			return AST{}, fmt.Errorf("parse MF2: "+format, err)
 		}
-
-		// fallback to syntax error unless one of MF2 errors is returned
-		return AST{}, fmt.Errorf("parse MF2: %w: "+format, mf2.ErrSyntax, err)
 	}
 
 	p := &parser{lexer: lex(input), pos: -1}
@@ -394,7 +396,7 @@ optionsLoop:
 }
 
 func (p *parser) markHasAnnotation(variable string) {
-	if variable == "" {
+	if variable == "" || !p.lexer.isComplexMessage {
 		return
 	}
 
@@ -531,11 +533,12 @@ func (p *parser) parseFunction() (Function, error) {
 		return function, nil
 	}
 
-	errorf := func(format string, args ...any) (Function, error) {
+	errorf := func(format string, args ...any) (Function, error) { //nolint:unparam
 		return Function{}, fmt.Errorf("function: "+format, args...)
 	}
 
 	// parse options
+	opts := make(map[string]struct{})
 
 	for {
 		if itm := p.next(); itm.typ != itemWhitespace {
@@ -550,6 +553,12 @@ func (p *parser) parseFunction() (Function, error) {
 			if err != nil {
 				return errorf("%w", err)
 			}
+
+			if _, ok := opts[option.Identifier.String()]; ok {
+				return errorf("%w", mf2.ErrDuplicateOptionName)
+			}
+
+			opts[option.Identifier.String()] = struct{}{}
 
 			function.Options = append(function.Options, option)
 		case itemAttribute: // end of function, attributes are next
@@ -675,7 +684,7 @@ selectorsLoop:
 			return errorf("%w", unexpectedErr(itm))
 		case itemVariable:
 			if _, ok := p.annotations[itm.val]; !ok {
-				return errorf(`missing direct or indirect annotation for selector "%s": %w`, itm.val, mf2.ErrMissingSelectorAnnotation) //nolint:lll
+				return errorf("%w", mf2.ErrMissingSelectorAnnotation)
 			}
 
 			matcher.Selectors = append(matcher.Selectors, Variable(itm.val))

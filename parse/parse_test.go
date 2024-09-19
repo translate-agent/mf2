@@ -642,7 +642,11 @@ func TestParseErrors(t *testing.T) {
 		},
 		{
 			in:      ".input {$foo} .match $foo * {{}}",
-			wantErr: `parse MF2: syntax error: complex message: matcher: missing direct or indirect annotation for selector "foo": missing selector annotation`, //nolint:lll
+			wantErr: `parse MF2: complex message: matcher: missing selector annotation`,
+		},
+		{
+			in:      "Hello, { :number style=decimal style=percent }!",
+			wantErr: `parse MF2: simple message: pattern: expression: function: duplicate option name`,
 		},
 	} {
 		t.Run(test.in, func(t *testing.T) {
