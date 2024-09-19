@@ -148,14 +148,17 @@ Examples:
 */
 func Parse(input string) (AST, error) {
 	errorf := func(format string, err error) (AST, error) {
-		// TODO(jhorsts): improve error handling, add MF2 syntax error as early as possible.
 		switch {
 		default:
+			// syntax errors
 			return AST{}, fmt.Errorf("parse MF2: %w: "+format, mf2.ErrSyntax, err)
 		case errors.Is(err, mf2.ErrDuplicateDeclaration),
 			errors.Is(err, mf2.ErrDuplicateOptionName),
+			errors.Is(err, mf2.ErrDuplicateVariant),
+			errors.Is(err, mf2.ErrMissingFallbackVariant),
 			errors.Is(err, mf2.ErrMissingSelectorAnnotation),
-			errors.Is(err, mf2.ErrDuplicateVariant):
+			errors.Is(err, mf2.ErrVariantKeyMismatch):
+			// data model errors
 			return AST{}, fmt.Errorf("parse MF2: "+format, err)
 		}
 	}
