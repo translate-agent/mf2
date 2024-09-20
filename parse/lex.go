@@ -545,11 +545,20 @@ func lexVariable(l *lexer) stateFn {
 	// discard variablePrefix $
 	l.next()
 
-	for r := l.next(); isName(r); r = l.next() {
-		sb.WriteRune(r)
-	}
+identifierLoop:
+	for {
+		r := l.next()
+		switch {
+		default:
+			if r != eof {
+				l.backup()
+			}
 
-	l.backup()
+			break identifierLoop
+		case isName(r):
+			sb.WriteRune(r)
+		}
+	}
 
 	return l.emitItem(mk(itemVariable, sb.String()))
 }

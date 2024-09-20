@@ -72,9 +72,10 @@ func (p *parser) current() item {
 	return p.items[p.pos]
 }
 
+// TODO(jhorsts): add collect() to lex.go to be re-used here and unit tests.
 func (p *parser) collect(l *lexer) error {
 	// sanity check, avoid infinite loop
-	for range 1000 {
+	for range 10_000 {
 		itm := l.nextItem()
 		if itm.typ == itemError {
 			return fmt.Errorf("%w: %w", mf2.ErrSyntax, itm.err)
@@ -683,6 +684,10 @@ selectorsLoop:
 
 			matcher.Selectors = append(matcher.Selectors, Variable(itm.val))
 		}
+	}
+
+	if len(matcher.Selectors) == 0 {
+		return errorf("%w: missing selector", mf2.ErrSyntax)
 	}
 
 	if v := p.current(); v.typ != itemWhitespace {
