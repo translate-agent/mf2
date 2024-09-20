@@ -304,7 +304,9 @@ func lexStart(l *lexer) stateFn {
 // lexPattern is the state function for lexing patterns.
 func lexPattern(l *lexer) stateFn {
 	sb := new(strings.Builder)
-	sb.WriteString(l.val()) // whitespace at the start of the MF2 if any
+	if l.start == 0 { // whitespace at the start of the MF2 if any
+		sb.WriteString(l.val())
+	}
 
 	for {
 		r := l.next()
