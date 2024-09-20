@@ -11,12 +11,11 @@ import (
 )
 
 type parser struct {
-	reservedVariable Variable // reservedVariable is a variable that cannot be re-declared within an expression
-	declaration      string   // input or local or empty
-	lexer            *lexer
-	items            []item
-	variables        []Variable
-	pos              int
+	reservedVariable Variable   // reservedVariable is a variable that cannot be re-declared within an expression
+	declaration      string     // input or local or empty
+	items            []item     // contains all lexed items
+	variables        []Variable // contains declared variable names
+	pos              int        // current position of lexed items
 }
 
 func (p *parser) duplicateVariable(variable Variable) error {
@@ -72,10 +71,10 @@ func (p *parser) current() item {
 	return p.items[p.pos]
 }
 
-func (p *parser) collect() error {
+func (p *parser) collect(l *lexer) error {
 	// sanity check, avoid infinite loop
 	for range 1000 {
-		itm := p.lexer.nextItem()
+		itm := l.nextItem()
 		if itm.typ == itemError {
 			return fmt.Errorf("%w: %w", mf2.ErrSyntax, itm.err)
 		}
@@ -151,8 +150,8 @@ func Parse(input string) (AST, error) {
 		return AST{}, fmt.Errorf("parse MF2: %w", err)
 	}
 
-	p := &parser{lexer: lex(input), pos: -1}
-	if err := p.collect(); err != nil {
+	p := &parser{pos: -1}
+	if err := p.collect(lex(input)); err != nil {
 		return errorf(err)
 	}
 
