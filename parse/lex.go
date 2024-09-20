@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
+
+	"go.expect.digital/mf2"
 )
 
 // eof is the end of file item.
@@ -538,18 +540,34 @@ func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
 	return l.emitItem(mk(itemUnquotedLiteral, sb.String()))
 }
 
-// lexLiteral is the state function for lexing variables.
+// lexVariable is the state function for lexing variables.
 func lexVariable(l *lexer) stateFn {
 	sb := new(strings.Builder)
 
 	// discard variablePrefix $
 	l.next()
 
-	for r := l.next(); isName(r); r = l.next() {
-		sb.WriteRune(r)
-	}
+identifierLoop:
+	for {
+		r := l.next()
 
-	l.backup()
+		switch {
+		default:
+			if r != eof {
+				l.backup()
+			}
+
+			break identifierLoop
+		case sb.Len() == 0:
+			if !isNameStart(r) {
+				return l.emitErrorf(`%w: bad first character "%s" in variable name`, mf2.ErrSyntax, string(r))
+			}
+
+			sb.WriteRune(r)
+		case isName(r):
+			sb.WriteRune(r)
+		}
+	}
 
 	return l.emitItem(mk(itemVariable, sb.String()))
 }

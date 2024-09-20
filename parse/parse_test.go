@@ -630,30 +630,30 @@ func TestParseErrors(t *testing.T) {
 	}{
 		{
 			in:      ".local $foo={|foo| :x} .local $bar ={|bar| :x} .match $foo $bar ** {{foo}}",
-			wantErr: "parse MF2: syntax error: complex message: matcher: variant keys: missing space between keys * and *",
+			wantErr: "parse MF2: complex message: matcher: variant keys: syntax error: missing space between keys * and *",
 		},
 		{
 			in:      ".local $foo= {|foo| :x} .local $bar = {|bar| :x} .match $foo $bar *1 {{foo}}",
-			wantErr: "parse MF2: syntax error: complex message: matcher: variant keys: missing space between keys * and 1",
+			wantErr: "parse MF2: complex message: matcher: variant keys: syntax error: missing space between keys * and 1",
 		},
 		{
 			in:      ".input {$foo} .input {$foo} {{ }}",
-			wantErr: `parse MF2: complex message: input declaration: expression: duplicate declaration: $foo`,
+			wantErr: "parse MF2: complex message: input declaration: expression: data model error: duplicate declaration: $foo",
 		},
 		{
 			in:      ".input {$foo} .match $foo * {{}}",
-			wantErr: `parse MF2: complex message: matcher: missing selector annotation`,
+			wantErr: "parse MF2: complex message: matcher: data model error: missing selector annotation",
 		},
 		{
 			in:      "Hello, { :number style=decimal style=percent }!",
-			wantErr: `parse MF2: simple message: pattern: expression: function: duplicate option name`,
+			wantErr: "parse MF2: simple message: pattern: expression: function: data model error: duplicate option name",
 		},
 	} {
 		t.Run(test.in, func(t *testing.T) {
 			t.Parallel()
 
 			if _, err := Parse(test.in); err == nil || err.Error() != test.wantErr {
-				t.Errorf("want '%s', got '%s'", test.wantErr, err)
+				t.Errorf("\nwant '%s'\ngot  '%s'", test.wantErr, err)
 			}
 		})
 	}

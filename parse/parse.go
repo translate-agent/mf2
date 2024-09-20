@@ -11,12 +11,11 @@ import (
 )
 
 type parser struct {
-	reservedVariable Variable // reservedVariable is a variable that cannot be re-declared within an expression
-	declaration      string   // input or local or empty
-	lexer            *lexer
-	items            []item
-	variables        []Variable
-	pos              int
+	reservedVariable Variable   // reservedVariable is a variable that cannot be re-declared within an expression
+	declaration      string     // input or local or empty
+	items            []item     // contains all lexed items
+	variables        []Variable // contains declared variable names
+	pos              int        // current position of lexed items
 }
 
 func (p *parser) duplicateVariable(variable Variable) error {
@@ -35,6 +34,7 @@ func (p *parser) declareVariable(variable Variable) {
 
 // next returns next token if any otherwise returns error token.
 func (p *parser) next() item {
+	// It can occur only when last item is not itemEOF. Lexer issue?
 	if p.pos == len(p.items)-1 {
 		return mk(itemError, "no more tokens")
 	}
@@ -72,12 +72,13 @@ func (p *parser) current() item {
 	return p.items[p.pos]
 }
 
-func (p *parser) collect() error {
+// TODO(jhorsts): add collect() to lex.go to be re-used here and unit tests.
+func (p *parser) collect(l *lexer) error {
 	// sanity check, avoid infinite loop
-	for range 1000 {
-		itm := p.lexer.nextItem()
+	for range 10_000 {
+		itm := l.nextItem()
 		if itm.typ == itemError {
-			return itm.err
+			return fmt.Errorf("%w: %w", mf2.ErrSyntax, itm.err)
 		}
 
 		p.items = append(p.items, itm)
@@ -147,25 +148,13 @@ Examples:
 	}
 */
 func Parse(input string) (AST, error) {
-	errorf := func(format string, err error) (AST, error) {
-		switch {
-		default:
-			// syntax errors
-			return AST{}, fmt.Errorf("parse MF2: %w: "+format, mf2.ErrSyntax, err)
-		case errors.Is(err, mf2.ErrDuplicateDeclaration),
-			errors.Is(err, mf2.ErrDuplicateOptionName),
-			errors.Is(err, mf2.ErrDuplicateVariant),
-			errors.Is(err, mf2.ErrMissingFallbackVariant),
-			errors.Is(err, mf2.ErrMissingSelectorAnnotation),
-			errors.Is(err, mf2.ErrVariantKeyMismatch):
-			// data model errors
-			return AST{}, fmt.Errorf("parse MF2: "+format, err)
-		}
+	errorf := func(err error) (AST, error) {
+		return AST{}, fmt.Errorf("parse MF2: %w", err)
 	}
 
-	p := &parser{lexer: lex(input), pos: -1}
-	if err := p.collect(); err != nil {
-		return errorf("%w", err)
+	p := &parser{pos: -1}
+	if err := p.collect(lex(input)); err != nil {
+		return errorf(err)
 	}
 
 	if len(p.items) == 1 && p.items[0].typ == itemEOF {
@@ -179,11 +168,11 @@ func Parse(input string) (AST, error) {
 
 	message, err := parse()
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	if itm := p.nextNonWS(); itm.typ != itemEOF {
-		return errorf("%w", unexpectedErr(itm, itemEOF))
+		return errorf(unexpectedErr(itm, itemEOF))
 	}
 
 	return AST{Message: message}, nil
@@ -697,6 +686,10 @@ selectorsLoop:
 		}
 	}
 
+	if len(matcher.Selectors) == 0 {
+		return errorf("%w: missing selector", mf2.ErrSyntax)
+	}
+
 	if v := p.current(); v.typ != itemWhitespace {
 		// there should be a whitespace between selectors and variants
 		return errorf("missing whitespace between selectors and variants: %w", mf2.ErrSyntax)
@@ -778,14 +771,14 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 			continue
 		case itemCatchAllKey:
 			if !spaced && len(keys) > 0 {
-				return errorf("missing space between keys %v and *", keys[len(keys)-1])
+				return errorf("%w: missing space between keys %v and *", mf2.ErrSyntax, keys[len(keys)-1])
 			}
 
 			keys = append(keys, CatchAllKey{})
 			spaced = false
 		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
 			if !spaced && len(keys) > 0 {
-				return errorf("missing space between keys %v and %s", keys[len(keys)-1], itm.val)
+				return errorf("%w: missing space between keys %v and %s", mf2.ErrSyntax, keys[len(keys)-1], itm.val)
 			}
 
 			literal, err := p.parseLiteral()
@@ -904,7 +897,7 @@ func (p *parser) parseLiteral() (Literal, error) {
 	case itemNumberLiteral:
 		var num float64
 		if err := json.Unmarshal([]byte(itm.val), &num); err != nil {
-			return nil, fmt.Errorf("number literal: %w", err)
+			return nil, fmt.Errorf("%w: number literal: %w", mf2.ErrSyntax, err)
 		}
 
 		return NumberLiteral(itm.val), nil
@@ -945,11 +938,11 @@ func (u UnexpectedTokenError) Error() string {
 	return "want item " + r + `, got ` + u.actual.String()
 }
 
-func unexpectedErr(actual item, expected ...itemType) UnexpectedTokenError {
-	return UnexpectedTokenError{
+func unexpectedErr(actual item, expected ...itemType) error {
+	return fmt.Errorf("%w: %w", mf2.ErrSyntax, UnexpectedTokenError{
 		actual:   actual,
 		expected: expected,
-	}
+	})
 }
 
 func keyString(key VariantKey) string {

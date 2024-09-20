@@ -198,7 +198,7 @@ func WithLocale(locale language.Tag) Option {
 func (t *Template) Parse(input string) (*Template, error) {
 	ast, err := ast.Parse(input)
 	if err != nil {
-		return nil, errors.Join(err, mf2.ErrSyntax)
+		return nil, fmt.Errorf("parse to execute: %w", err)
 	}
 
 	t.ast = &ast
@@ -275,13 +275,10 @@ func (e *executer) resolveComplexMessage(message ast.ComplexMessage) error {
 	err := e.resolveDeclarations(message.Declarations)
 
 	switch {
-	case errors.Is(err, mf2.ErrUnsupportedStatement),
-		errors.Is(err, mf2.ErrUnresolvedVariable),
-		errors.Is(err, mf2.ErrBadOperand),
-		errors.Is(err, mf2.ErrBadOption):
-		resolutionErr = fmt.Errorf("complex message: %w", err)
-	case err != nil:
+	case errors.Is(err, mf2.ErrSyntax):
 		return fmt.Errorf("complex message: %w", err)
+	case err != nil:
+		resolutionErr = fmt.Errorf("complex message: %w", err)
 	}
 
 	switch b := message.ComplexBody.(type) {
