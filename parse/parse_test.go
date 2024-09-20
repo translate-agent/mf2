@@ -680,7 +680,14 @@ func BenchmarkParse(b *testing.B) {
 	var tree AST
 
 	for range b.N {
-		tree, _ = Parse(`  .input {$foo :number} .local $bar = {$foo} .match $bar one {{\|one\|}} * {{\|other\|}}  `)
+		tree, _ = Parse(`
+.input {$foo :number @attribute=value}
+.local $bar = {$foo}
+
+.match $bar
+one {{\|one\|}}
+* {{\|other\|}}
+`)
 	}
 
 	runtime.KeepAlive(tree)

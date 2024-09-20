@@ -874,11 +874,7 @@ func (p *parser) parseAttribute() (Attribute, error) {
 
 	switch itm := p.nextNonWS(); itm.typ {
 	default:
-		return errorf("%w", unexpectedErr(itm, itemVariable, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral))
-	case itemVariable:
-		variable := Variable(itm.val)
-		p.declareVariable(variable)
-		attribute.Value = variable
+		return errorf("%w", unexpectedErr(itm, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral))
 	case itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral:
 		if attribute.Value, err = p.parseLiteral(); err != nil {
 			return errorf("%w", err)
