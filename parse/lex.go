@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"unicode/utf8"
-
-	"go.expect.digital/mf2"
 )
 
 // eof is the end of file item.
@@ -390,8 +388,7 @@ func lexComplexMessage(l *lexer) stateFn {
 				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
 			}
 		case r == variablePrefix:
-			l.backup()
-			return lexVariable(l)
+			return lexName(l, itemVariable)
 		case isWhitespace(r):
 			l.backup()
 			return lexWhitespace(l)
@@ -434,49 +431,60 @@ func lexComplexMessage(l *lexer) stateFn {
 
 // lexExpr is the state function for lexing expressions.
 func lexExpr(l *lexer) stateFn {
-	switch v := l.next(); {
+	switch r := l.next(); {
 	default:
 		l.backup()
 
 		return lexUnquotedOrNumberLiteral(l)
-	case v == variablePrefix:
-		l.backup()
-		return lexVariable(l)
-	case v == '|':
+	case r == variablePrefix:
+		return lexName(l, itemVariable)
+	case r == '|':
 		l.backup()
 		return lexQuotedLiteral(l)
-	case v == '#', // markup-open
-		v == '/', // markup-close
-		v == '@', // attribute
-		v == ':': // function
-		l.backup()
+	case r == ':':
+		l.isFunction = true
 
-		return lexIdentifier(l)
-	case v == '{': // expression/markup start
+		return lexIdentifier(l, itemFunction)
+	case r == '@':
+		l.isFunction = false
+
+		return lexIdentifier(l, itemAttribute)
+	case r == '#':
+		l.isMarkup = true
+
+		return lexIdentifier(l, itemMarkupOpen)
+	case r == '/':
+		if l.isMarkup {
+			return l.emitItem(mk(itemMarkupClose, ""))
+		}
+
+		l.isMarkup = true
+
+		return lexIdentifier(l, itemMarkupClose)
+	case r == '{': // expression/markup start
 		l.isExpression = true
 
 		return l.emitItem(mk(itemExpressionOpen, "{"))
-	case v == '}': // expression/markup end
+	case r == '}': // expression/markup end
 		l.isExpression = false
 		l.isFunction = false
 		l.isMarkup = false
 
 		return l.emitItem(mk(itemExpressionClose, "}"))
-	case isWhitespace(v):
+	case isWhitespace(r):
 		l.backup()
 		return lexWhitespace(l)
-	case (l.prevType == itemMarkupOpen || l.prevType == itemMarkupClose) ||
-		(l.isFunction || l.isMarkup) &&
-			(l.prevType == itemFunction ||
-				l.prevType == itemQuotedLiteral ||
-				l.prevType == itemUnquotedLiteral ||
-				l.prevType == itemNumberLiteral ||
-				l.prevType == itemVariable):
+	case (l.isFunction || l.isMarkup) && isNameStart(r):
 		l.backup()
-		return lexIdentifier(l)
-	case v == '=':
+
+		if l.prevType == itemOperator {
+			return lexName(l, itemUnquotedLiteral)
+		}
+
+		return lexIdentifier(l, itemOption)
+	case r == '=':
 		return l.emitItem(mk(itemOperator, "="))
-	case v == eof:
+	case r == eof:
 		return l.emitErrorf("unexpected eof in expression")
 	}
 }
@@ -511,6 +519,8 @@ func lexQuotedLiteral(l *lexer) stateFn {
 }
 
 // lexUnquotedOrNumberLiteral is the state function for lexing names.
+//
+// TODO(jhorsts): unquoted literal (name) MUST start with name start character.
 func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
 	var hasPlus bool
 
@@ -540,38 +550,6 @@ func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
 	return l.emitItem(mk(itemUnquotedLiteral, sb.String()))
 }
 
-// lexVariable is the state function for lexing variables.
-func lexVariable(l *lexer) stateFn {
-	sb := new(strings.Builder)
-
-	// discard variablePrefix $
-	l.next()
-
-identifierLoop:
-	for {
-		r := l.next()
-
-		switch {
-		default:
-			if r != eof {
-				l.backup()
-			}
-
-			break identifierLoop
-		case sb.Len() == 0:
-			if !isNameStart(r) {
-				return l.emitErrorf(`%w: bad first character "%s" in variable name`, mf2.ErrSyntax, string(r))
-			}
-
-			sb.WriteRune(r)
-		case isName(r):
-			sb.WriteRune(r)
-		}
-	}
-
-	return l.emitItem(mk(itemVariable, sb.String()))
-}
-
 // lexWhitespace is the state function for lexing whitespace.
 func lexWhitespace(l *lexer) stateFn {
 	sb := new(strings.Builder)
@@ -591,63 +569,69 @@ func lexWhitespace(l *lexer) stateFn {
 	}
 }
 
-// lexIdentifier is the state function for lexing identifiers.
-func lexIdentifier(l *lexer) stateFn {
-	var (
-		ns  bool
-		typ itemType
-		sb  = new(strings.Builder)
-	)
+// lexName is the state function for lexing names.
+func lexName(l *lexer, typ itemType) stateFn {
+	r := l.next()
+	if !isNameStart(r) {
+		return l.emitErrorf(`bad %s name "%s"`, typ, string(r))
+	}
 
-	switch r := l.next(); r {
-	default:
-		typ = itemOption
+	sb := new(strings.Builder)
+	sb.WriteRune(r)
 
+	for r = l.next(); isName(r); r = l.next() {
 		sb.WriteRune(r)
-	case ':':
-		l.isFunction = true
-		typ = itemFunction
-	case '#':
-		l.isMarkup = true
-		typ = itemMarkupOpen
-	case '/':
-		l.isMarkup = true
-		typ = itemMarkupClose
-	case '@':
-		l.isFunction = false
-		typ = itemAttribute
+	}
+
+	if r != eof {
+		l.backup()
+	}
+
+	return l.emitItem(mk(typ, sb.String()))
+}
+
+// lexIdentifier is the state function for lexing identifiers.
+func lexIdentifier(l *lexer, typ itemType) stateFn {
+	r := l.next()
+	if !isNameStart(r) {
+		return l.emitErrorf(`bad %s identifier "%s"`, typ, string(r))
+	}
+
+	sb := new(strings.Builder)
+	sb.WriteRune(r)
+
+	for r = l.next(); isName(r); r = l.next() {
+		sb.WriteRune(r)
+	}
+
+	switch r {
+	default:
+		l.backup()
+
+		return l.emitItem(mk(typ, sb.String()))
+	case ':': // identifier with namespace
+		sb.WriteRune(r)
 	case eof:
-		return l.emitErrorf("unexpected eof in identifier")
+		return l.emitItem(mk(typ, sb.String()))
 	}
 
-	for {
-		r := l.next()
+	r = l.next()
 
-		switch {
-		default:
-			l.backup()
+	sb.WriteRune(r)
 
-			return l.emitItem(mk(typ, sb.String()))
-		case sb.Len() == 0 && isNameStart(r):
-			sb.WriteRune(r)
-		case isName(r):
-			sb.WriteRune(r)
-		case sb.Len() > 0 && r == ':':
-			if ns {
-				return l.emitErrorf("namespace already defined in identifier: %s", sb.String())
-			}
-
-			ns = true
-
-			sb.WriteRune(r)
-		case sb.Len() == 0 && typ != itemMarkupClose:
-			return l.emitErrorf("missing %s name", typ)
-		case strings.HasSuffix(sb.String(), ":"):
-			return l.emitErrorf(`invalid %s name "%s"`, typ, sb.String())
-		case r == eof:
-			return l.emitErrorf("unexpected eof in identifier")
-		}
+	if !isNameStart(r) {
+		return l.emitErrorf(`bad %s identifier "%s"`, typ, sb.String())
 	}
+
+	for r = l.next(); isName(r); r = l.next() {
+		sb.WriteRune(r)
+	}
+
+	if r != eof {
+		l.backup()
+	}
+
+	return l.emitItem(mk(typ, sb.String()))
 }
 
 // helpers

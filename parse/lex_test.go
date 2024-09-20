@@ -77,7 +77,7 @@ func Test_lex(t *testing.T) {
 			input: "{:func:}",
 			want: []item{
 				mk(itemExpressionOpen, "{"),
-				mkErrorf(`invalid function name "func:"`),
+				mkErrorf(`bad function identifier "func:}"`),
 			},
 		},
 		{
@@ -85,7 +85,7 @@ func Test_lex(t *testing.T) {
 			input: "{:}",
 			want: []item{
 				mk(itemExpressionOpen, "{"),
-				mkErrorf("missing function name"),
+				mkErrorf(`bad function identifier "}"`),
 			},
 		},
 		{
