@@ -92,7 +92,6 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/{_<xyzz___}",
 		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/{__!xyzz___}",
 		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/{{extra}}_content",
-		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/{}",
 		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/{~xyzz_}",
 		"TestMF2WG/.message-format-wg/test/tests/syntax-errors.json/{~}",
 	}
