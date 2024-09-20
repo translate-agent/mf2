@@ -616,11 +616,12 @@ func lexIdentifier(l *lexer, typ itemType) stateFn {
 	}
 
 	r = l.next()
-	if !isNameStart(r) {
-		return l.emitErrorf(`bad %s identifier "%s"`, typ, sb.String()+string(r))
-	}
 
 	sb.WriteRune(r)
+
+	if !isNameStart(r) {
+		return l.emitErrorf(`bad %s identifier "%s"`, typ, sb.String())
+	}
 
 	for r = l.next(); isName(r); r = l.next() {
 		sb.WriteRune(r)
