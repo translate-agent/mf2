@@ -138,10 +138,11 @@ func lex(input string) *lexer {
 //
 // See ".message-format-wg/spec/message.abnf".
 type lexer struct {
-	input            string
-	item             item     // previous item or start char with optional preceding whitespaces in simple message
-	prevType         itemType // previous non-whitespace item type
-	start, end, line int
+	input      string
+	item       item     // previous item or start char with optional preceding whitespaces in simple message
+	prevType   itemType // previous non-whitespace item type
+	start, end int      // start and end positions of the item to be emitted
+	line       int      // line number
 
 	isFunction,
 	isMarkup,
@@ -226,11 +227,12 @@ func (l *lexer) emitItem(i item) stateFn {
 	return nil
 }
 
+// emit emits the item to be emitted.
 func (l *lexer) emit(typ itemType) stateFn {
 	return l.emitItem(mk(typ, l.val()))
 }
 
-// val returns the value of the token to be emitted.
+// val returns the value of the item to be emitted.
 func (l *lexer) val() string {
 	if 0 <= l.start && l.end <= len(l.input) && l.start <= l.end { // IsSliceInBounds()
 		return l.input[l.start:l.end]
