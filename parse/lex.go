@@ -568,12 +568,12 @@ func lexNumberLiteral(l *lexer) stateFn {
 	for {
 		r := l.next()
 
-		switch r {
+		switch {
 		default:
 			l.backup()
 			return emit()
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'e', '.', '-', '+': // noop
-		case eof:
+		case '0' <= r && r <= '9', r == '.', r == 'e', r == '-', r == '+': // noop
+		case r == eof:
 			return emit()
 		}
 	}
