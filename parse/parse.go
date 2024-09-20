@@ -436,7 +436,7 @@ func (p *parser) parseExpression() (Expression, error) {
 	case itemFunction:
 		p.backup()
 	case itemExpressionClose: // empty expression
-		return errorf("missing operand or annotation")
+		return errorf("%w: empty expression", mf2.ErrSyntax)
 	}
 
 	if p.peekNonWS().typ == itemExpressionClose { // expression with operand only
