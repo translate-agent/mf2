@@ -375,14 +375,17 @@ func lexComplexMessage(l *lexer) stateFn {
 			case strings.HasPrefix(input, keywordLocal):
 				l.start++ // skip .
 				l.end += len(keywordLocal)
+
 				return l.emit(itemLocalKeyword)
 			case strings.HasPrefix(input, keywordInput):
 				l.start++ // skip .
 				l.end += len(keywordInput)
+
 				return l.emit(itemInputKeyword)
 			case strings.HasPrefix(input, keywordMatch):
 				l.start++ // skip .
 				l.end += len(keywordMatch)
+
 				return l.emit(itemMatchKeyword)
 			}
 		case r == variablePrefix:
@@ -571,7 +574,10 @@ func lexName(l *lexer, typ itemType) stateFn {
 		return l.emitErrorf(`bad %s name "%s"`, typ, string(r))
 	}
 
-	for r = l.next(); isName(r); r = l.next() {
+	for {
+		if r = l.next(); !isName(r) {
+			break
+		}
 	}
 
 	if r != eof {
@@ -588,7 +594,10 @@ func lexIdentifier(l *lexer, typ itemType) stateFn {
 		return l.emitErrorf(`bad %s identifier "%s"`, typ, string(r))
 	}
 
-	for r = l.next(); isName(r); r = l.next() {
+	for {
+		if r = l.next(); !isName(r) {
+			break
+		}
 	}
 
 	switch r {
@@ -607,7 +616,10 @@ func lexIdentifier(l *lexer, typ itemType) stateFn {
 		return l.emitErrorf(`bad %s identifier "%s"`, typ, l.val())
 	}
 
-	for r = l.next(); isName(r); r = l.next() {
+	for {
+		if r = l.next(); !isName(r) {
+			break
+		}
 	}
 
 	if r != eof {
