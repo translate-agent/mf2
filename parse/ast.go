@@ -120,16 +120,17 @@ func (m ComplexMessage) message() {}
 
 type Text string
 
+// text-escape = backslash ( backslash / "{" / "}" ).
+var textEscaper = strings.NewReplacer(
+	`\`, `\\`,
+	`{`, `\{`,
+	`}`, `\}`,
+	`|`, `\|`,
+)
+
 // String returns MF2 formatted string.
 func (t Text) String() string {
-	// text-escape = backslash ( backslash / "{" / "}" )
-	r := strings.NewReplacer(
-		`\`, `\\`,
-		`{`, `\{`,
-		`}`, `\}`,
-	)
-
-	return r.Replace(string(t))
+	return textEscaper.Replace(string(t))
 }
 
 func (Text) node()        {}
