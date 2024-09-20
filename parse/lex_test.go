@@ -504,7 +504,7 @@ func logItem(t *testing.T, want item, l lexer) {
 
 	t.Logf("c%s p%s e%s f%s m%s %-30s e%s(%s) a%s(%s)\n",
 		f(l.isComplexMessage), f(l.isPattern), f(l.isExpression), f(l.isFunction), f(l.isMarkup),
-		"'"+l.input[l.pos:]+"'", "'"+wantVal+"'", want.typ, "'"+val+"'", l.item.typ)
+		"'"+l.input[l.end:]+"'", "'"+wantVal+"'", want.typ, "'"+val+"'", l.item.typ)
 }
 
 func BenchmarkLex(b *testing.B) {

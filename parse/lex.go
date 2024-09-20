@@ -138,10 +138,11 @@ func lex(input string) *lexer {
 //
 // See ".message-format-wg/spec/message.abnf".
 type lexer struct {
-	input     string
-	item      item     // previous item or start char with optional preceding whitespaces in simple message
-	prevType  itemType // previous non-whitespace item type
-	pos, line int
+	input      string
+	item       item     // previous item or start char with optional preceding whitespaces in simple message
+	prevType   itemType // previous non-whitespace item type
+	start, end int      // start and end positions of the item to be emitted
+	line       int      // line number
 
 	isFunction,
 	isMarkup,
@@ -152,23 +153,23 @@ type lexer struct {
 
 // peek peeks at the next rune.
 func (l *lexer) peek() rune {
-	if l.pos < 0 || len(l.input) <= l.pos { // isSliceInBounds()
+	if l.end < 0 || len(l.input) <= l.end { // isSliceInBounds()
 		return eof
 	}
 
-	r, _ := utf8.DecodeRuneInString(l.input[l.pos:])
+	r, _ := utf8.DecodeRuneInString(l.input[l.end:])
 
 	return r
 }
 
 // next returns the next rune.
 func (l *lexer) next() rune {
-	if l.pos < 0 || len(l.input) <= l.pos { // isSliceInBounds()
+	if l.end < 0 || len(l.input) <= l.end { // isSliceInBounds()
 		return eof
 	}
 
-	r, n := utf8.DecodeRuneInString(l.input[l.pos:])
-	l.pos += n
+	r, n := utf8.DecodeRuneInString(l.input[l.end:])
+	l.end += n
 
 	if r == '\n' {
 		l.line++
@@ -179,13 +180,13 @@ func (l *lexer) next() rune {
 
 // backup backs up the current position in the input string.
 func (l *lexer) backup() {
-	r, n := utf8.DecodeLastRuneInString(l.input[:l.pos])
+	r, n := utf8.DecodeLastRuneInString(l.input[:l.end])
 
 	if r == '\n' {
 		l.line--
 	}
 
-	l.pos -= n
+	l.end -= n
 }
 
 // nextItem returns the next item in the input string.
@@ -203,7 +204,7 @@ func (l *lexer) nextItem() item {
 		state = lexPattern
 	case l.isComplexMessage:
 		state = lexComplexMessage
-	case l.pos == 0:
+	case l.end == 0:
 		state = lexStart
 	}
 
@@ -216,6 +217,7 @@ func (l *lexer) nextItem() item {
 
 // emitItem emits the given item and returns the next state function.
 func (l *lexer) emitItem(i item) stateFn {
+	l.start = l.end
 	l.item = i
 
 	if i.typ != itemWhitespace && i.typ != itemEOF {
@@ -223,6 +225,20 @@ func (l *lexer) emitItem(i item) stateFn {
 	}
 
 	return nil
+}
+
+// emit emits the item to be emitted.
+func (l *lexer) emit(typ itemType) stateFn {
+	return l.emitItem(mk(typ, l.val()))
+}
+
+// val returns the value of the item to be emitted.
+func (l *lexer) val() string {
+	if 0 <= l.start && l.end <= len(l.input) && l.start <= l.end { // IsSliceInBounds()
+		return l.input[l.start:l.end]
+	}
+
+	return ""
 }
 
 // emitErrorf emits the error and returns the next state function.
@@ -235,25 +251,18 @@ type stateFn func(*lexer) stateFn
 
 // lexStart is the state function to lex the start of the MF2.
 func lexStart(l *lexer) stateFn {
-	// Whitespaces at the start. When simple message, it is start char with optional preceding whitespaces.
-	sb := new(strings.Builder)
-
 	complexItem := func() stateFn {
 		l.isComplexMessage = true
 		l.backup()
 
-		if sb.Len() > 0 {
-			return l.emitItem(mk(itemWhitespace, sb.String()))
+		if l.start < l.end {
+			return l.emit(itemWhitespace)
 		}
 
 		return lexComplexMessage(l)
 	}
 
-	simpleItem := func(startChar rune) stateFn {
-		sb.WriteRune(startChar)
-
-		l.item = mk(itemText, sb.String())
-
+	simpleItem := func() stateFn {
 		return lexPattern(l)
 	}
 
@@ -264,16 +273,12 @@ func lexStart(l *lexer) stateFn {
 		default:
 			return l.emitErrorf(`unexpected start char "%c"`, r)
 		case isWhitespace(r):
-			sb.WriteRune(r)
 		case isSimpleStart(r):
-			return simpleItem(r)
+			return simpleItem()
 		case r == '\\':
-			next := l.next()
-			if !isEscapedChar(next) {
-				return l.emitErrorf(`unexpected escaped char "%c"`, next)
-			}
+			l.backup()
 
-			return simpleItem(next)
+			return simpleItem()
 		case r == '.':
 			return complexItem()
 		case r == '{':
@@ -285,14 +290,10 @@ func lexStart(l *lexer) stateFn {
 
 			l.backup()
 
-			if sb.Len() > 0 {
-				return l.emitItem(mk(itemText, sb.String()))
-			}
-
 			return lexPattern(l)
 		case r == eof:
-			if sb.Len() > 0 {
-				return l.emitItem(mk(itemText, sb.String()))
+			if l.start < l.end {
+				return l.emit(itemText)
 			}
 
 			return nil
@@ -303,10 +304,8 @@ func lexStart(l *lexer) stateFn {
 // lexPattern is the state function for lexing patterns.
 func lexPattern(l *lexer) stateFn {
 	sb := new(strings.Builder)
-
-	// write start character with optional preceding whitespaces if simple message.
-	if l.prevType == itemUnknown && l.item.typ == itemText {
-		sb.WriteString(l.item.val)
+	if l.start == 0 { // whitespace at the start of the MF2 if any
+		sb.WriteString(l.val())
 	}
 
 	for {
@@ -370,36 +369,40 @@ func lexComplexMessage(l *lexer) stateFn {
 		default:
 			return l.emitErrorf(`unknown character "%c" in complex message`, r)
 		case r == '.':
-			input := l.input[l.pos:]
+			input := l.input[l.end:]
 
 			switch {
 			default:
-				l.backup()
-
 				return l.emitErrorf(`invalid keyword`)
 			case strings.HasPrefix(input, keywordLocal):
-				l.pos += len(keywordLocal)
-				return l.emitItem(mk(itemLocalKeyword, keywordLocal))
+				l.start++ // skip .
+				l.end += len(keywordLocal)
+
+				return l.emit(itemLocalKeyword)
 			case strings.HasPrefix(input, keywordInput):
-				l.pos += len(keywordInput)
-				return l.emitItem(mk(itemInputKeyword, keywordInput))
+				l.start++ // skip .
+				l.end += len(keywordInput)
+
+				return l.emit(itemInputKeyword)
 			case strings.HasPrefix(input, keywordMatch):
-				l.pos += len(keywordMatch)
-				return l.emitItem(mk(itemMatchKeyword, keywordMatch))
+				l.start++ // skip .
+				l.end += len(keywordMatch)
+
+				return l.emit(itemMatchKeyword)
 			}
 		case r == variablePrefix:
+			l.start++ // skip $
 			return lexName(l, itemVariable)
 		case isWhitespace(r):
-			l.backup()
 			return lexWhitespace(l)
 		case r == '=':
-			return l.emitItem(mk(itemOperator, "="))
+			return l.emit(itemOperator)
 		case r == '{':
 			if l.peek() == '{' {
 				l.next()
 				l.isPattern = true
 
-				return l.emitItem(mk(itemQuotedPatternOpen, "{{"))
+				return l.emit(itemQuotedPatternOpen)
 			}
 
 			l.backup()
@@ -410,7 +413,7 @@ func lexComplexMessage(l *lexer) stateFn {
 				l.next()
 				l.isPattern = false
 
-				return l.emitItem(mk(itemQuotedPatternClose, "}}"))
+				return l.emit(itemQuotedPatternClose)
 			}
 
 			return l.emitErrorf("unexpected } in complex message")
@@ -437,20 +440,24 @@ func lexExpr(l *lexer) stateFn {
 
 		return lexUnquotedOrNumberLiteral(l)
 	case r == variablePrefix:
+		l.start++ // skip $
 		return lexName(l, itemVariable)
 	case r == '|':
 		l.backup()
 		return lexQuotedLiteral(l)
 	case r == ':':
 		l.isFunction = true
+		l.start++ // skip :
 
 		return lexIdentifier(l, itemFunction)
 	case r == '@':
 		l.isFunction = false
+		l.start++ // skip @
 
 		return lexIdentifier(l, itemAttribute)
 	case r == '#':
 		l.isMarkup = true
+		l.start++ // skip #
 
 		return lexIdentifier(l, itemMarkupOpen)
 	case r == '/':
@@ -459,20 +466,20 @@ func lexExpr(l *lexer) stateFn {
 		}
 
 		l.isMarkup = true
+		l.start++ // skip /
 
 		return lexIdentifier(l, itemMarkupClose)
 	case r == '{': // expression/markup start
 		l.isExpression = true
 
-		return l.emitItem(mk(itemExpressionOpen, "{"))
+		return l.emit(itemExpressionOpen)
 	case r == '}': // expression/markup end
 		l.isExpression = false
 		l.isFunction = false
 		l.isMarkup = false
 
-		return l.emitItem(mk(itemExpressionClose, "}"))
+		return l.emit(itemExpressionClose)
 	case isWhitespace(r):
-		l.backup()
 		return lexWhitespace(l)
 	case (l.isFunction || l.isMarkup) && isNameStart(r):
 		l.backup()
@@ -483,7 +490,7 @@ func lexExpr(l *lexer) stateFn {
 
 		return lexIdentifier(l, itemOption)
 	case r == '=':
-		return l.emitItem(mk(itemOperator, "="))
+		return l.emit(itemOperator)
 	case r == eof:
 		return l.emitErrorf("unexpected eof in expression")
 	}
@@ -524,47 +531,40 @@ func lexQuotedLiteral(l *lexer) stateFn {
 func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
 	var hasPlus bool
 
-	sb := new(strings.Builder)
-
 	for r := l.next(); isName(r) || r == '+'; r = l.next() {
 		if r == '+' {
 			hasPlus = true
 		}
-
-		sb.WriteRune(r)
 	}
 
 	l.backup()
 
 	var number float64
 
-	if err := json.Unmarshal([]byte(sb.String()), &number); err == nil {
-		return l.emitItem(mk(itemNumberLiteral, sb.String()))
+	if err := json.Unmarshal([]byte(l.val()), &number); err == nil {
+		return l.emit(itemNumberLiteral)
 	}
 
 	// "+" is not valid unquoted literal character
 	if hasPlus {
-		return l.emitErrorf(`invalid unquoted literal "%s"`, sb.String())
+		return l.emitErrorf(`invalid unquoted literal "%s"`, l.val())
 	}
 
-	return l.emitItem(mk(itemUnquotedLiteral, sb.String()))
+	return l.emit(itemUnquotedLiteral)
 }
 
 // lexWhitespace is the state function for lexing whitespace.
 func lexWhitespace(l *lexer) stateFn {
-	sb := new(strings.Builder)
-
 	for {
 		r := l.next()
 
 		switch {
 		default:
 			l.backup()
-			return l.emitItem(mk(itemWhitespace, sb.String()))
+			return l.emit(itemWhitespace)
 		case isWhitespace(r):
-			sb.WriteRune(r)
 		case r == eof:
-			return l.emitItem(mk(itemWhitespace, sb.String()))
+			return l.emit(itemWhitespace)
 		}
 	}
 }
@@ -576,18 +576,17 @@ func lexName(l *lexer, typ itemType) stateFn {
 		return l.emitErrorf(`bad %s name "%s"`, typ, string(r))
 	}
 
-	sb := new(strings.Builder)
-	sb.WriteRune(r)
-
-	for r = l.next(); isName(r); r = l.next() {
-		sb.WriteRune(r)
+	for {
+		if r = l.next(); !isName(r) {
+			break
+		}
 	}
 
 	if r != eof {
 		l.backup()
 	}
 
-	return l.emitItem(mk(typ, sb.String()))
+	return l.emit(typ)
 }
 
 // lexIdentifier is the state function for lexing identifiers.
@@ -597,41 +596,39 @@ func lexIdentifier(l *lexer, typ itemType) stateFn {
 		return l.emitErrorf(`bad %s identifier "%s"`, typ, string(r))
 	}
 
-	sb := new(strings.Builder)
-	sb.WriteRune(r)
-
-	for r = l.next(); isName(r); r = l.next() {
-		sb.WriteRune(r)
+	for {
+		if r = l.next(); !isName(r) {
+			break
+		}
 	}
 
 	switch r {
 	default:
 		l.backup()
 
-		return l.emitItem(mk(typ, sb.String()))
+		return l.emit(typ)
 	case ':': // identifier with namespace
-		sb.WriteRune(r)
 	case eof:
-		return l.emitItem(mk(typ, sb.String()))
+		return l.emit(typ)
 	}
 
 	r = l.next()
 
-	sb.WriteRune(r)
-
 	if !isNameStart(r) {
-		return l.emitErrorf(`bad %s identifier "%s"`, typ, sb.String())
+		return l.emitErrorf(`bad %s identifier "%s"`, typ, l.val())
 	}
 
-	for r = l.next(); isName(r); r = l.next() {
-		sb.WriteRune(r)
+	for {
+		if r = l.next(); !isName(r) {
+			break
+		}
 	}
 
 	if r != eof {
 		l.backup()
 	}
 
-	return l.emitItem(mk(typ, sb.String()))
+	return l.emit(typ)
 }
 
 // helpers
