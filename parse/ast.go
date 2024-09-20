@@ -120,7 +120,11 @@ func (m ComplexMessage) message() {}
 
 type Text string
 
-// text-escape = backslash ( backslash / "{" / "}" ).
+// textEscaper escapes characters by adding backslashes.
+//
+// ABNF:
+//
+//	escaped-char = backslash ( backslash / "{" / "|" / "}" )
 var textEscaper = strings.NewReplacer(
 	`\`, `\\`,
 	`{`, `\{`,
