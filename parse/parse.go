@@ -34,6 +34,7 @@ func (p *parser) declareVariable(variable Variable) {
 
 // next returns next token if any otherwise returns error token.
 func (p *parser) next() item {
+	// It can occur only when last item is not itemEOF. Lexer issue?
 	if p.pos == len(p.items)-1 {
 		return mk(itemError, "no more tokens")
 	}
@@ -891,7 +892,7 @@ func (p *parser) parseLiteral() (Literal, error) {
 	case itemNumberLiteral:
 		var num float64
 		if err := json.Unmarshal([]byte(itm.val), &num); err != nil {
-			return nil, fmt.Errorf("number literal: %w", err)
+			return nil, fmt.Errorf("%w: number literal: %w", mf2.ErrSyntax, err)
 		}
 
 		return NumberLiteral(itm.val), nil
@@ -932,11 +933,11 @@ func (u UnexpectedTokenError) Error() string {
 	return "want item " + r + `, got ` + u.actual.String()
 }
 
-func unexpectedErr(actual item, expected ...itemType) UnexpectedTokenError {
-	return UnexpectedTokenError{
+func unexpectedErr(actual item, expected ...itemType) error {
+	return fmt.Errorf("%w: %w", mf2.ErrSyntax, UnexpectedTokenError{
 		actual:   actual,
 		expected: expected,
-	}
+	})
 }
 
 func keyString(key VariantKey) string {
