@@ -367,7 +367,7 @@ func lexComplexMessage(l *lexer) stateFn {
 
 		switch {
 		default:
-			return l.emitErrorf(`unknown character "%c" in complex message`, r)
+			return l.emitErrorf(`bad character "%c" in complex message`, r)
 		case r == '.':
 			input := l.input[l.end:]
 
@@ -423,9 +423,10 @@ func lexComplexMessage(l *lexer) stateFn {
 			l.backup()
 
 			return lexQuotedLiteral(l)
-		case isName(r):
-			l.backup()
-			return lexUnquotedOrNumberLiteral(l)
+		case isNameStart(r):
+			return lexUnquotedLiteral(l)
+		case r == '-' || '0' <= r && r <= '9':
+			return lexNumberLiteral(l)
 		case r == eof:
 			return nil
 		}
@@ -436,9 +437,7 @@ func lexComplexMessage(l *lexer) stateFn {
 func lexExpr(l *lexer) stateFn {
 	switch r := l.next(); {
 	default:
-		l.backup()
-
-		return lexUnquotedOrNumberLiteral(l)
+		return l.emitErrorf(`bad character "%c" in expression`, r)
 	case r == variablePrefix:
 		l.start++ // skip $
 		return lexName(l, itemVariable)
@@ -491,6 +490,10 @@ func lexExpr(l *lexer) stateFn {
 		return lexIdentifier(l, itemOption)
 	case r == '=':
 		return l.emit(itemOperator)
+	case isNameStart(r):
+		return lexUnquotedLiteral(l)
+	case r == '-' || '0' <= r && r <= '9':
+		return lexNumberLiteral(l)
 	case r == eof:
 		return l.emitErrorf("unexpected eof in expression")
 	}
@@ -525,35 +528,59 @@ func lexQuotedLiteral(l *lexer) stateFn {
 	}
 }
 
-// lexUnquotedOrNumberLiteral is the state function for lexing names.
-//
-// TODO(jhorsts): unquoted literal (name) MUST start with name start character.
-func lexUnquotedOrNumberLiteral(l *lexer) stateFn {
-	var hasPlus bool
+// lexUnquotedLiteral is the state function for lexing unquoted literals.
+// The first character is already lexed.
+func lexUnquotedLiteral(l *lexer) stateFn {
+	for {
+		r := l.next()
 
-	for r := l.next(); isName(r) || r == '+'; r = l.next() {
-		if r == '+' {
-			hasPlus = true
+		switch {
+		default:
+			l.backup()
+
+			return l.emit(itemUnquotedLiteral)
+		case isName(r): // noop
+		case r == eof:
+			return l.emit(itemUnquotedLiteral)
 		}
 	}
+}
 
-	l.backup()
+// lexNumberLiteral is the state function for lexing number literals.
+// The first character is already lexed.
+//
+// ABNF:
+//
+//	number-literal   = ["-"] (%x30 / (%x31-39 *DIGIT)) ["." 1*DIGIT] [%i"e" ["-" / "+"] 1*DIGIT]
+func lexNumberLiteral(l *lexer) stateFn {
+	emit := func() stateFn {
+		var number float64
 
-	var number float64
+		val := l.val()
 
-	if err := json.Unmarshal([]byte(l.val()), &number); err == nil {
+		if err := json.Unmarshal([]byte(val), &number); err != nil {
+			return l.emitErrorf(`bad number literal "%s"`, val)
+		}
+
 		return l.emit(itemNumberLiteral)
 	}
 
-	// "+" is not valid unquoted literal character
-	if hasPlus {
-		return l.emitErrorf(`invalid unquoted literal "%s"`, l.val())
-	}
+	for {
+		r := l.next()
 
-	return l.emit(itemUnquotedLiteral)
+		switch {
+		default:
+			l.backup()
+			return emit()
+		case '0' <= r && r <= '9', r == '.', r == 'e', r == '-', r == '+': // noop
+		case r == eof:
+			return emit()
+		}
+	}
 }
 
 // lexWhitespace is the state function for lexing whitespace.
+// The first character is already lexed.
 func lexWhitespace(l *lexer) stateFn {
 	for {
 		r := l.next()
