@@ -572,7 +572,7 @@ func lexNumberLiteral(l *lexer) stateFn {
 		default:
 			l.backup()
 			return emit()
-		case '0' <= r && r <= '9', r == '.', r == 'e', r == '-', r == '+': // noop
+		case '0' <= r && r <= '9', r == '.', r == 'e', r == 'E', r == '-', r == '+': // noop
 		case r == eof:
 			return emit()
 		}
