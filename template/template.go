@@ -442,7 +442,7 @@ func (e *executer) resolveOptions(options []ast.Option) (Options, error) {
 }
 
 func (e *executer) resolveMatcher(m ast.Matcher) error {
-	res, matcherErr := e.resolveSelectors(m)
+	selectors, matcherErr := e.resolveSelectors(m)
 
 	switch {
 	case errors.Is(matcherErr, mf2.ErrUnknownFunction),
@@ -452,7 +452,7 @@ func (e *executer) resolveMatcher(m ast.Matcher) error {
 		return fmt.Errorf("matcher: %w", matcherErr)
 	}
 
-	pref := e.resolvePreferences(m, res)
+	pref := e.resolvePreferences(m, selectors)
 
 	filteredVariants := e.filterVariants(m, pref)
 
@@ -488,11 +488,11 @@ func (e *executer) resolveSelectors(m ast.Matcher) ([]*ResolvedValue, error) {
 	return res, err
 }
 
-func (e *executer) resolvePreferences(m ast.Matcher, res []*ResolvedValue) [][]string {
+func (e *executer) resolvePreferences(m ast.Matcher, selectors []*ResolvedValue) [][]string {
 	// Step 2: Resolve Preferences
-	pref := make([][]string, 0, len(res))
+	pref := make([][]string, 0, len(selectors))
 
-	for i := range res {
+	for i := range selectors {
 		var keys []string
 
 		for _, variant := range m.Variants {
@@ -513,9 +513,7 @@ func (e *executer) resolvePreferences(m ast.Matcher, res []*ResolvedValue) [][]s
 			}
 		}
 
-		rv := res[i]
-
-		matches := matchSelectorKeys(rv, keys)
+		matches := matchSelectorKeys(selectors[i], keys)
 		pref = append(pref, matches)
 	}
 
@@ -612,29 +610,17 @@ func keyString(key ast.VariantKey) string {
 	}
 }
 
-func matchSelectorKeys(rv any, keys []string) []string {
-	if v, ok := rv.(*ResolvedValue); ok {
-		if v.selectKey == nil || v.err != nil {
-			return []string{ast.CatchAllKey{}.String()}
-		}
-
-		rv = v.selectKey(keys)
+func matchSelectorKeys(selector *ResolvedValue, keys []string) []string {
+	if selector.selectKey == nil || selector.err != nil {
+		return []string{"*"}
 	}
 
-	value, ok := rv.(string)
-	if !ok {
+	selected := selector.selectKey(keys)
+	if selected == "" {
 		return nil
 	}
 
-	var matches []string
-
-	for _, key := range keys {
-		if key == value {
-			matches = append(matches, key)
-		}
-	}
-
-	return matches
+	return []string{selected}
 }
 
 type sortableVariant struct {
