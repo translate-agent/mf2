@@ -533,30 +533,20 @@ func (e *executer) filterVariants(m ast.Matcher, pref [][]string) []ast.Variant 
 	var filteredVariants []ast.Variant
 
 	for _, variant := range m.Variants {
-		matchesAllSelectors := true
+		matchedAllSelectors := true
 
-		for i, keyOrder := range pref {
-			key := variant.Keys[i]
-
-			var ks string
-
+		for i, matchedSelectorKeys := range pref {
 			// NOTE(mvilks): since collected keys will be compared to the selector,
 			//	we need the keys's raw string value, not the representation of it
 			//  e.g. the `1` should be equal to `|1|`
-			switch key := key.(type) {
-			default:
-				ks = keyString(key)
-			case ast.CatchAllKey:
-				continue
-			}
-
-			if !slices.Contains(keyOrder, ks) {
-				matchesAllSelectors = false
+			_, ok := variant.Keys[i].(ast.CatchAllKey)
+			if !ok && !slices.Contains(matchedSelectorKeys, keyString(variant.Keys[i])) {
+				matchedAllSelectors = false
 				break
 			}
 		}
 
-		if matchesAllSelectors {
+		if matchedAllSelectors {
 			filteredVariants = append(filteredVariants, variant)
 		}
 	}
