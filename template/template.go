@@ -470,19 +470,15 @@ func (e *executer) resolveSelectors(m ast.Matcher) ([]*ResolvedValue, error) {
 	res := make([]*ResolvedValue, 0, len(m.Selectors))
 
 	for _, selector := range m.Selectors {
-		v, ok := e.variables[string(selector)]
-		if !ok {
-			res = append(res, NewResolvedValue("{"+selector.String()+"}"))
-			err = errors.Join(err, fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v))
+		// Selector variable is ALWAYS resolved. Parser errors with ErrBadSelector
+		// when selector has no annotation.
+		v := e.variables[string(selector)]
+		if v.selectKey == nil {
+			err = errors.Join(err, fmt.Errorf(`%w "%s"`, mf2.ErrBadSelector, v))
 		}
 
 		err = errors.Join(err, v.err)
-
 		res = append(res, v)
-	}
-
-	if err != nil {
-		err = errors.Join(mf2.ErrBadSelector, err)
 	}
 
 	return res, err
