@@ -477,7 +477,10 @@ func (e *executer) resolveSelectors(m ast.Matcher) ([]*ResolvedValue, error) {
 			err = errors.Join(err, fmt.Errorf(`%w "%s"`, mf2.ErrBadSelector, v))
 		}
 
-		err = errors.Join(err, v.err)
+		if v.err != nil {
+			err = errors.Join(err, fmt.Errorf("%w: %w", mf2.ErrBadSelector, v.err))
+		}
+
 		res = append(res, v)
 	}
 
