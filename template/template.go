@@ -493,23 +493,28 @@ func (e *executer) resolvePreferences(m ast.Matcher, selectors []*ResolvedValue)
 	pref := make([][]string, 0, len(selectors))
 
 	for i := range selectors {
-		var keys []string
+		keys := make([]string, 0, len(m.Variants[i].Keys))
 
 		for _, variant := range m.Variants {
-			for _, vKey := range variant.Keys {
-				// NOTE(mvilks): since collected keys will be compared to the selector,
-				//	we need the keys's raw string value, not the representation of it
-				//  e.g. the `1` should be equal to `|1|`
-				switch key := vKey.(type) {
-				case ast.CatchAllKey:
-					continue
-				case ast.QuotedLiteral:
-					keys = append(keys, string(key))
-				case ast.NameLiteral:
-					keys = append(keys, string(key))
-				case ast.NumberLiteral:
-					keys = append(keys, key.String())
-				}
+			// NOTE(mvilks): since collected keys will be compared to the selector,
+			//	we need the keys's raw string value, not the representation of it
+			//  e.g. the `1` should be equal to `|1|`
+			var key string
+
+			switch v := variant.Keys[i].(type) {
+			case ast.CatchAllKey:
+				continue
+			case ast.QuotedLiteral:
+				key = string(v)
+			case ast.NameLiteral:
+				key = string(v)
+			case ast.NumberLiteral:
+				key = v.String()
+			}
+
+			// add only unique keys
+			if !slices.Contains(keys, key) {
+				keys = append(keys, key)
 			}
 		}
 
