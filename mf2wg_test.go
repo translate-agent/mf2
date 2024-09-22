@@ -25,7 +25,6 @@ func init() {
 
 		"TestMF2WG/.message-format-wg/test/tests/data-model-errors.json/.local_$star_=_{star_:string}_.match_$star_|*|_{{Literal_star}}_*_{{The_default}}",
 
-		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.local_$x_=_{1_:test:select}_.local_$y_=_{1_:test:format}_.match_$x_$y_1_1_{{1,1}}_1_*_{{1,*}}_*_1_{{*,1}}_*_*_{{*,*}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.local_$x_=_{1_:test:format}_.match_$x_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.input_{$x_:test:select_decimalPlaces=1}_.local_$y_=_{$x_:test:select}_.match_$y_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 	}

@@ -95,7 +95,7 @@ var (
 	// ErrBadOption is an error that occurs when there is
 	// an implementation-defined error with an option or its value.
 	ErrBadOption = fmt.Errorf("%w: %w", ErrMessageFunction, errors.New("bad option"))
-	// ErrBadSelector error occurs when a message includes a selector
+	// ErrBadSelector occurs when a message includes a selector
 	// with a resolved value which does not support selection.
 	ErrBadSelector = fmt.Errorf("%w: %w", ErrMessageFunction, errors.New("bad selector"))
 	// ErrBadVariantKey is an error that occurs when a variant key
