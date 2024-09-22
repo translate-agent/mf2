@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"slices"
 
 	"golang.org/x/text/language"
 )
@@ -22,18 +23,13 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 	}
 
 	selectKey := func(keys []string) string {
-		res, value := "", format()
+		value := format()
 
-		for _, key := range keys {
-			switch key {
-			case value:
-				return key
-			case "*":
-				res = "*"
-			}
+		if slices.Contains(keys, value) {
+			return value
 		}
 
-		return res
+		return ""
 	}
 
 	return NewResolvedValue(operand, WithFormat(format), WithSelectKey(selectKey)), nil

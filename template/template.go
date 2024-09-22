@@ -82,10 +82,10 @@ func (r *ResolvedValue) String() string {
 	return defaultFormat(r.value)
 }
 
-// ResolvedValueOpt is a function to apply to the ResolvedValue.
+// ResolvedValueOpt is a function to apply to the [ResolvedValue].
 type ResolvedValueOpt func(*ResolvedValue)
 
-// WithFormat applies a formatting function to the ResolvedValue.
+// WithFormat applies a formatting function to the [ResolvedValue] returned by [Func].
 // The formatting function is called in the formatting context.
 func WithFormat(format func() string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
@@ -93,16 +93,18 @@ func WithFormat(format func() string) ResolvedValueOpt {
 	}
 }
 
-// WithSelectKey applies a selection function to the ResolvedValue.
+// WithSelectKey applies a selection function to the [ResolvedValue] returned by [Func].
 // The selection function is called in the selection context.
+//
+// Keys exclude catch all key "*". If keys contain "*", it is string literal and is NOT catch all key.
 func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.selectKey = selectKey
 	}
 }
 
-// NewResolvedValue creates a new variable of type *ResolvedValue.
-// If value is already *ResolvedValue, the optional format() and selectKey() are applied to it.
+// NewResolvedValue creates a new variable of type [*ResolvedValue].
+// If value is already [*ResolvedValue], the optional format() and selectKey() are applied to it.
 func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
 	r, ok := value.(*ResolvedValue)
 	if !ok {
@@ -443,12 +445,7 @@ func (e *executer) resolveOptions(options []ast.Option) (Options, error) {
 
 func (e *executer) resolveMatcher(m ast.Matcher) error {
 	selectors, matcherErr := e.resolveSelectors(m)
-
-	switch {
-	case errors.Is(matcherErr, mf2.ErrUnknownFunction),
-		errors.Is(matcherErr, mf2.ErrUnresolvedVariable),
-		errors.Is(matcherErr, mf2.ErrBadSelector): // noop
-	case matcherErr != nil:
+	if matcherErr != nil && !errors.Is(matcherErr, mf2.ErrBadSelector) {
 		return fmt.Errorf("matcher: %w", matcherErr)
 	}
 
