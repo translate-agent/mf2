@@ -492,8 +492,11 @@ func (e *executer) resolvePreferences(m ast.Matcher, selectors []*ResolvedValue)
 	// Step 2: Resolve Preferences
 	pref := make([][]string, 0, len(selectors))
 
+	// all variants have the same number of keys
+	n := len(m.Variants[0].Keys)
+
 	for i := range selectors {
-		keys := make([]string, 0, len(m.Variants[i].Keys))
+		keys := make([]string, 0, n)
 
 		for _, variant := range m.Variants {
 			// NOTE(mvilks): since collected keys will be compared to the selector,
