@@ -10,10 +10,14 @@ import (
 	"golang.org/x/text/language"
 )
 
-// RegistryTestFunc is the implementation of the :test:function.
+// RegistryTestFunc is the implementation of the ":test:function", ":test:format" and "test:select".
+// ":test:function" is both functions - ":test:format" and ":test:select".
 func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
-	if name != "format" && name != "select" {
-		panic(`want "format" or "select" func name in ":test" namespace`)
+	isFormat := name == "format" || name == "function"
+	isSelect := name == "select" || name == "function"
+
+	if !isFormat && !isSelect {
+		panic(`want "function", "format" or "select" func name in ":test" namespace`)
 	}
 
 	return func(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
@@ -43,11 +47,11 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 		case alwaysFail:
 			return errorf("%w", mf2.ErrBadSelector)
 		case formatFail:
-			if name == "format" {
+			if isFormat {
 				return errorf("%w", mf2.ErrBadSelector)
 			}
 		case selectFail:
-			if name == "select" {
+			if isSelect {
 				return errorf("%w", mf2.ErrBadSelector)
 			}
 		}
@@ -66,10 +70,6 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 			return fmt.Sprintf("%.1f", math.Trunc(v*10)/10) //nolint:mnd
 		}
 
-		if name == "format" {
-			return NewResolvedValue(v, WithFormat(format), WithFunction(":test:"+name, options)), nil
-		}
-
 		selectKey := func(keys []string) string {
 			key := format()
 			for _, k := range keys {
@@ -81,7 +81,15 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 			return ""
 		}
 
-		return NewResolvedValue(v, WithSelectKey(selectKey), WithFunction(":test:select", options)), nil
+		withFunc := WithFunction(":test:"+name, options)
+		switch name {
+		default: // :test:function
+			return NewResolvedValue(v, WithFormat(format), WithSelectKey(selectKey), withFunc), nil
+		case "format":
+			return NewResolvedValue(v, WithFormat(format), withFunc), nil
+		case "select":
+			return NewResolvedValue(v, WithSelectKey(selectKey), withFunc), nil
+		}
 	}
 }
 
