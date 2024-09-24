@@ -22,9 +22,6 @@ func init() {
 	//nolint:lll
 	failing = []string{
 		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
-
-		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.local_$x_=_{1_:test:format}_.match_$x_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/pattern-selection.json/.input_{$x_:test:select_decimalPlaces=1}_.local_$y_=_{$x_:test:select}_.match_$y_1.0_{{1.0}}_1_{{1}}_*_{{other}}",
 	}
 }
 

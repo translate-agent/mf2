@@ -24,10 +24,12 @@ type Template struct {
 
 // ResolvedValue keeps the result of the Expression resolution with optionally
 // defined format() and selectKey() functions for Format and Select contexts.
-type ResolvedValue struct {
+type ResolvedValue struct { //nolint:govet
 	value     any
 	selectKey func(keys []string) string
 	format    func() string
+	function  string
+	options   Options
 	err       error
 }
 
@@ -101,6 +103,21 @@ func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.selectKey = selectKey
 	}
+}
+
+func WithFunction(f string, opts Options) ResolvedValueOpt {
+	return func(r *ResolvedValue) {
+		r.function = f
+		r.options = opts
+	}
+}
+
+func MergeOptions(target, source Options) Options {
+	for k, v := range source {
+		target[k] = v
+	}
+
+	return target
 }
 
 // NewResolvedValue creates a new variable of type [*ResolvedValue].
