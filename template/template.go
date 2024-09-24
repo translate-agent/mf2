@@ -24,13 +24,13 @@ type Template struct {
 
 // ResolvedValue keeps the result of the Expression resolution with optionally
 // defined format() and selectKey() functions for Format and Select contexts.
-type ResolvedValue struct { //nolint:govet
+type ResolvedValue struct {
 	value     any
 	selectKey func(keys []string) string
 	format    func() string
-	function  string
 	options   Options
 	err       error
+	function  string
 }
 
 // defaultFormat returns formatted string value for any type.
