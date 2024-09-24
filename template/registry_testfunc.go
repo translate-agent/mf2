@@ -34,8 +34,9 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 		// annotation for which resolution has succeeded, then [..]" merge all options from resolved value.
 		switch operand.function {
 		case ":test:function", ":test:format", ":test:select":
-			maps.Copy(operand.options, options)
-			options = operand.options
+			merged := maps.Clone(operand.options)
+			maps.Copy(merged, options)
+			options = merged
 		}
 
 		opts, err := parseTestFunctionOptions(options)
