@@ -82,6 +82,7 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 		}
 
 		withFunc := WithFunction(":test:"+name, options)
+
 		switch name {
 		default: // :test:function
 			return NewResolvedValue(v, WithFormat(format), WithSelectKey(selectKey), withFunc), nil
