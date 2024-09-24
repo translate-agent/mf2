@@ -28,7 +28,9 @@ type ResolvedValue struct {
 	value     any
 	selectKey func(keys []string) string
 	format    func() string
+	options   Options
 	err       error
+	function  string
 }
 
 // defaultFormat returns formatted string value for any type.
@@ -100,6 +102,15 @@ func WithFormat(format func() string) ResolvedValueOpt {
 func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.selectKey = selectKey
+	}
+}
+
+// withFunction applies a function name and options with which that function was called to the
+// [ResolvedValue]. It allows consecutive functions of the same type to preserve and re-use options.
+func withFunction(funcName string, opts Options) ResolvedValueOpt {
+	return func(r *ResolvedValue) {
+		r.function = funcName
+		r.options = opts
 	}
 }
 

@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"strconv"
 
@@ -27,6 +28,15 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 		v, err := parseNumberOperand(operand)
 		if err != nil {
 			return errorf("%w", mf2.ErrBadOperand)
+		}
+
+		// "If arg is the resolved value of an expression with a :test:function, :test:select, or :test:format
+		// annotation for which resolution has succeeded, then [..]" merge all options from resolved value.
+		switch operand.function {
+		case ":test:function", ":test:format", ":test:select":
+			merged := maps.Clone(operand.options)
+			maps.Copy(merged, options)
+			options = merged
 		}
 
 		opts, err := parseTestFunctionOptions(options)
@@ -72,13 +82,15 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 			return ""
 		}
 
+		withFunc := withFunction(":test:"+name, options)
+
 		switch name {
 		default: // :test:function
-			return NewResolvedValue(v, WithFormat(format), WithSelectKey(selectKey)), nil
+			return NewResolvedValue(v, WithFormat(format), WithSelectKey(selectKey), withFunc), nil
 		case "format":
-			return NewResolvedValue(v, WithFormat(format)), nil
+			return NewResolvedValue(v, WithFormat(format), withFunc), nil
 		case "select":
-			return NewResolvedValue(v, WithSelectKey(selectKey)), nil
+			return NewResolvedValue(v, WithSelectKey(selectKey), withFunc), nil
 		}
 	}
 }
