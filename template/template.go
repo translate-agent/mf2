@@ -105,9 +105,9 @@ func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 	}
 }
 
-// WithFunction applies a function name and options with which that function was called to the
+// withFunction applies a function name and options with which that function was called to the
 // [ResolvedValue]. It allows consecutive functions of the same type to preserve and re-use options.
-func WithFunction(funcName string, opts Options) ResolvedValueOpt {
+func withFunction(funcName string, opts Options) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.function = funcName
 		r.options = opts
