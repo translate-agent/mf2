@@ -2,8 +2,8 @@ package template
 
 import (
 	"fmt"
+	"maps"
 	"math"
-	"slices"
 	"strconv"
 
 	"go.expect.digital/mf2"
@@ -11,8 +11,6 @@ import (
 )
 
 // RegistryTestFunc is the implementation of the :test:function.
-//
-//nolint:gocognit
 func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (*ResolvedValue, error) {
 	if name != "format" && name != "select" {
 		panic(`want "format" or "select" func name in ":test" namespace`)
@@ -30,8 +28,10 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 
 		// "If arg is the resolved value of an expression with a :test:function, :test:select, or :test:format
 		// annotation for which resolution has succeeded, then [..]" merge all options from resolved value.
-		if slices.Contains([]string{":test:function", ":test:format", ":test:select"}, operand.function) {
-			options = MergeOptions(operand.options, options)
+		switch operand.function {
+		case ":test:function", ":test:format", ":test:select":
+			maps.Copy(operand.options, options)
+			options = operand.options
 		}
 
 		opts, err := parseTestFunctionOptions(options)
@@ -71,10 +71,6 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 		}
 
 		selectKey := func(keys []string) string {
-			if opts.fails == alwaysFail || opts.fails == selectFail {
-				return ""
-			}
-
 			key := format()
 			for _, k := range keys {
 				if k == key {

@@ -112,14 +112,6 @@ func WithFunction(f string, opts Options) ResolvedValueOpt {
 	}
 }
 
-func MergeOptions(target, source Options) Options {
-	for k, v := range source {
-		target[k] = v
-	}
-
-	return target
-}
-
 // NewResolvedValue creates a new variable of type [*ResolvedValue].
 // If value is already [*ResolvedValue], the optional format() and selectKey() are applied to it.
 func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
