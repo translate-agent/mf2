@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"go.expect.digital/intl"
 	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
 )
@@ -90,7 +91,7 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 	for opt := range options {
 		switch opt {
 		case "calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
-			"year", "month", "day", "hour", "minute", "second", "fractionalSecondDigits":
+			"month", "hour", "minute", "second", "fractionalSecondDigits":
 			return errorf(`option "%s" is not implemented`, opt)
 		}
 	}
@@ -178,7 +179,7 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 }
 
 // datetimeFunc is the implementation of the datetime function. Locale-sensitive date and time formatting.
-func datetimeFunc(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
+func datetimeFunc(operand *ResolvedValue, options Options, locale language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
 		return nil, fmt.Errorf("exec datetime function: "+format, args...)
 	}
@@ -195,6 +196,17 @@ func datetimeFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Res
 
 	format := func() string {
 		var layout string
+
+		if opts.TimeZone != nil {
+			value = value.In(opts.TimeZone)
+		}
+
+		if opts.Year != "" || opts.Day != "" {
+			return intl.NewDateTimeFormat(locale, intl.Options{
+				Year: intl.MustParseYear(opts.Year),
+				Day:  intl.MustParseDay(opts.Day),
+			}).Format(value)
+		}
 
 		switch opts.DateStyle {
 		case "full":
@@ -222,10 +234,6 @@ func datetimeFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Res
 			case "short":
 				layout += "15:04"
 			}
-		}
-
-		if opts.TimeZone != nil {
-			value = value.In(opts.TimeZone)
 		}
 
 		return value.Format(layout)

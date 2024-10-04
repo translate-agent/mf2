@@ -50,6 +50,24 @@ func Test_Datetime(t *testing.T) {
 			options: map[string]any{"timeStyle": "long", "dateStyle": "medium", "timeZone": "EET"},
 			want:    "02 Jan 2021 05:04:05 +0200",
 		},
+		{
+			name:    "2 digit year",
+			input:   testDate,
+			options: map[string]any{"year": "2-digit"},
+			want:    "21",
+		},
+		{
+			name:    "numeric year",
+			input:   testDate,
+			options: map[string]any{"year": "numeric"},
+			want:    "2021",
+		},
+		{
+			name:    "2 digit day",
+			input:   testDate,
+			options: map[string]any{"day": "2-digit"},
+			want:    "02",
+		},
 		// negative tests
 		{
 			name:    "not implemented",
