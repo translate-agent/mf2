@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"go.expect.digital/mf2"
+	"golang.org/x/text/unicode/norm"
 )
 
 type parser struct {
@@ -952,9 +953,9 @@ func keyString(key VariantKey) string {
 	case CatchAllKey:
 		return "*"
 	case QuotedLiteral:
-		return string(k)
+		return norm.NFC.String(string(k))
 	case NameLiteral:
-		return string(k)
+		return norm.NFC.String(string(k))
 	case NumberLiteral:
 		return string(k)
 	}

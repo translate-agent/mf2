@@ -518,7 +518,7 @@ func (e *executer) resolvePreferences(m ast.Matcher, selectors []*ResolvedValue)
 			case ast.QuotedLiteral:
 				key = string(v)
 			case ast.NameLiteral:
-				key = string(v)
+				key = norm.NFC.String(string(v))
 			case ast.NumberLiteral:
 				key = v.String()
 			}
@@ -606,7 +606,7 @@ func keyString(key ast.VariantKey) string {
 	case ast.QuotedLiteral:
 		return string(k)
 	case ast.NameLiteral:
-		return string(k)
+		return norm.NFC.String(string(k))
 	case ast.NumberLiteral:
 		return string(k)
 	}
@@ -622,7 +622,7 @@ func matchSelectorKeys(selector *ResolvedValue, keys []string) []string {
 		return nil
 	}
 
-	return []string{selected}
+	return []string{norm.NFC.String(selected)}
 }
 
 type sortableVariant struct {

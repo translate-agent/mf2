@@ -45,12 +45,6 @@ func init() {
 		"TestMF2WG/.message-format-wg/test/tests/bidi.json/\\u200e_.local_$x_=_{1}_{{_{$x}}}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.local_$x_=_{1.25_:integer}_.local_$y_=_{$x_:number}_{{{$y}}}",
-
-		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_Ḍ̇_{{Not_normalized}}_Ḍ̇_{{Normalized}}_*_{{Wrong}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_Ḍ̇_{{Right}}_*_{{Wrong}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_Ḍ̇_{{Right}}_*_{{Wrong}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_Ḍ̇_{{Not_normalized}}_|Ḍ̇|_{{Normalized}}_*_{{Wrong}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_|Ḍ̇|_{{Not_normalized}}_|Ḍ̇|_{{Normalized}}_*_{{Wrong}}",
 	}
 }
 
