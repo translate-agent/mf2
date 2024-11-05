@@ -2,6 +2,8 @@ github.com/yaa110/go-persian-calendar v1.2.1 h1:5ntPqDMZaZpRF4j8iiokDsfgm8deSr0H
 github.com/yaa110/go-persian-calendar v1.2.1/go.mod h1:qtnmHCS9u1EiwzzSCSttGoxD5NfV9ZMzymxFCBYmqfg=
 go.expect.digital/intl v0.0.0-20241004091652-49fdb3a970df h1:s9dQbrQwmVTLchP5FEjH6QQYTTNEvd/DGB5zu3kTydA=
 go.expect.digital/intl v0.0.0-20241004091652-49fdb3a970df/go.mod h1:o0Cesg15dBgq3JEIYk9+L/3jkobB04Mlz9cgLVTVR7Y=
+go.expect.digital/intl v0.0.0-20241011193650-21e732e06d6f h1:+TMwBwr+TWDm1bbKM8KvNkj6vFCgqcM7SjUhyd8STCY=
+go.expect.digital/intl v0.0.0-20241011193650-21e732e06d6f/go.mod h1:YVJFd3vWEEcXboaQwSxRNj/NJXcnoR6mfXcvTZ6EZKY=
 golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 h1:yixxcjnhBmY0nkL253HFVIm0JsFHwrHdT3Yh6szTnfY=
 golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8/go.mod h1:jj3sYF3dwk5D+ghuXyeI3r5MFf+NT2An6/9dOA95KSI=
 golang.org/x/text v0.19.0 h1:kTxAhCbGbxhK0IwgSKiMO5awPoDQ0RpfiVYBfK860YM=

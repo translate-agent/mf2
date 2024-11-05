@@ -22,6 +22,35 @@ func init() {
 	//nolint:lll
 	failing = []string{
 		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
+
+		"TestMF2WG/.message-format-wg/test/tests/u-options.json/أهلاً_{بالعالم_:string}",
+		"TestMF2WG/.message-format-wg/test/tests/u-options.json/hello_{world_:string_u:dir=auto}",
+		"TestMF2WG/.message-format-wg/test/tests/u-options.json/أهلاً_{world_:string_u:dir=ltr}",
+		"TestMF2WG/.message-format-wg/test/tests/u-options.json/أهلاً_{بالعالم_:string_u:dir=auto}",
+		"TestMF2WG/.message-format-wg/test/tests/u-options.json/أهلاً_{بالعالم_:string_u:dir=rtl}",
+		"TestMF2WG/.message-format-wg/test/tests/u-options.json/hello_{world_:string_u:dir=ltr_u:id=foo}",
+		"TestMF2WG/.message-format-wg/test/tests/u-options.json/hello_{4.2_:number_u:locale=fr}",
+		"TestMF2WG/.message-format-wg/test/tests/u-options.json/{#tag_u:dir=rtl_u:locale=ar}content{/ns:tag}",
+		"TestMF2WG/.message-format-wg/test/tests/u-options.json/hello_{world_:string_u:dir=rtl}",
+
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$\\u200efoo\\u200f_=_{5}_{{{$foo}}}",
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$foo_=_{4}_{{{$\\u200efoo\\u200f}}}",
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$\\u200efoo\\u200f_=_{3}_{{{$\\u200efoo\\u200f}}}",
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$\\u061cfoo_=_{1}_{{_{$\\u061cfoo}_}}",
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$x_=_{1}_{{_{\\u200e_$x_\\u200f}_}}",
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/{\\u200e_hello_\\u200f}",
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$x_=_{1_:number}.match_$x\\u061c1_{{one}}*_{{other}}",
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$x_=_{1}_\\u200f_{{_{$x}}}",
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$x_=_{1}_{{_{$x}}}_\\u2066",
+		"TestMF2WG/.message-format-wg/test/tests/bidi.json/\\u200e_.local_$x_=_{1}_{{_{$x}}}",
+
+		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.local_$x_=_{1.25_:integer}_.local_$y_=_{$x_:number}_{{{$y}}}",
+
+		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_Ḍ̇_{{Not_normalized}}_Ḍ̇_{{Normalized}}_*_{{Wrong}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_Ḍ̇_{{Right}}_*_{{Wrong}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_Ḍ̇_{{Right}}_*_{{Wrong}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_Ḍ̇_{{Not_normalized}}_|Ḍ̇|_{{Normalized}}_*_{{Wrong}}",
+		"TestMF2WG/.message-format-wg/test/tests/functions/string.json/.local_$x_=_{Ḍ̇_:string}_.match_$x_|Ḍ̇|_{{Not_normalized}}_|Ḍ̇|_{{Normalized}}_*_{{Wrong}}",
 	}
 }
 

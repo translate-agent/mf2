@@ -3,7 +3,7 @@ module go.expect.digital/mf2
 go 1.23
 
 require (
-	go.expect.digital/intl v0.0.0-20241004091652-49fdb3a970df
+	go.expect.digital/intl v0.0.0-20241011193650-21e732e06d6f
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/text v0.19.0
 )

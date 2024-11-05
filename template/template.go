@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/language"
+	"golang.org/x/text/unicode/norm"
 
 	"go.expect.digital/mf2"
 	ast "go.expect.digital/mf2/parse"
@@ -232,7 +233,7 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 
 		switch v.(type) {
 		default:
-			executer.variables[k] = NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
+			executer.variables[norm.NFC.String(k)] = NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
 			continue
 		case string:
 			f = stringFunc
@@ -245,7 +246,7 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 			return fmt.Errorf("execute template: %w", err)
 		}
 
-		executer.variables[k] = r
+		executer.variables[norm.NFC.String(k)] = r
 	}
 
 	if err := executer.execute(); err != nil {
@@ -317,14 +318,14 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error { /
 				r.err = errors.Join(r.err, fmt.Errorf("resolve local %s: %w", d.Variable, err))
 			}
 
-			e.variables[string(d.Variable)] = r // newVariable(d.Expression, nil)
+			e.variables[norm.NFC.String(string(d.Variable))] = r // newVariable(d.Expression, nil)
 		case ast.InputDeclaration:
 			r, err := e.resolveExpression(ast.Expression(d))
 			if err != nil {
 				r.err = errors.Join(r.err, fmt.Errorf("resolve input %s: %w", d.Operand, err))
 			}
 
-			e.variables[string(d.Operand.(ast.Variable))] = r //nolint: forcetypeassert // always ast.Variable
+			e.variables[norm.NFC.String(string(d.Operand.(ast.Variable)))] = r //nolint: forcetypeassert // always ast.Variable
 		}
 	}
 
@@ -430,7 +431,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.NumberLiteral:
 		return string(v), nil
 	case ast.Variable:
-		val, ok := e.variables[string(v)]
+		val, ok := e.variables[norm.NFC.String(string(v))]
 		if !ok {
 			return NewResolvedValue("{" + v.String() + "}"), fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
