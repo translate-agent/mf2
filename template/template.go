@@ -318,14 +318,14 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error { /
 				r.err = errors.Join(r.err, fmt.Errorf("resolve local %s: %w", d.Variable, err))
 			}
 
-			e.variables[norm.NFC.String(string(d.Variable))] = r // newVariable(d.Expression, nil)
+			e.variables[string(d.Variable)] = r // newVariable(d.Expression, nil)
 		case ast.InputDeclaration:
 			r, err := e.resolveExpression(ast.Expression(d))
 			if err != nil {
 				r.err = errors.Join(r.err, fmt.Errorf("resolve input %s: %w", d.Operand, err))
 			}
 
-			e.variables[norm.NFC.String(string(d.Operand.(ast.Variable)))] = r //nolint: forcetypeassert // always ast.Variable
+			e.variables[string(d.Operand.(ast.Variable))] = r //nolint: forcetypeassert // always ast.Variable
 		}
 	}
 
@@ -431,7 +431,7 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 	case ast.NumberLiteral:
 		return string(v), nil
 	case ast.Variable:
-		val, ok := e.variables[norm.NFC.String(string(v))]
+		val, ok := e.variables[string(v)]
 		if !ok {
 			return NewResolvedValue("{" + v.String() + "}"), fmt.Errorf(`%w "%s"`, mf2.ErrUnresolvedVariable, v)
 		}
@@ -518,7 +518,7 @@ func (e *executer) resolvePreferences(m ast.Matcher, selectors []*ResolvedValue)
 			case ast.QuotedLiteral:
 				key = string(v)
 			case ast.NameLiteral:
-				key = norm.NFC.String(string(v))
+				key = string(v)
 			case ast.NumberLiteral:
 				key = v.String()
 			}
@@ -606,7 +606,7 @@ func keyString(key ast.VariantKey) string {
 	case ast.QuotedLiteral:
 		return string(k)
 	case ast.NameLiteral:
-		return norm.NFC.String(string(k))
+		return string(k)
 	case ast.NumberLiteral:
 		return string(k)
 	}
@@ -622,7 +622,7 @@ func matchSelectorKeys(selector *ResolvedValue, keys []string) []string {
 		return nil
 	}
 
-	return []string{norm.NFC.String(selected)}
+	return []string{selected}
 }
 
 type sortableVariant struct {
