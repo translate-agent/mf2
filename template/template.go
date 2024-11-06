@@ -229,21 +229,19 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	executer := &executer{template: t, w: w, variables: make(map[string]*ResolvedValue, len(input))}
 
 	for k, v := range input {
-		var (
-			r   *ResolvedValue
-			err error
-		)
+		var f Func
 
-		switch u := v.(type) {
+		switch v.(type) {
 		default:
 			executer.variables[norm.NFC.String(k)] = NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
 			continue
 		case string:
-			r, err = stringFunc(NewResolvedValue(norm.NFC.String(u)), nil, t.locale)
+			f = stringFunc
 		case float64, int:
-			r, err = numberFunc(NewResolvedValue(v), nil, t.locale)
+			f = numberFunc
 		}
 
+		r, err := f(NewResolvedValue(v), nil, t.locale)
 		if err != nil {
 			return fmt.Errorf("execute template: %w", err)
 		}
@@ -510,8 +508,8 @@ func (e *executer) resolvePreferences(m ast.Matcher, selectors []*ResolvedValue)
 
 		for _, variant := range m.Variants {
 			// NOTE(mvilks): since collected keys will be compared to the selector,
-			//	we need the keys's raw string value, not the representation of it
-			//  e.g. the `1` should be equal to `|1|`
+			// we need the keys's raw string value, not the representation of it
+			// e.g. the `1` should be equal to `|1|`
 			var key string
 
 			switch v := variant.Keys[i].(type) {
