@@ -175,6 +175,12 @@ func Test_Matcher(t *testing.T) {
 			inputs: []map[string]any{{"count": "1"}},
 			want:   []string{"Exact match"},
 		},
+		{
+			name:   "normalization form C",
+			text:   ".input {$foo :string} .match $foo \u1E0c\u0307 {{Right}} * {{Wrong}}",
+			inputs: []map[string]any{{"foo": "\u0044\u0323\u0307"}},
+			want:   []string{"Right"},
+		},
 	}
 
 	for _, test := range tests {

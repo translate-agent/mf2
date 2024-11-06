@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"golang.org/x/text/language"
-	"golang.org/x/text/unicode/norm"
 )
 
 // stringFunc is the implementation of the string function.
@@ -26,7 +25,7 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 	selectKey := func(keys []string) string {
 		value := format()
 
-		if slices.Contains(keys, norm.NFC.String(value)) {
+		if slices.Contains(keys, value) {
 			return value
 		}
 

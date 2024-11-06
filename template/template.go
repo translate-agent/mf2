@@ -229,19 +229,21 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 	executer := &executer{template: t, w: w, variables: make(map[string]*ResolvedValue, len(input))}
 
 	for k, v := range input {
-		var f Func
+		var (
+			r   *ResolvedValue
+			err error
+		)
 
-		switch v.(type) {
+		switch u := v.(type) {
 		default:
 			executer.variables[norm.NFC.String(k)] = NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
 			continue
 		case string:
-			f = stringFunc
+			r, err = stringFunc(NewResolvedValue(norm.NFC.String(u)), nil, t.locale)
 		case float64, int:
-			f = numberFunc
+			r, err = numberFunc(NewResolvedValue(v), nil, t.locale)
 		}
 
-		r, err := f(NewResolvedValue(v), nil, t.locale)
 		if err != nil {
 			return fmt.Errorf("execute template: %w", err)
 		}
