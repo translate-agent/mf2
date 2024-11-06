@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/language"
+	"golang.org/x/text/unicode/norm"
 
 	"go.expect.digital/mf2"
 	ast "go.expect.digital/mf2/parse"
@@ -232,7 +233,7 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 
 		switch v.(type) {
 		default:
-			executer.variables[k] = NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
+			executer.variables[norm.NFC.String(k)] = NewResolvedValue(v, WithFormat(func() string { return defaultFormat(v) }))
 			continue
 		case string:
 			f = stringFunc
@@ -245,7 +246,7 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 			return fmt.Errorf("execute template: %w", err)
 		}
 
-		executer.variables[k] = r
+		executer.variables[norm.NFC.String(k)] = r
 	}
 
 	if err := executer.execute(); err != nil {
@@ -507,8 +508,8 @@ func (e *executer) resolvePreferences(m ast.Matcher, selectors []*ResolvedValue)
 
 		for _, variant := range m.Variants {
 			// NOTE(mvilks): since collected keys will be compared to the selector,
-			//	we need the keys's raw string value, not the representation of it
-			//  e.g. the `1` should be equal to `|1|`
+			// we need the keys's raw string value, not the representation of it
+			// e.g. the `1` should be equal to `|1|`
 			var key string
 
 			switch v := variant.Keys[i].(type) {

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"go.expect.digital/mf2"
+	"golang.org/x/text/unicode/norm"
 )
 
 type parser struct {
@@ -409,7 +410,7 @@ func (p *parser) parseExpression() (Expression, error) {
 
 		return errorf("%w: %w", mf2.ErrBadOperand, err)
 	case itemVariable:
-		variable := Variable(itm.val)
+		variable := Variable(norm.NFC.String(itm.val))
 
 		switch p.declaration {
 		case "local":
@@ -561,7 +562,7 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 		return errorf(unexpectedErr(next, itemVariable))
 	}
 
-	variable := Variable(next.val)
+	variable := Variable(norm.NFC.String(next.val))
 	if err := p.duplicateVariable(variable); err != nil {
 		return errorf(err)
 	}
@@ -678,11 +679,12 @@ selectorsLoop:
 		case itemEOF:
 			return errorf("%w", unexpectedErr(itm))
 		case itemVariable:
-			if !hasAnnotation(Variable(itm.val), declarations) {
+			v := Variable(norm.NFC.String(itm.val))
+			if !hasAnnotation(v, declarations) {
 				return errorf("%w", mf2.ErrMissingSelectorAnnotation)
 			}
 
-			matcher.Selectors = append(matcher.Selectors, Variable(itm.val))
+			matcher.Selectors = append(matcher.Selectors, v)
 		}
 	}
 
@@ -904,7 +906,7 @@ func (p *parser) parseLiteral() (Literal, error) {
 	case itemQuotedLiteral:
 		return QuotedLiteral(itm.val), nil
 	case itemUnquotedLiteral:
-		return NameLiteral(itm.val), nil
+		return NameLiteral(norm.NFC.String(itm.val)), nil
 	}
 }
 
@@ -952,9 +954,9 @@ func keyString(key VariantKey) string {
 	case CatchAllKey:
 		return "*"
 	case QuotedLiteral:
-		return string(k)
+		return norm.NFC.String(string(k))
 	case NameLiteral:
-		return string(k)
+		return norm.NFC.String(string(k))
 	case NumberLiteral:
 		return string(k)
 	}

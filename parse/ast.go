@@ -303,6 +303,7 @@ func (Matcher) complexBody() {}
 
 // ---------------------------------Node---------------------------------
 
+// Variable identifier is normalized in Unicode Normalization Form C.
 type Variable string
 
 // String returns MF2 formatted string.
