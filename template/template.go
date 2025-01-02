@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 
-	"golang.org/x/exp/slices"
 	"golang.org/x/text/language"
 	"golang.org/x/text/unicode/norm"
 
