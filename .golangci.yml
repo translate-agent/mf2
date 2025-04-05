@@ -1,23 +1,20 @@
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
     - depguard
     - dupl
     - err113
     - exhaustruct
-    - exportloopref # deprecated
     - forbidigo
     - funlen
-    - gci
     - ginkgolinter
-    - goconst
     - gochecknoglobals
     - gochecknoinits
+    - goconst
     - gocyclo
     - godox
-    - gofmt
     - goheader
-    - goimports
     - gomodguard
     - gosmopolitan
     - grouper
@@ -36,25 +33,43 @@ linters:
     - wastedassign
     - whitespace
     - zerologlint
-linters-settings:
-  cyclop:
-    max-complexity: 30
-  exhaustive:
-    default-signifies-exhaustive: true
-  govet:
-    enable-all: true
-  importas:
-    alias:
-      - pkg: go.expect.digital/translate/pkg/pb/translate/v1
-        alias: translatev1
-  ireturn:
-    allow:
-      - anon
-      - error
-      - empty
-      - generic
-      - stdlib
-      - (or|er)$
-      - Literal # false reporting in parseLiteral() by nolintlint
-  predeclared:
-    ignore: ""
+  settings:
+    cyclop:
+      max-complexity: 30
+    exhaustive:
+      default-signifies-exhaustive: true
+    govet:
+      enable-all: true
+    importas:
+      alias:
+        - pkg: go.expect.digital/translate/pkg/pb/translate/v1
+          alias: translatev1
+    ireturn:
+      allow:
+        - anon
+        - error
+        - empty
+        - generic
+        - stdlib
+        - (or|er)$
+        - Literal
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
