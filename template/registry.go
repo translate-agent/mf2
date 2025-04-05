@@ -1,13 +1,13 @@
 package template
 
 import (
+	"cmp"
 	"fmt"
 	"reflect"
 	"slices"
 	"strconv"
 	"time"
 
-	"golang.org/x/exp/constraints"
 	"golang.org/x/text/feature/plural"
 	"golang.org/x/text/language"
 )
@@ -119,7 +119,7 @@ func oneOf[T comparable](values ...T) func(T) error {
 	}
 }
 
-func eqOrGreaterThan[T constraints.Ordered](v T) func(T) error {
+func eqOrGreaterThan[T cmp.Ordered](v T) func(T) error {
 	return func(value T) error {
 		if value < v {
 			return fmt.Errorf("want greater than %v, got %v", v, value)
