@@ -8,8 +8,16 @@ updates:
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "weekly"
-    reviewers:
-      - "janishorsts"
+      interval: "daily"
     allow:
       - dependency-type: "all"
+    commit-message:
+      prefix: "chore(deps)"
+  - package-ecosystem: "github-actions"
+    directory: "/.github/workflows"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-type: "all"
+    commit-message:
+      prefix: "ci(deps)"
