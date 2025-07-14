@@ -558,7 +558,8 @@ func lexNumberLiteral(l *lexer) stateFn {
 
 		val := l.val()
 
-		if err := json.Unmarshal([]byte(val), &number); err != nil {
+		err := json.Unmarshal([]byte(val), &number)
+		if err != nil {
 			return l.emitErrorf(`bad number literal "%s"`, val)
 		}
 

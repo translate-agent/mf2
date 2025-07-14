@@ -154,7 +154,9 @@ func Parse(input string) (AST, error) {
 	}
 
 	p := &parser{pos: -1}
-	if err := p.collect(lex(input)); err != nil {
+
+	err := p.collect(lex(input))
+	if err != nil {
 		return errorf(err)
 	}
 
@@ -228,6 +230,7 @@ declarationsLoop:
 	default:
 		err := unexpectedErr(
 			itm, itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemQuotedPatternOpen)
+
 		return errorf("%w", err)
 	case itemQuotedPatternOpen:
 		pattern, err := p.parsePattern()
@@ -420,18 +423,21 @@ func (p *parser) parseExpression() (Expression, error) {
 			}
 		case "input":
 			// .input {$foo} .input {$foo}
-			if err = p.duplicateVariable(variable); err != nil {
+			err = p.duplicateVariable(variable)
+			if err != nil {
 				return errorf("%w", err)
 			}
 
 			p.reservedVariable = variable
+
 			defer func() { p.reservedVariable = "" }()
 		}
 
 		p.declareVariable(variable)
 		expr.Operand = variable
 	case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
-		if expr.Operand, err = p.parseLiteral(); err != nil {
+		expr.Operand, err = p.parseLiteral()
+		if err != nil {
 			return errorf("%w", err)
 		}
 	case itemFunction:
@@ -458,7 +464,8 @@ func (p *parser) parseExpression() (Expression, error) {
 	default:
 		return errorf("%w", unexpectedErr(itm, itemFunction, itemAttribute))
 	case itemFunction:
-		if expr.Annotation, err = p.parseFunction(); err != nil {
+		expr.Annotation, err = p.parseFunction()
+		if err != nil {
 			return errorf("%w", err)
 		}
 	case itemAttribute:
@@ -481,8 +488,8 @@ func (p *parser) parseExpression() (Expression, error) {
 	}
 
 	// parse attributes
-
-	if expr.Attributes, err = p.parseAttributes(); err != nil {
+	expr.Attributes, err = p.parseAttributes()
+	if err != nil {
 		return errorf("%w", err)
 	}
 
@@ -551,6 +558,7 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 	}
 
 	p.declaration = "local"
+
 	defer func() { p.declaration = "" }()
 
 	next := p.next()
@@ -563,11 +571,14 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 	}
 
 	variable := Variable(norm.NFC.String(next.val))
-	if err := p.duplicateVariable(variable); err != nil {
+
+	err := p.duplicateVariable(variable)
+	if err != nil {
 		return errorf(err)
 	}
 
 	p.reservedVariable = variable
+
 	defer func() { p.reservedVariable = "" }()
 
 	p.declareVariable(variable)
@@ -598,6 +609,7 @@ func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
 	}
 
 	p.declaration = "input"
+
 	defer func() { p.declaration = "" }()
 
 	next := p.nextNonWS()
@@ -822,7 +834,9 @@ func (p *parser) parseOption() (Option, error) {
 		option.Value = variable
 	case itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral:
 		var err error
-		if option.Value, err = p.parseLiteral(); err != nil {
+
+		option.Value, err = p.parseLiteral()
+		if err != nil {
 			return errorf("%w", err)
 		}
 	}
@@ -883,7 +897,8 @@ func (p *parser) parseAttribute() (Attribute, error) {
 	default:
 		return errorf("%w", unexpectedErr(itm, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral))
 	case itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral:
-		if attribute.Value, err = p.parseLiteral(); err != nil {
+		attribute.Value, err = p.parseLiteral()
+		if err != nil {
 			return errorf("%w", err)
 		}
 	}
@@ -898,7 +913,9 @@ func (p *parser) parseLiteral() (Literal, error) {
 		return nil, fmt.Errorf("literal: %w", err)
 	case itemNumberLiteral:
 		var num float64
-		if err := json.Unmarshal([]byte(itm.val), &num); err != nil {
+
+		err := json.Unmarshal([]byte(itm.val), &num)
+		if err != nil {
 			return nil, fmt.Errorf("%w: number literal: %w", mf2.ErrSyntax, err)
 		}
 
