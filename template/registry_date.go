@@ -30,11 +30,14 @@ func parseDateOptions(options Options) (*dateOptions, error) {
 	)
 
 	styles := oneOf("full", "long", "medium", "short")
-	if opts.Style, err = options.GetString("style", "short", styles); err != nil {
+
+	opts.Style, err = options.GetString("style", "short", styles)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
-	if opts.TimeZone, err = getTZ(options); err != nil {
+	opts.TimeZone, err = getTZ(options)
+	if err != nil {
 		return errorf("%w", err)
 	}
 

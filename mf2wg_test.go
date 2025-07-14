@@ -73,7 +73,8 @@ func TestMF2WG(t *testing.T) {
 
 			var tests Tests
 
-			if err := json.NewDecoder(f).Decode(&tests); err != nil {
+			err = json.NewDecoder(f).Decode(&tests)
+			if err != nil {
 				t.Error(err)
 			}
 
@@ -210,7 +211,8 @@ func (e *Errors) UnmarshalJSON(data []byte) error {
 	case len(data) == 0:
 		return nil
 	case data[0] == '[': // parse errors slice
-		if err := json.Unmarshal(data, &e.Errors); err != nil {
+		err := json.Unmarshal(data, &e.Errors)
+		if err != nil {
 			return fmt.Errorf("want slice: %w", err)
 		}
 

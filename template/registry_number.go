@@ -144,17 +144,23 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	)
 
 	selects := oneOf("plural", "ordinal", "exact")
-	if options.Select, err = opts.GetString("select", "plural", selects); err != nil {
+
+	options.Select, err = opts.GetString("select", "plural", selects)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
 	useGroupings := oneOf("auto", "always", "never", "min2")
-	if options.UseGrouping, err = opts.GetString("useGrouping", "auto", useGroupings); err != nil {
+
+	options.UseGrouping, err = opts.GetString("useGrouping", "auto", useGroupings)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
 	compactDisplays := oneOf("short", "long")
-	if options.CompactDisplay, err = opts.GetString("compactDisplay", "short", compactDisplays); err != nil {
+
+	options.CompactDisplay, err = opts.GetString("compactDisplay", "short", compactDisplays)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
@@ -163,7 +169,8 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		default:
 			return errorf("invalid currency type: %T", v)
 		case string:
-			if options.Currency, err = currency.ParseISO(v); err != nil {
+			options.Currency, err = currency.ParseISO(v)
+			if err != nil {
 				return errorf("invalid currency value: %s", v)
 			}
 
@@ -176,17 +183,23 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	}
 
 	currencyDisplays := oneOf("code", "symbol", "narrowSymbol", "name")
-	if options.CurrencyDisplay, err = opts.GetString("currencyDisplay", "", currencyDisplays); err != nil {
+
+	options.CurrencyDisplay, err = opts.GetString("currencyDisplay", "", currencyDisplays)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
 	currencySigns := oneOf("standard", "accounting")
-	if options.CurrencySign, err = opts.GetString("currencySign", "standard", currencySigns); err != nil {
+
+	options.CurrencySign, err = opts.GetString("currencySign", "standard", currencySigns)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
 	notations := oneOf("standard", "scientific", "engineering", "compact")
-	if options.Notation, err = opts.GetString("notation", "standard", notations); err != nil {
+
+	options.Notation, err = opts.GetString("notation", "standard", notations)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
@@ -194,34 +207,45 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru", "hanidec", "khmr",
 		"knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec", "telu", "thai", "tibt",
 	)
-	if options.NumberingSystem, err = opts.GetString("numberingSystem", "", numberingSystems); err != nil {
+
+	options.NumberingSystem, err = opts.GetString("numberingSystem", "", numberingSystems)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
 	signDisplays := oneOf("auto", "always", "exceptZero", "negative", "never")
-	if options.SignDisplay, err = opts.GetString("signDisplay", "auto", signDisplays); err != nil {
+
+	options.SignDisplay, err = opts.GetString("signDisplay", "auto", signDisplays)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
 	styles := oneOf("decimal", "percent")
-	if options.Style, err = opts.GetString("style", "decimal", styles); err != nil {
+
+	options.Style, err = opts.GetString("style", "decimal", styles)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
-	if options.Unit, err = opts.GetInt("unit", 0); err != nil {
+	options.Unit, err = opts.GetInt("unit", 0)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
 	unitDisplays := oneOf("short", "narrow")
-	if options.UnitDisplay, err = opts.GetString("unitDisplay", "short", unitDisplays); err != nil {
+
+	options.UnitDisplay, err = opts.GetString("unitDisplay", "short", unitDisplays)
+	if err != nil {
 		return errorf("%w", err)
 	}
 
-	if options.MinimumIntegerDigits, err = opts.GetInt("minimumIntegerDigits", 1, eqOrGreaterThan(1)); err != nil {
+	options.MinimumIntegerDigits, err = opts.GetInt("minimumIntegerDigits", 1, eqOrGreaterThan(1))
+	if err != nil {
 		return errorf("%w", err)
 	}
 
-	if options.MinimumFractionDigits, err = opts.GetInt("minimumFractionDigits", 0, eqOrGreaterThan(0)); err != nil {
+	options.MinimumFractionDigits, err = opts.GetInt("minimumFractionDigits", 0, eqOrGreaterThan(0))
+	if err != nil {
 		return errorf("%w", err)
 	}
 
@@ -236,7 +260,8 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		return errorf("%w", err)
 	}
 
-	if options.MinimumSignificantDigits, err = opts.GetInt("minimumSignificantDigits", 1, eqOrGreaterThan(1)); err != nil {
+	options.MinimumSignificantDigits, err = opts.GetInt("minimumSignificantDigits", 1, eqOrGreaterThan(1))
+	if err != nil {
 		return errorf("%w", err)
 	}
 

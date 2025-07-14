@@ -40,7 +40,8 @@ func (o Options) GetString(name, fallback string, validate ...Validate[string]) 
 	}
 
 	for _, f := range validate {
-		if err := f(s); err != nil {
+		err := f(s)
+		if err != nil {
 			return errorf("%w", err)
 		}
 	}
@@ -83,7 +84,8 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 	}
 
 	for _, f := range validate {
-		if err := f(i); err != nil {
+		err := f(i)
+		if err != nil {
 			return errorf("%w", err)
 		}
 	}
@@ -132,6 +134,7 @@ func eqOrGreaterThan[T cmp.Ordered](v T) func(T) error {
 // castAs tries to cast any value to the given type.
 func castAs[T any](val any) (T, error) {
 	var zeroVal T
+
 	typ := reflect.TypeOf(zeroVal)
 
 	v := (reflect.ValueOf(val))

@@ -19,7 +19,8 @@ func ExampleTemplate_plainText() {
 		panic(err)
 	}
 
-	if err := t.Execute(os.Stdout, nil); err != nil {
+	err = t.Execute(os.Stdout, nil)
+	if err != nil {
 		panic(err)
 	}
 
@@ -37,7 +38,8 @@ func ExampleTemplate_simpleMessage() {
 	}
 
 	// Execute the template.
-	if err = t.Execute(os.Stdout, map[string]any{"degrees": 15}); err != nil {
+	err = t.Execute(os.Stdout, map[string]any{"degrees": 15})
+	if err != nil {
 		panic(err)
 	}
 
@@ -100,7 +102,8 @@ func ExampleTemplate_complexMessage() {
 	}
 
 	// Execute the template.
-	if err = t.Execute(os.Stdout, map[string]any{"color": "red"}); err != nil {
+	err = t.Execute(os.Stdout, map[string]any{"color": "red"})
+	if err != nil {
 		panic(err)
 	}
 

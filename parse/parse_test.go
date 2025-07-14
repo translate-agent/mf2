@@ -652,7 +652,8 @@ func TestParseErrors(t *testing.T) {
 		t.Run(test.in, func(t *testing.T) {
 			t.Parallel()
 
-			if _, err := Parse(test.in); err == nil || err.Error() != test.wantErr {
+			_, err := Parse(test.in)
+			if err == nil || err.Error() != test.wantErr {
 				t.Errorf("\nwant '%s'\ngot  '%s'", test.wantErr, err)
 			}
 		})

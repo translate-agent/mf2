@@ -34,6 +34,21 @@ type ResolvedValue struct {
 	function  string
 }
 
+// NewResolvedValue creates a new variable of type [*ResolvedValue].
+// If value is already [*ResolvedValue], the optional format() and selectKey() are applied to it.
+func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
+	r, ok := value.(*ResolvedValue)
+	if !ok {
+		r = &ResolvedValue{value: value}
+	}
+
+	for _, f := range options {
+		f(r)
+	}
+
+	return r
+}
+
 // defaultFormat returns formatted string value for any type.
 func defaultFormat(value any) string {
 	switch v := value.(type) {
@@ -113,21 +128,6 @@ func withFunction(funcName string, opts Options) ResolvedValueOpt {
 		r.function = funcName
 		r.options = opts
 	}
-}
-
-// NewResolvedValue creates a new variable of type [*ResolvedValue].
-// If value is already [*ResolvedValue], the optional format() and selectKey() are applied to it.
-func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
-	r, ok := value.(*ResolvedValue)
-	if !ok {
-		r = &ResolvedValue{value: value}
-	}
-
-	for _, f := range options {
-		f(r)
-	}
-
-	return r
 }
 
 func newFallbackValue(expr ast.Expression) *ResolvedValue {
@@ -249,7 +249,8 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 		executer.variables[norm.NFC.String(k)] = r
 	}
 
-	if err := executer.execute(); err != nil {
+	err := executer.execute()
+	if err != nil {
 		return fmt.Errorf("execute template: %w", err)
 	}
 
@@ -342,7 +343,8 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 	for _, part := range pattern {
 		switch v := part.(type) {
 		case ast.Text:
-			if _, err := e.w.Write([]byte(v)); err != nil {
+			_, err := e.w.Write([]byte(v))
+			if err != nil {
 				return errorf("write text: %w", err)
 			}
 		case ast.Expression:
@@ -351,7 +353,8 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 				resolutionErr = errors.Join(resolutionErr, err)
 			}
 
-			if _, err := e.w.Write([]byte(resolved.String())); err != nil {
+			_, err = e.w.Write([]byte(resolved.String()))
+			if err != nil {
 				return errorf("write resolved expression: %w", err)
 			}
 		// When formatting to a string, markup placeholders format to an empty string by default.
@@ -381,7 +384,8 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 	case ast.Function:
 		funcName = v.Identifier.String()
 
-		if options, err = e.resolveOptions(v.Options); err != nil {
+		options, err = e.resolveOptions(v.Options)
+		if err != nil {
 			return newFallbackValue(expr), fmt.Errorf("expression: %w", err)
 		}
 	case nil: // noop, no annotation
