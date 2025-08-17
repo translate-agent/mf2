@@ -7,4 +7,4 @@ require (
 	golang.org/x/text v0.27.0
 )
 
-require github.com/yaa110/go-persian-calendar v1.2.1 // indirect
+require github.com/yaa110/go-persian-calendar v1.2.2 // indirect
