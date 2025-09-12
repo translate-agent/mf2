@@ -6,4 +6,7 @@
     ":semanticCommits",
   ],
   rebaseWhen: "behind-base-branch",
+  "git-submodules": {
+    enabled: true,
+  },
 }
