@@ -76,7 +76,7 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 	case string:
 		i, err = strconv.Atoi(n)
 		if err != nil {
-			return 0, fmt.Errorf(`parse integer from string "%s": %w`, n, err)
+			return errorf(`parse integer from string "%s": %w`, n, err)
 		}
 	case int:
 		i = n
