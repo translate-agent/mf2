@@ -44,17 +44,18 @@ func RegistryTestFunc(name string) func(*ResolvedValue, Options, language.Tag) (
 			return errorf("%w", mf2.ErrBadOption)
 		}
 
-		switch opts.fails { //nolint:exhaustive
+		switch opts.fails {
 		case alwaysFail:
 			return errorf("%w", mf2.ErrBadSelector)
 		case formatFail:
 			if isFormat {
-				return errorf("%w", mf2.ErrBadSelector)
+				return errorf("%w", mf2.ErrBadOption)
 			}
 		case selectFail:
 			if isSelect {
 				return errorf("%w", mf2.ErrBadSelector)
 			}
+		case neverFail: // noop
 		}
 
 		format := func() string {
@@ -129,11 +130,13 @@ func parseTestFunctionOptions(options Options) (TestFunctionOptions, error) {
 				opts.decimalPlaces = int(n)
 			}
 		case "fails":
-			switch failsWhen(v.String()) {
+			s := failsWhen(v.String())
+
+			switch s {
 			default:
 				return opts, fmt.Errorf("invalid fails: %s", v)
 			case neverFail, selectFail, formatFail, alwaysFail:
-				opts.fails = failsWhen(v.String())
+				opts.fails = s
 			}
 		}
 	}
