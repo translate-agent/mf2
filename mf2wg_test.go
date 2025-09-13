@@ -3,12 +3,10 @@ package mf2_test
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"testing"
 
 	"go.expect.digital/mf2"
@@ -210,6 +208,7 @@ func run(t *testing.T, test Test) {
 // ".message-format-wg/spec/schemas/v0/tests.schema.json".
 type Tests struct {
 	Scenario              string                `json:"scenario"`
+	Description           string                `json:"description"`
 	Tests                 []Test                `json:"tests"`
 	DefaultTestProperties DefaultTestProperties `json:"defaultTestProperties"`
 }
@@ -217,6 +216,8 @@ type Tests struct {
 type Test struct {
 	// The MF2 message to be tested.
 	Src string `json:"src"`
+	// The bidi isolation strategy.
+	BidiIsolation string `json:"bidiIsolation"`
 	// Information about the test scenario.
 	Description string `json:"description"`
 	// The locale to use for formatting. Defaults to 'en-US'.
@@ -230,17 +231,17 @@ type Test struct {
 	// A normalixed form of `src`, for testing stringifiers.
 	CleanSrc string `json:"cleanSrc"`
 	// The runtime errors expected to be emitted when formatting the message.
-	ExpErrors Errors `json:"expErrors"`
+	ExpErrors []Error `json:"expErrors"`
+	// List of features that the test relies on.
+	Tags []string `json:"tags"`
+	// The expected result of formatting the message to parts.
+	ExpParts []map[string]any `json:"expParts"`
 }
 
 // Apply applies default properties to the test.
 func (t Test) Apply(defaultProperties DefaultTestProperties) Test {
-	if t.ExpErrors.Expected == nil {
-		t.ExpErrors.Expected = defaultProperties.ExpErrors.Expected
-	}
-
-	if len(t.ExpErrors.Errors) == 0 {
-		t.ExpErrors.Errors = defaultProperties.ExpErrors.Errors
+	if len(t.ExpErrors) == 0 {
+		t.ExpErrors = defaultProperties.ExpErrors
 	}
 
 	if t.Locale == nil {
@@ -250,37 +251,9 @@ func (t Test) Apply(defaultProperties DefaultTestProperties) Test {
 	return t
 }
 
-type Errors struct {
-	Expected *bool
-	Errors   []Error
-}
-
-func (e *Errors) UnmarshalJSON(data []byte) error {
-	switch {
-	default: // parse bool
-		v, err := strconv.ParseBool(string(data))
-		if err != nil {
-			return fmt.Errorf("want bool: %w", err)
-		}
-
-		e.Expected = &v
-
-		return nil
-	case len(data) == 0:
-		return nil
-	case data[0] == '[': // parse errors slice
-		err := json.Unmarshal(data, &e.Errors)
-		if err != nil {
-			return fmt.Errorf("want slice: %w", err)
-		}
-
-		return nil
-	}
-}
-
 type DefaultTestProperties struct {
 	Locale    *language.Tag `json:"locale"`
-	ExpErrors Errors        `json:"expErrors"`
+	ExpErrors []Error       `json:"expErrors"`
 }
 
 type Error struct {
@@ -293,13 +266,8 @@ type Var struct {
 	Type  string `json:"type"`
 }
 
-func assertErr(t *testing.T, want Errors, err error) {
-	// we expect error but we don't know the exact error
-	if want.Expected != nil && *want.Expected && err == nil {
-		t.Error("want error, got nil")
-	}
-
-	if len(want.Errors) == 0 && err != nil {
+func assertErr(t *testing.T, want []Error, err error) {
+	if len(want) == 0 && err != nil {
 		t.Errorf("want no error, got '%s'", err)
 	}
 
@@ -309,7 +277,7 @@ func assertErr(t *testing.T, want Errors, err error) {
 		}
 	}
 
-	for _, v := range want.Errors {
+	for _, v := range want {
 		switch v.Type {
 		default:
 			t.Errorf("asserting error '%s' is not implemented", v)
