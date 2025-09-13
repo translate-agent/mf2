@@ -21,91 +21,91 @@ var failing []string
 func init() {
 	//nolint:lll
 	failing = []string{
-		"TestMF2WG/.message-format-wg/test/tests/fallback.json/{42_:test:function_fails=format}",
-		"TestMF2WG/.message-format-wg/test/tests/fallback.json/{|C:\\\\|_:test:function_fails=format}",
-		"TestMF2WG/.message-format-wg/test/tests/fallback.json/.local_$var_=_{|val|_:test:undefined}_{{{$var}}}",
-		"TestMF2WG/.message-format-wg/test/tests/fallback.json/.local_$var_=_{|val|_:test:undefined}_{{{$var_:test:function}}}",
+		"TestMF2WG/Fallback/{42_:test:function_fails=format}",
+		"TestMF2WG/Fallback/{|C:\\\\|_:test:function_fails=format}",
+		"TestMF2WG/Fallback/.local_$var_=_{|val|_:test:undefined}_{{{$var}}}",
+		"TestMF2WG/Fallback/.local_$var_=_{|val|_:test:undefined}_{{{$var_:test:function}}}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/.local_$n_=_{42_:integer}_{{{$n_:currency_currency=EUR}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/.local_$n_=_{42_:number}_{{{$n_:currency_currency=EUR}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/.local_$n_=_{42_:number}_{{{$n_:currency}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/.local_$n_=_{42_:currency_currency=EUR}_{{{$n_:currency}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/{foo_:currency}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/{:currency}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/{42_:currency}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/{$x_:currency_currency=EUR}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/{42_:currency_currency=EUR_fractionDigits=2}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/{42_:currency_currency=EUR_fractionDigits=auto}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/currency.json/{42_:currency_currency=EUR}",
+		"TestMF2WG/Currency_function/.local_$n_=_{42_:integer}_{{{$n_:currency_currency=EUR}}}",
+		"TestMF2WG/Currency_function/.local_$n_=_{42_:number}_{{{$n_:currency_currency=EUR}}}",
+		"TestMF2WG/Currency_function/.local_$n_=_{42_:number}_{{{$n_:currency}}}",
+		"TestMF2WG/Currency_function/.local_$n_=_{42_:currency_currency=EUR}_{{{$n_:currency}}}",
+		"TestMF2WG/Currency_function/{foo_:currency}",
+		"TestMF2WG/Currency_function/{:currency}",
+		"TestMF2WG/Currency_function/{42_:currency}",
+		"TestMF2WG/Currency_function/{$x_:currency_currency=EUR}",
+		"TestMF2WG/Currency_function/{42_:currency_currency=EUR_fractionDigits=2}",
+		"TestMF2WG/Currency_function/{42_:currency_currency=EUR_fractionDigits=auto}",
+		"TestMF2WG/Currency_function/{42_:currency_currency=EUR}",
 
 		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.local_$bad_=_{exact}_{{variable_select_{1_:integer_select=$bad}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.local_$sel_=_{1_:integer_select=exact}_.local_$bad_=_{$sel_:integer}_.match_$bad_1_{{ONE}}_*_{{operand_select_{$bad}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.local_$sel_=_{1_:integer_select=$bad}_.match_$sel_1_{{ONE}}_*_{{variable_select_{$sel}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/.local_$x_=_{1.25_:integer}_.local_$y_=_{$x_:number}_{{{$y}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/integer.json/variable_select_{1_:integer_select=$bad}",
+		"TestMF2WG/Integer_function/.local_$bad_=_{exact}_{{variable_select_{1_:integer_select=$bad}}}",
+		"TestMF2WG/Integer_function/.local_$sel_=_{1_:integer_select=exact}_.local_$bad_=_{$sel_:integer}_.match_$bad_1_{{ONE}}_*_{{operand_select_{$bad}}}",
+		"TestMF2WG/Integer_function/.local_$sel_=_{1_:integer_select=$bad}_.match_$sel_1_{{ONE}}_*_{{variable_select_{$sel}}}",
+		"TestMF2WG/Integer_function/.local_$x_=_{1.25_:integer}_.local_$y_=_{$x_:number}_{{{$y}}}",
+		"TestMF2WG/Integer_function/variable_select_{1_:integer_select=$bad}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/.local_$x_=_{52_:number_signDisplay=always}_{{{$x_:offset_subtract=10}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/.local_$x_=_{1_:offset_add=1}_.match_$x_1_{{=1}}_2_{{=2}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{:offset_add=13}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{52_:offset_subtract=10}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{$x_:offset_subtract=10}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{$x_:offset_add=1}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/.local_$x_=_{10_:integer}_.local_$y_=_{$x_:offset_subtract=6}_.match_$y_10_{{=10}}_4_{{=4}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/.local_$x_=_{41_:integer_signDisplay=always}_{{{$x_:offset_add=1}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{42_:offset}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{foo_:offset_add=13}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{42_:offset_subtract=foo}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{41_:offset_add=1_foo=13}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{42_:offset_add=foo}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{42_:offset_foo=13}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{42_:offset_add=13_subtract=13}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/offset.json/{41_:offset_add=1}",
+		"TestMF2WG/Offset_function/.local_$x_=_{52_:number_signDisplay=always}_{{{$x_:offset_subtract=10}}}",
+		"TestMF2WG/Offset_function/.local_$x_=_{1_:offset_add=1}_.match_$x_1_{{=1}}_2_{{=2}}_*_{{other}}",
+		"TestMF2WG/Offset_function/{:offset_add=13}",
+		"TestMF2WG/Offset_function/{52_:offset_subtract=10}",
+		"TestMF2WG/Offset_function/{$x_:offset_subtract=10}",
+		"TestMF2WG/Offset_function/{$x_:offset_add=1}",
+		"TestMF2WG/Offset_function/.local_$x_=_{10_:integer}_.local_$y_=_{$x_:offset_subtract=6}_.match_$y_10_{{=10}}_4_{{=4}}_*_{{other}}",
+		"TestMF2WG/Offset_function/.local_$x_=_{41_:integer_signDisplay=always}_{{{$x_:offset_add=1}}}",
+		"TestMF2WG/Offset_function/{42_:offset}",
+		"TestMF2WG/Offset_function/{foo_:offset_add=13}",
+		"TestMF2WG/Offset_function/{42_:offset_subtract=foo}",
+		"TestMF2WG/Offset_function/{41_:offset_add=1_foo=13}",
+		"TestMF2WG/Offset_function/{42_:offset_add=foo}",
+		"TestMF2WG/Offset_function/{42_:offset_foo=13}",
+		"TestMF2WG/Offset_function/{42_:offset_add=13_subtract=13}",
+		"TestMF2WG/Offset_function/{41_:offset_add=1}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/{:percent}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/{0.12345678_:percent_maximumFractionDigits=1}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/.local_$n_=_{0.42_:number}_{{{$n_:percent}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/.local_$n_=_{0.01_:percent}_{{{$n_:percent}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/{$x_:percent}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/.local_$n_=_{42_:integer}_{{{$n_:percent}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/.input_{$n_:percent}_.match_$n_one_{{one}}_*_{{other}}#01",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/{0.12_:percent_minimumSignificantDigits=1}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/{foo_:percent}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/.input_{$n_:percent}_.match_$n_one_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/{1_:percent}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/{0.12345678_:percent}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/percent.json/{0.12_:percent_minimumFractionDigits=1}",
+		"TestMF2WG/Percent_function/{:percent}",
+		"TestMF2WG/Percent_function/{0.12345678_:percent_maximumFractionDigits=1}",
+		"TestMF2WG/Percent_function/.local_$n_=_{0.42_:number}_{{{$n_:percent}}}",
+		"TestMF2WG/Percent_function/.local_$n_=_{0.01_:percent}_{{{$n_:percent}}}",
+		"TestMF2WG/Percent_function/{$x_:percent}",
+		"TestMF2WG/Percent_function/.local_$n_=_{42_:integer}_{{{$n_:percent}}}",
+		"TestMF2WG/Percent_function/.input_{$n_:percent}_.match_$n_one_{{one}}_*_{{other}}#01",
+		"TestMF2WG/Percent_function/{0.12_:percent_minimumSignificantDigits=1}",
+		"TestMF2WG/Percent_function/{foo_:percent}",
+		"TestMF2WG/Percent_function/.input_{$n_:percent}_.match_$n_one_{{one}}_*_{{other}}",
+		"TestMF2WG/Percent_function/{1_:percent}",
+		"TestMF2WG/Percent_function/{0.12345678_:percent}",
+		"TestMF2WG/Percent_function/{0.12_:percent_minimumFractionDigits=1}",
 
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$foo_=_{$bar_:number}_{{bar_{$foo}}}#01",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$bad_=_{exact}_{{variable_select_{1_:number_select=$bad}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$sel_=_{1_:number_select=exact}_.local_$bad_=_{$sel_:number}_.match_$bad_1_{{ONE}}_*_{{operand_select_{$bad}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/.local_$sel_=_{1_:number_select=$bad}_.match_$sel_1_{{ONE}}_*_{{variable_select_{$sel}}}",
-		"TestMF2WG/.message-format-wg/test/tests/functions/number.json/variable_select_{1_:number_select=$bad}",
+		"TestMF2WG/Number_function/.local_$foo_=_{$bar_:number}_{{bar_{$foo}}}#01",
+		"TestMF2WG/Number_function/.local_$bad_=_{exact}_{{variable_select_{1_:number_select=$bad}}}",
+		"TestMF2WG/Number_function/.local_$sel_=_{1_:number_select=exact}_.local_$bad_=_{$sel_:number}_.match_$bad_1_{{ONE}}_*_{{operand_select_{$bad}}}",
+		"TestMF2WG/Number_function/.local_$sel_=_{1_:number_select=$bad}_.match_$sel_1_{{ONE}}_*_{{variable_select_{$sel}}}",
+		"TestMF2WG/Number_function/variable_select_{1_:number_select=$bad}",
 
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/أهلاً_{بالعالم_:string}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/hello_{world_:string_u:dir=auto}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/أهلاً_{world_:string_u:dir=ltr}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/أهلاً_{بالعالم_:string_u:dir=auto}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/أهلاً_{بالعالم_:string_u:dir=rtl}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/hello_{world_:string_u:dir=ltr_u:id=foo}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/hello_{4.2_:number_u:locale=fr}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/{#tag_u:dir=rtl_u:locale=ar}content{/ns:tag}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/{#tag_u:dir=rtl}content{/ns:tag}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/hello_{world_:string_u:dir=rtl}",
-		"TestMF2WG/.message-format-wg/test/tests/u-options.json/.local_$world_=_{world_:string_u:dir=ltr_u:id=foo}_{{hello_{$world}}}",
+		"TestMF2WG/u:_Options/أهلاً_{بالعالم_:string}",
+		"TestMF2WG/u:_Options/hello_{world_:string_u:dir=auto}",
+		"TestMF2WG/u:_Options/أهلاً_{world_:string_u:dir=ltr}",
+		"TestMF2WG/u:_Options/أهلاً_{بالعالم_:string_u:dir=auto}",
+		"TestMF2WG/u:_Options/أهلاً_{بالعالم_:string_u:dir=rtl}",
+		"TestMF2WG/u:_Options/hello_{world_:string_u:dir=ltr_u:id=foo}",
+		"TestMF2WG/u:_Options/hello_{4.2_:number_u:locale=fr}",
+		"TestMF2WG/u:_Options/{#tag_u:dir=rtl_u:locale=ar}content{/ns:tag}",
+		"TestMF2WG/u:_Options/{#tag_u:dir=rtl}content{/ns:tag}",
+		"TestMF2WG/u:_Options/hello_{world_:string_u:dir=rtl}",
+		"TestMF2WG/u:_Options/.local_$world_=_{world_:string_u:dir=ltr_u:id=foo}_{{hello_{$world}}}",
 
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$\\u200efoo\\u200f_=_{3}_{{{$\\u200efoo\\u200f}}}",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$\\u200efoo\\u200f_=_{5}_{{{$foo}}}",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$\\u061cfoo_=_{1}_{{_{$\\u061cfoo}_}}",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$foo_=_{4}_{{{$\\u200efoo\\u200f}}}",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$x_=_{1}_{{_{\\u200e_$x_\\u200f}_}}",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$x_=_{1_:number}.match_$x\\u061c1_{{one}}_*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$x_=_{1_:number}.match_$x\\u061c1_{{one}}*_{{other}}",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$x_=_{1}_\\u200f_{{_{$x}}}",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/.local_$x_=_{1}_{{_{$x}}}_\\u2066",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/{\\u200e_hello_\\u200f}",
-		"TestMF2WG/.message-format-wg/test/tests/bidi.json/\\u200e_.local_$x_=_{1}_{{_{$x}}}",
+		"TestMF2WG/Bidi_support/.local_$\\u200efoo\\u200f_=_{3}_{{{$\\u200efoo\\u200f}}}",
+		"TestMF2WG/Bidi_support/.local_$\\u200efoo\\u200f_=_{5}_{{{$foo}}}",
+		"TestMF2WG/Bidi_support/.local_$\\u061cfoo_=_{1}_{{_{$\\u061cfoo}_}}",
+		"TestMF2WG/Bidi_support/.local_$foo_=_{4}_{{{$\\u200efoo\\u200f}}}",
+		"TestMF2WG/Bidi_support/.local_$x_=_{1}_{{_{\\u200e_$x_\\u200f}_}}",
+		"TestMF2WG/Bidi_support/.local_$x_=_{1_:number}.match_$x\\u061c1_{{one}}_*_{{other}}",
+		"TestMF2WG/Bidi_support/.local_$x_=_{1_:number}.match_$x\\u061c1_{{one}}*_{{other}}",
+		"TestMF2WG/Bidi_support/.local_$x_=_{1}_\\u200f_{{_{$x}}}",
+		"TestMF2WG/Bidi_support/.local_$x_=_{1}_{{_{$x}}}_\\u2066",
+		"TestMF2WG/Bidi_support/{\\u200e_hello_\\u200f}",
+		"TestMF2WG/Bidi_support/\\u200e_.local_$x_=_{1}_{{_{$x}}}",
 	}
 }
 
@@ -122,22 +122,22 @@ func TestMF2WG(t *testing.T) {
 			return nil
 		}
 
-		t.Run(path, func(t *testing.T) {
+		f, err := os.Open(path)
+		if err != nil {
+			t.Error(err)
+		}
+
+		defer f.Close()
+
+		var tests Tests
+
+		err = json.NewDecoder(f).Decode(&tests)
+		if err != nil {
+			t.Error(err)
+		}
+
+		t.Run(tests.Scenario, func(t *testing.T) {
 			t.Parallel()
-
-			f, err := os.Open(path)
-			if err != nil {
-				t.Error(err)
-			}
-
-			defer f.Close()
-
-			var tests Tests
-
-			err = json.NewDecoder(f).Decode(&tests)
-			if err != nil {
-				t.Error(err)
-			}
 
 			for _, test := range tests.Tests {
 				t.Run(test.Src, func(t *testing.T) {
@@ -213,6 +213,7 @@ func run(t *testing.T, test Test) {
 // Tests contains harness tests by MF2 WG, schema defined in
 // ".message-format-wg/spec/schemas/v0/tests.schema.json".
 type Tests struct {
+	Scenario              string                `json:"scenario"`
 	Tests                 []Test                `json:"tests"`
 	DefaultTestProperties DefaultTestProperties `json:"defaultTestProperties"`
 }
