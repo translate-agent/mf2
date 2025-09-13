@@ -1,6 +1,7 @@
 package mf2_test
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -19,8 +20,6 @@ var failing []string
 func init() {
 	//nolint:lll
 	failing = []string{
-		"TestMF2WG/Fallback/.local_$var_=_{|val|_:test:undefined}_{{{$var}}}",
-
 		"TestMF2WG/Currency_function/.local_$n_=_{42_:integer}_{{{$n_:currency_currency=EUR}}}",
 		"TestMF2WG/Currency_function/.local_$n_=_{42_:number}_{{{$n_:currency_currency=EUR}}}",
 		"TestMF2WG/Currency_function/.local_$n_=_{42_:number}_{{{$n_:currency}}}",
@@ -166,9 +165,7 @@ func run(t *testing.T, test Test) {
 		options = append(options, template.WithLocale(*test.Locale))
 	}
 
-	if test.Description != "" {
-		t.Log(test.Description)
-	}
+	t.Log(cmp.Or(test.Description, "no test description"))
 
 	templ, err := template.New(options...).Parse(test.Src)
 	// The implementation returns error in two places:

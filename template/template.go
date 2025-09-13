@@ -37,16 +37,16 @@ type ResolvedValue struct {
 // NewResolvedValue creates a new variable of type [*ResolvedValue].
 // If value is already [*ResolvedValue], the optional format() and selectKey() are applied to it.
 func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
-	r, ok := value.(*ResolvedValue)
+	resolved, ok := value.(*ResolvedValue)
 	if !ok {
-		r = &ResolvedValue{value: value}
+		resolved = &ResolvedValue{value: value}
 	}
 
 	for _, f := range options {
-		f(r)
+		f(resolved)
 	}
 
-	return r
+	return resolved
 }
 
 // defaultFormat returns formatted string value for any type.
@@ -239,12 +239,12 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 			f = numberFunc
 		}
 
-		r, err := f(NewResolvedValue(v), nil, t.locale)
+		resolved, err := f(NewResolvedValue(v), nil, t.locale)
 		if err != nil {
 			return fmt.Errorf("execute template: %w", err)
 		}
 
-		executer.variables[norm.NFC.String(k)] = r
+		executer.variables[norm.NFC.String(k)] = resolved
 	}
 
 	err := executer.execute()
@@ -312,19 +312,20 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error { /
 	for _, decl := range declarations {
 		switch d := decl.(type) {
 		case ast.LocalDeclaration:
-			r, err := e.resolveExpression(d.Expression)
+			resolved, err := e.resolveExpression(d.Expression)
 			if err != nil {
-				r.err = errors.Join(r.err, fmt.Errorf("resolve local %s: %w", d.Variable, err))
+				resolved = NewResolvedValue("{" + d.Variable.String() + "}")
+				resolved.err = errors.Join(resolved.err, fmt.Errorf("resolve local %s: %w", d.Variable, err))
 			}
 
-			e.variables[string(d.Variable)] = r // newVariable(d.Expression, nil)
+			e.variables[string(d.Variable)] = resolved
 		case ast.InputDeclaration:
-			r, err := e.resolveExpression(ast.Expression(d))
+			resolved, err := e.resolveExpression(ast.Expression(d))
 			if err != nil {
-				r.err = errors.Join(r.err, fmt.Errorf("resolve input %s: %w", d.Operand, err))
+				resolved.err = errors.Join(resolved.err, fmt.Errorf("resolve input %s: %w", d.Operand, err))
 			}
 
-			e.variables[string(d.Operand.(ast.Variable))] = r //nolint: forcetypeassert // always ast.Variable
+			e.variables[string(d.Operand.(ast.Variable))] = resolved //nolint: forcetypeassert // always ast.Variable
 		}
 	}
 
