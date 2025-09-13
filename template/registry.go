@@ -62,29 +62,28 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 		return fallback, nil
 	}
 
-	var i int
+	var (
+		i   int
+		err error
+	)
 
 	switch n := v.value.(type) {
 	default:
-		var err error
-
 		i, err = castAs[int](n)
 		if err != nil {
 			return errorf("%w", err)
 		}
 	case string:
-		n64, err := strconv.ParseInt(n, 10, 64)
+		i, err = strconv.Atoi(n)
 		if err != nil {
-			return 0, fmt.Errorf(`parse integer from string "%s": %w`, n, err)
+			return errorf(`parse integer from string "%s": %w`, n, err)
 		}
-
-		i = int(n64)
 	case int:
 		i = n
 	}
 
 	for _, f := range validate {
-		err := f(i)
+		err = f(i)
 		if err != nil {
 			return errorf("%w", err)
 		}
