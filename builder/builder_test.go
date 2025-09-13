@@ -56,7 +56,7 @@ func Test_Builder(t *testing.T) {
 						LiteralOption("x", "y z"),
 						LiteralOption("host", ""))).
 				Text("!"),
-			"Hello, { $world :upper limit = 2 min = $min type = integer x = |y z| host = || }!",
+			"Hello, { $world :upper limit = |2| min = $min type = integer x = |y z| host = || }!",
 		},
 		{
 			"complex message, period char",
@@ -103,7 +103,7 @@ func Test_Builder(t *testing.T) {
 				Keys(2, 0).Text("second ").Expr(Var("i")).
 				Keys(3, 0).Expr(Literal("\\a|")).
 				Keys("*", "*").Expr(Literal(1)),
-			".match $i $j\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
+			".match $i $j\n|1| |2| {{\\{first\\}}}\n|2| |0| {{second { $i }}}\n|3| |0| {{{ |\\\\a\\|| }}}\n* * {{{ |1| }}}",
 		},
 		{
 			"complex message, matcher with multiple keys and local declarations",
@@ -118,7 +118,7 @@ func Test_Builder(t *testing.T) {
 				Keys(2, 0).Text("second ").Expr(Var("i")).
 				Keys(3, 0).Expr(Literal("\\a|")).
 				Keys("*", "*").Expr(Literal(1)),
-			".input { $i }\n.local $hostName = { $i }\n.match $i $j\n1 2 {{\\{first\\}}}\n2 0 {{second { $i }}}\n3 0 {{{ |\\\\a\\|| }}}\n* * {{{ 1 }}}",
+			".input { $i }\n.local $hostName = { $i }\n.match $i $j\n|1| |2| {{\\{first\\}}}\n|2| |0| {{second { $i }}}\n|3| |0| {{{ |\\\\a\\|| }}}\n* * {{{ |1| }}}",
 		},
 		{
 			"attributes",
@@ -160,7 +160,7 @@ func Test_Builder(t *testing.T) {
 				SelfCloseMarkup("nest3").
 				CloseMarkup("nest2").
 				CloseMarkup("nest1"),
-			"{ #open opt1 = val1 opt2 = $var @attr1 = 1 } something { /close @empty1 @attr1 = $var }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| /}{ #nest1 }{ #nest2 }nested{ #nest3 /}{ /nest2 }{ /nest1 }",
+			"{ #open opt1 = val1 opt2 = $var @attr1 = |1| } something { /close @empty1 @attr1 = $var }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| /}{ #nest1 }{ #nest2 }nested{ #nest3 /}{ /nest2 }{ /nest1 }",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

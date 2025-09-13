@@ -47,7 +47,7 @@ func Test_lex(t *testing.T) {
 				mk(itemWhitespace, " "),
 				mk(itemOption, "seed"),
 				mk(itemOperator, "="),
-				mk(itemNumberLiteral, "1"),
+				mk(itemUnquotedLiteral, "1"),
 				mk(itemWhitespace, " "),
 				mk(itemOption, "log:level"),
 				mk(itemOperator, "="),
@@ -135,18 +135,6 @@ func Test_lex(t *testing.T) {
 			},
 		},
 		{
-			name:  "number literal",
-			input: "{-1.9e+10 :odd}",
-			want: []item{
-				mk(itemExpressionOpen, "{"),
-				mk(itemNumberLiteral, "-1.9e+10"),
-				mk(itemWhitespace, " "),
-				mk(itemFunction, "odd"),
-				mk(itemExpressionClose, "}"),
-				mk(itemEOF, ""),
-			},
-		},
-		{
 			name:  "unquoted literal",
 			input: "{hello :uppercase}",
 			want: []item{
@@ -156,15 +144,6 @@ func Test_lex(t *testing.T) {
 				mk(itemFunction, "uppercase"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
-			},
-		},
-		{
-			name:  "invalid unquoted literal",
-			input: "{hello+world}",
-			want: []item{
-				mk(itemExpressionOpen, "{"),
-				mk(itemUnquotedLiteral, "hello"),
-				mkErrorf(`bad character "+" in expression`),
 			},
 		},
 		{
@@ -196,7 +175,7 @@ func Test_lex(t *testing.T) {
 				mk(itemWhitespace, " "),
 				mk(itemAttribute, "a"),
 				mk(itemOperator, "="),
-				mk(itemNumberLiteral, "1"),
+				mk(itemUnquotedLiteral, "1"),
 				mk(itemExpressionClose, "}"),
 				mk(itemEOF, ""),
 			},
@@ -243,14 +222,14 @@ func Test_lex(t *testing.T) {
 				mk(itemVariable, "n"),
 				mk(itemWhitespace, " "),
 				// 0 {{no apples}}
-				mk(itemNumberLiteral, "0"),
+				mk(itemUnquotedLiteral, "0"),
 				mk(itemWhitespace, " "),
 				mk(itemQuotedPatternOpen, "{{"),
 				mk(itemText, "no apples"),
 				mk(itemQuotedPatternClose, "}}"),
 				mk(itemWhitespace, " "),
 				// 1 {{{$n} apple}}
-				mk(itemNumberLiteral, "1"),
+				mk(itemUnquotedLiteral, "1"),
 				mk(itemWhitespace, " "),
 				mk(itemQuotedPatternOpen, "{{"),
 				mk(itemExpressionOpen, "{"),

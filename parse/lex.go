@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -30,7 +29,6 @@ const (
 	itemLocalKeyword
 	itemMatchKeyword
 	itemCatchAllKey
-	itemNumberLiteral
 	itemQuotedLiteral
 	itemUnquotedLiteral
 	itemOption
@@ -68,8 +66,6 @@ func (t itemType) String() string {
 		return "local keyword"
 	case itemMatchKeyword:
 		return "match keyword"
-	case itemNumberLiteral:
-		return "number literal"
 	case itemOperator:
 		return "operator"
 	case itemOption:
@@ -423,10 +419,8 @@ func lexComplexMessage(l *lexer) stateFn {
 			l.backup()
 
 			return lexQuotedLiteral(l)
-		case isNameStart(r):
+		case isName(r):
 			return lexUnquotedLiteral(l)
-		case r == '-' || '0' <= r && r <= '9':
-			return lexNumberLiteral(l)
 		case r == eof:
 			return nil
 		}
@@ -490,10 +484,8 @@ func lexExpr(l *lexer) stateFn {
 		return lexIdentifier(l, itemOption)
 	case r == '=':
 		return l.emit(itemOperator)
-	case isNameStart(r):
+	case isName(r):
 		return lexUnquotedLiteral(l)
-	case r == '-' || '0' <= r && r <= '9':
-		return lexNumberLiteral(l)
 	case r == eof:
 		return l.emitErrorf("unexpected eof in expression")
 	}
@@ -542,40 +534,6 @@ func lexUnquotedLiteral(l *lexer) stateFn {
 		case isName(r): // noop
 		case r == eof:
 			return l.emit(itemUnquotedLiteral)
-		}
-	}
-}
-
-// lexNumberLiteral is the state function for lexing number literals.
-// The first character is already lexed.
-//
-// ABNF:
-//
-//	number-literal   = ["-"] (%x30 / (%x31-39 *DIGIT)) ["." 1*DIGIT] [%i"e" ["-" / "+"] 1*DIGIT]
-func lexNumberLiteral(l *lexer) stateFn {
-	emit := func() stateFn {
-		var number float64
-
-		val := l.val()
-
-		err := json.Unmarshal([]byte(val), &number)
-		if err != nil {
-			return l.emitErrorf(`bad number literal "%s"`, val)
-		}
-
-		return l.emit(itemNumberLiteral)
-	}
-
-	for {
-		r := l.next()
-
-		switch {
-		default:
-			l.backup()
-			return emit()
-		case '0' <= r && r <= '9', r == '.', r == 'e', r == 'E', r == '-', r == '+': // noop
-		case r == eof:
-			return emit()
 		}
 	}
 }
@@ -670,51 +628,95 @@ func isAlpha(r rune) bool {
 //
 // ABNF:
 //
-//	name-start = ALPHA / "_"
-//	           / %xC0-D6 / %xD8-F6 / %xF8-2FF
-//	           / %x370-37D / %x37F-1FFF / %x200C-200D
-//	           / %x2070-218F / %x2C00-2FEF / %x3001-D7FF
-//	           / %xF900-FDCF / %xFDF0-FFFC / %x10000-EFFFF
+//	name-start = ALPHA
+//	                             ;          omit Cc: %x0-1F, Whitespace: SPACE, Ascii: «!"#$%&'()*»
+//	           / %x2B            ; «+»      omit Ascii: «,-./0123456789:;<=>?@» «[\]^»
+//	           / %x5F            ; «_»      omit Cc: %x7F-9F, Whitespace: %xA0, Ascii: «`» «{|}~»
+//	           / %xA1-61B        ;          omit BidiControl: %x61C
+//	           / %x61D-167F      ;          omit Whitespace: %x1680
+//	           / %x1681-1FFF     ;          omit Whitespace: %x2000-200A
+//	           / %x200B-200D     ;          omit BidiControl: %x200E-200F
+//	           / %x2010-2027     ;          omit Whitespace: %x2028-2029 %x202F, BidiControl: %x202A-202E
+//	           / %x2030-205E     ;          omit Whitespace: %x205F
+//	           / %x2060-2065     ;          omit BidiControl: %x2066-2069
+//	           / %x206A-2FFF     ;          omit Whitespace: %x3000
+//	           / %x3001-D7FF     ;          omit Cs: %xD800-DFFF
+//	           / %xE000-FDCF     ;          omit NChar: %xFDD0-FDEF
+//	           / %xFDF0-FFFD     ;          omit NChar: %xFFFE-FFFF
+//	           / %x10000-1FFFD   ;          omit NChar: %x1FFFE-1FFFF
+//	           / %x20000-2FFFD   ;          omit NChar: %x2FFFE-2FFFF
+//	           / %x30000-3FFFD   ;          omit NChar: %x3FFFE-3FFFF
+//	           / %x40000-4FFFD   ;          omit NChar: %x4FFFE-4FFFF
+//	           / %x50000-5FFFD   ;          omit NChar: %x5FFFE-5FFFF
+//	           / %x60000-6FFFD   ;          omit NChar: %x6FFFE-6FFFF
+//	           / %x70000-7FFFD   ;          omit NChar: %x7FFFE-7FFFF
+//	           / %x80000-8FFFD   ;          omit NChar: %x8FFFE-8FFFF
+//	           / %x90000-9FFFD   ;          omit NChar: %x9FFFE-9FFFF
+//	           / %xA0000-AFFFD   ;          omit NChar: %xAFFFE-AFFFF
+//	           / %xB0000-BFFFD   ;          omit NChar: %xBFFFE-BFFFF
+//	           / %xC0000-CFFFD   ;          omit NChar: %xCFFFE-CFFFF
+//	           / %xD0000-DFFFD   ;          omit NChar: %xDFFFE-DFFFF
+//	           / %xE0000-EFFFD   ;          omit NChar: %xEFFFE-EFFFF
+//	           / %xF0000-FFFFD   ;          omit NChar: %xFFFFE-FFFFF
+//	           / %x100000-10FFFD ;          omit NChar: %x10FFFE-10FFFF
+//
+//nolint:cyclop,gocognit
 func isNameStart(r rune) bool {
 	return isAlpha(r) ||
+		r == '+' ||
 		r == '_' ||
-		0xC0 <= r && r <= 0xD6 ||
-		0xD8 <= r && r <= 0xF6 ||
-		0xF8 <= r && r <= 0x2FF ||
-		0x370 <= r && r <= 0x37D ||
-		0x37F <= r && r <= 0x61B ||
-		0x61D <= r && r <= 0x1FFF ||
-		0x200C <= r && r <= 0x200D ||
-		0x2070 <= r && r <= 0x218F ||
-		0x2C00 <= r && r <= 0x2FEF ||
+		0xA1 <= r && r <= 0x61B ||
+		0x61D <= r && r <= 0x167F ||
+		0x1681 <= r && r <= 0x1FFF ||
+		0x200B <= r && r <= 0x200D ||
+		0x2010 <= r && r <= 0x2027 ||
+		0x2030 <= r && r <= 0x205E ||
+		0x2060 <= r && r <= 0x2065 ||
+		0x206A <= r && r <= 0x2FFF ||
 		0x3001 <= r && r <= 0xD7FF ||
-		0xF900 <= r && r <= 0xFDCF ||
-		0xFDF0 <= r && r <= 0xFFFC ||
-		0x10000 <= r && r <= 0xEFFFF
+		0xE000 <= r && r <= 0xFDCF ||
+		0xFDF0 <= r && r <= 0xFFFD ||
+		0x10000 <= r && r <= 0x1FFFD ||
+		0x20000 <= r && r <= 0x2FFFD ||
+		0x30000 <= r && r <= 0x3FFFD ||
+		0x40000 <= r && r <= 0x4FFFD ||
+		0x50000 <= r && r <= 0x5FFFD ||
+		0x60000 <= r && r <= 0x6FFFD ||
+		0x70000 <= r && r <= 0x7FFFD ||
+		0x80000 <= r && r <= 0x8FFFD ||
+		0x90000 <= r && r <= 0x9FFFD ||
+		0xA0000 <= r && r <= 0xAFFFD ||
+		0xB0000 <= r && r <= 0xBFFFD ||
+		0xC0000 <= r && r <= 0xCFFFD ||
+		0xD0000 <= r && r <= 0xDFFFD ||
+		0xE0000 <= r && r <= 0xEFFFD ||
+		0xF0000 <= r && r <= 0xFFFFD ||
+		0x100000 <= r && r <= 0x10FFFD
 }
 
 // isName returns true if r is name character.
 //
 // ABNF:
 //
-//	name-char = name-start / DIGIT / "-" / "." / %xB7 / %x0300-036F / %x203F-2040.
+//	name-char  = name-start / DIGIT / "-" / "."
 func isName(v rune) bool {
 	return isNameStart(v) ||
 		'0' <= v && v <= '9' ||
 		v == '-' ||
-		v == '.' ||
-		v == 0xB7 ||
-		0x0300 <= v && v <= 0x036F ||
-		0x203F <= v && v <= 2040
+		v == '.'
 }
 
 // isQuoted returns true if r is quoted character.
 //
 // ABNF:
 //
-// quoted-char = content-char / s / "." / "@" / "{" / "}".
+//	quoted-char = %x01-5B        ; omit NULL (%x00) and \ (%x5C)
+//	            / %x5D-7B        ; omit | (%x7C)
+//	            / %x7D-10FFFF
 func isQuoted(r rune) bool {
-	return isContent(r) || isWhitespace(r) || r == '.' || r == '@' || r == '{' || r == '}'
+	return 0x01 <= r && r <= 0x5B ||
+		0x5D <= r && r <= 0x7B ||
+		0x7D <= r && r <= 0x10FFFF
 }
 
 // isWhitespace returns true if r is whitespace character.
@@ -752,43 +754,38 @@ func isEscapedChar(r rune) bool {
 //
 // ABNF:
 //
-//	simple-start-char = content-char / s / "@" / "|"
+//	simple-start-char = %x01-08        ; omit NULL (%x00), HTAB (%x09) and LF (%x0A)
+//	                  / %x0B-0C        ; omit CR (%x0D)
+//	                  / %x0E-1F        ; omit SP (%x20)
+//	                  / %x21-2D        ; omit . (%x2E)
+//	                  / %x2F-5B        ; omit \ (%x5C)
+//	                  / %x5D-7A        ; omit { (%x7B)
+//	                  / %x7C           ; omit } (%x7D)
+//	                  / %x7E-2FFF      ; omit IDEOGRAPHIC SPACE (%x3000)
+//	                  / %x3001-10FFFF
 func isSimpleStart(r rune) bool {
-	return isContent(r) || isWhitespace(r) || r == '@' || r == '|'
+	return 0x01 <= r && r <= 0x08 ||
+		0x0B <= r && r <= 0x0C ||
+		0x0E <= r && r <= 0x1F ||
+		0x21 <= r && r <= 0x2D ||
+		0x2F <= r && r <= 0x5B ||
+		0x5D <= r && r <= 0x7A ||
+		r == 0x7C ||
+		0x7E <= r && r <= 0x2FFF ||
+		0x3001 <= r && r <= 0x10FFFF
 }
 
 // isText returns true if r is text character.
 //
 // ABNF:
 //
-//	text-char = content-char / s / "." / "@" / "|"
+//	text-char = %x01-5B        ; omit NULL (%x00) and \ (%x5C)
+//	          / %x5D-7A        ; omit { (%x7B)
+//	          / %x7C           ; omit } (%x7D)
+//	          / %x7E-10FFFF
 func isText(r rune) bool {
-	return isContent(r) || isWhitespace(r) || r == '.' || r == '@' || r == '|'
-}
-
-// isContent returns true if r is content character.
-//
-// ABNF:
-//
-//	content-char = %x01-08       ; omit NULL (%x00), HTAB (%x09) and LF (%x0A)
-//	               %x0B-0C       ; omit CR (%x0D)
-//	               %x0E-1F       ; omit SP (%x20)
-//	               %x21-2D       ; omit . (%x2E)
-//	               %x2F-3F       ; omit @ (%x40)
-//	               %x41-5B       ; omit \ (%x5C)
-//	               %x5D-7A       ; omit { | } (%x7B-7D)
-//	               %x7E-2FFF     ; omit IDEOGRAPHIC SPACE (%x3000)
-//	               %x3001-D7FF   ; omit surrogates
-//	               %xE000-10FFFF
-func isContent(r rune) bool {
-	return 0x01 <= r && r <= 0x08 || // omit NULL (%x00), HTAB (%x09) and LF (%x0A)
-		0x0B <= r && r <= 0x0C || // omit CR (%x0D)
-		0x0E <= r && r <= 0x1F || // omit SP (%x20)
-		0x21 <= r && r <= 0x2D || // omit . (%x2E)
-		0x2F <= r && r <= 0x3F || // omit @ (%x40)
-		0x41 <= r && r <= 0x5B || // omit \ (%x5C)
-		0x5D <= r && r <= 0x7A || // omit { | } (%x7B-7D)
-		0x7E <= r && r <= 0x2FFF || // omit IDEOGRAPHIC SPACE (%x3000)
-		0x3001 <= 3 && r <= 0xD7FF || // omit surrogates
-		0xE000 <= r && r <= 0x10FFFF
+	return 0x01 <= r && r <= 0x5B ||
+		0x5D <= r && r <= 0x7A ||
+		0x7C <= r && r <= 0x7D ||
+		0x7E <= r && r <= 0x10FFFF
 }

@@ -206,16 +206,6 @@ func (NameLiteral) literal()    {}
 func (NameLiteral) value()      {}
 func (NameLiteral) variantKey() {}
 
-type NumberLiteral string
-
-// String returns MF2 formatted string.
-func (l NumberLiteral) String() string { return string(l) }
-
-func (NumberLiteral) node()       {}
-func (NumberLiteral) literal()    {}
-func (NumberLiteral) value()      {}
-func (NumberLiteral) variantKey() {}
-
 // --------------------------------Annotation----------------------------------
 
 type Function struct {
