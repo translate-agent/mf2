@@ -84,7 +84,7 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 						Options: []Option{
 							{
-								Value: NumberLiteral("-3.14"),
+								Value: NameLiteral("-3.14"),
 								Identifier: Identifier{
 									Namespace: "",
 									Name:      "option1",
@@ -130,7 +130,7 @@ func TestParseSimpleMessage(t *testing.T) {
 			input: "Hello, { 1e3 }  World!",
 			want: SimpleMessage{
 				Text("Hello, "),
-				Expression{Operand: NumberLiteral("1e3")},
+				Expression{Operand: NameLiteral("1e3")},
 				Text("  World!"),
 			},
 		},
@@ -174,14 +174,14 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 						Options: []Option{
 							{
-								Value: NumberLiteral("-1"),
+								Value: NameLiteral("-1"),
 								Identifier: Identifier{
 									Namespace: "ns1",
 									Name:      "option1",
 								},
 							},
 							{
-								Value: NumberLiteral("1"),
+								Value: NameLiteral("1"),
 								Identifier: Identifier{
 									Namespace: "ns2",
 									Name:      "option2",
@@ -229,7 +229,7 @@ func TestParseSimpleMessage(t *testing.T) {
 						},
 						Options: []Option{
 							{
-								Value: NumberLiteral("999"),
+								Value: NameLiteral("999"),
 								Identifier: Identifier{
 									Namespace: "namespace",
 									Name:      "option999",
@@ -351,7 +351,7 @@ func TestParseComplexMessage(t *testing.T) {
 					// .local $local1={1}
 					LocalDeclaration{
 						Variable:   Variable("local1"),
-						Expression: Expression{Operand: NumberLiteral("1")},
+						Expression: Expression{Operand: NameLiteral("1")},
 					},
 				},
 				ComplexBody: QuotedPattern{Text("Text")},
@@ -376,7 +376,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Keys: []VariantKey{NumberLiteral("1")},
+							Keys: []VariantKey{NameLiteral("1")},
 							QuotedPattern: QuotedPattern{
 								Text("Hello "),
 								Expression{Operand: Variable("variable")},
@@ -415,7 +415,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Keys: []VariantKey{NumberLiteral("1")},
+							Keys: []VariantKey{NameLiteral("1")},
 							QuotedPattern: QuotedPattern{
 								Text("Hello "),
 								Expression{Operand: Variable("variable")},
@@ -454,7 +454,7 @@ func TestParseComplexMessage(t *testing.T) {
 					},
 					Variants: []Variant{
 						{
-							Keys: []VariantKey{NumberLiteral("1")},
+							Keys: []VariantKey{NameLiteral("1")},
 							QuotedPattern: QuotedPattern{
 								Text("Hello "),
 								Expression{Operand: Variable("variable")},
@@ -603,7 +603,7 @@ no yes {{Hello world!}}
 
 			got, err := Parse(test.input)
 			if err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
 
 			// Check that AST message is equal to expected one.

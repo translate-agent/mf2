@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -407,9 +406,7 @@ func (p *parser) parseExpression() (Expression, error) {
 
 	switch itm := p.nextNonWS(); itm.typ {
 	default:
-		err = unexpectedErr(itm,
-			itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral,
-			itemFunction, itemExpressionClose)
+		err = unexpectedErr(itm, itemQuotedLiteral, itemUnquotedLiteral, itemFunction, itemExpressionClose)
 
 		return errorf("%w: %w", mf2.ErrBadOperand, err)
 	case itemVariable:
@@ -435,7 +432,7 @@ func (p *parser) parseExpression() (Expression, error) {
 
 		p.declareVariable(variable)
 		expr.Operand = variable
-	case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
+	case itemQuotedLiteral, itemUnquotedLiteral:
 		expr.Operand, err = p.parseLiteral()
 		if err != nil {
 			return errorf("%w", err)
@@ -715,7 +712,7 @@ selectorsLoop:
 	for {
 		switch itm := p.nextNonWS(); itm.typ {
 		default:
-			err := unexpectedErr(itm, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+			err := unexpectedErr(itm, itemCatchAllKey, itemQuotedLiteral, itemUnquotedLiteral)
 			return errorf("%w", err)
 		case itemEOF:
 			p.backup()
@@ -728,7 +725,7 @@ selectorsLoop:
 			}
 
 			return errorf("%w", mf2.ErrMissingFallbackVariant)
-		case itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
+		case itemCatchAllKey, itemQuotedLiteral, itemUnquotedLiteral:
 			keys, err := p.parseVariantKeys()
 			if err != nil {
 				return errorf("%w", err)
@@ -778,7 +775,7 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 	for itm := p.current(); itm.typ != itemQuotedPatternOpen; itm = p.next() {
 		switch itm.typ {
 		default:
-			err := unexpectedErr(itm, itemWhitespace, itemCatchAllKey, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+			err := unexpectedErr(itm, itemWhitespace, itemCatchAllKey, itemQuotedLiteral, itemUnquotedLiteral)
 			return errorf("%w", err)
 		case itemWhitespace:
 			spaced = true
@@ -790,7 +787,7 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 
 			keys = append(keys, CatchAllKey{})
 			spaced = false
-		case itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral:
+		case itemQuotedLiteral, itemUnquotedLiteral:
 			if !spaced && len(keys) > 0 {
 				return errorf("%w: missing space between keys %v and %s", mf2.ErrSyntax, keys[len(keys)-1], itm.val)
 			}
@@ -822,7 +819,7 @@ func (p *parser) parseOption() (Option, error) {
 	// Next after operator must be a variable or literal.
 	switch next := p.nextNonWS(); next.typ {
 	default:
-		err := unexpectedErr(next, itemVariable, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral)
+		err := unexpectedErr(next, itemVariable, itemQuotedLiteral, itemUnquotedLiteral)
 		return errorf("%w", err)
 	case itemVariable:
 		variable := Variable(next.val)
@@ -832,7 +829,7 @@ func (p *parser) parseOption() (Option, error) {
 
 		p.declareVariable(variable)
 		option.Value = variable
-	case itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral:
+	case itemQuotedLiteral, itemUnquotedLiteral:
 		var err error
 
 		option.Value, err = p.parseLiteral()
@@ -895,8 +892,8 @@ func (p *parser) parseAttribute() (Attribute, error) {
 
 	switch itm := p.nextNonWS(); itm.typ {
 	default:
-		return errorf("%w", unexpectedErr(itm, itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral))
-	case itemQuotedLiteral, itemUnquotedLiteral, itemNumberLiteral:
+		return errorf("%w", unexpectedErr(itm, itemQuotedLiteral, itemUnquotedLiteral))
+	case itemQuotedLiteral, itemUnquotedLiteral:
 		attribute.Value, err = p.parseLiteral()
 		if err != nil {
 			return errorf("%w", err)
@@ -909,17 +906,8 @@ func (p *parser) parseAttribute() (Attribute, error) {
 func (p *parser) parseLiteral() (Literal, error) {
 	switch itm := p.current(); itm.typ {
 	default:
-		err := unexpectedErr(itm, itemNumberLiteral, itemQuotedLiteral, itemUnquotedLiteral)
+		err := unexpectedErr(itm, itemQuotedLiteral, itemUnquotedLiteral)
 		return nil, fmt.Errorf("literal: %w", err)
-	case itemNumberLiteral:
-		var num float64
-
-		err := json.Unmarshal([]byte(itm.val), &num)
-		if err != nil {
-			return nil, fmt.Errorf("%w: number literal: %w", mf2.ErrSyntax, err)
-		}
-
-		return NumberLiteral(itm.val), nil
 	case itemQuotedLiteral:
 		return QuotedLiteral(itm.val), nil
 	case itemUnquotedLiteral:
@@ -974,7 +962,5 @@ func keyString(key VariantKey) string {
 		return norm.NFC.String(string(k))
 	case NameLiteral:
 		return norm.NFC.String(string(k))
-	case NumberLiteral:
-		return string(k)
 	}
 }

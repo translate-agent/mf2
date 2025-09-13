@@ -149,8 +149,6 @@ func newFallbackValue(expr ast.Expression) *ResolvedValue {
 		return wrap(v.String())
 	case ast.NameLiteral:
 		return wrap(ast.QuotedLiteral(v).String())
-	case ast.NumberLiteral:
-		return wrap(ast.QuotedLiteral(v.String()).String())
 	case ast.Variable:
 		return wrap(v.String())
 	}
@@ -432,8 +430,6 @@ func (e *executer) resolveValue(v ast.Value) (any, error) {
 		return string(v), nil
 	case ast.NameLiteral:
 		return string(v), nil
-	case ast.NumberLiteral:
-		return string(v), nil
 	case ast.Variable:
 		val, ok := e.variables[string(v)]
 		if !ok {
@@ -523,8 +519,6 @@ func (e *executer) resolvePreferences(m ast.Matcher, selectors []*ResolvedValue)
 				key = string(v)
 			case ast.NameLiteral:
 				key = string(v)
-			case ast.NumberLiteral:
-				key = v.String()
 			}
 
 			// add only unique keys
@@ -610,8 +604,6 @@ func keyString(key ast.VariantKey) string {
 	case ast.QuotedLiteral:
 		return string(k)
 	case ast.NameLiteral:
-		return string(k)
-	case ast.NumberLiteral:
 		return string(k)
 	}
 }
