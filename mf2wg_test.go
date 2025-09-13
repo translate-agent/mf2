@@ -21,10 +21,7 @@ var failing []string
 func init() {
 	//nolint:lll
 	failing = []string{
-		"TestMF2WG/Fallback/{42_:test:function_fails=format}",
-		"TestMF2WG/Fallback/{|C:\\\\|_:test:function_fails=format}",
 		"TestMF2WG/Fallback/.local_$var_=_{|val|_:test:undefined}_{{{$var}}}",
-		"TestMF2WG/Fallback/.local_$var_=_{|val|_:test:undefined}_{{{$var_:test:function}}}",
 
 		"TestMF2WG/Currency_function/.local_$n_=_{42_:integer}_{{{$n_:currency_currency=EUR}}}",
 		"TestMF2WG/Currency_function/.local_$n_=_{42_:number}_{{{$n_:currency_currency=EUR}}}",
@@ -37,8 +34,6 @@ func init() {
 		"TestMF2WG/Currency_function/{42_:currency_currency=EUR_fractionDigits=2}",
 		"TestMF2WG/Currency_function/{42_:currency_currency=EUR_fractionDigits=auto}",
 		"TestMF2WG/Currency_function/{42_:currency_currency=EUR}",
-
-		"TestMF2WG/.message-format-wg/test/tests/functions/datetime.json/{|2006-01-02T15:04:06|_:datetime_year=numeric_month=|2-digit|}",
 
 		"TestMF2WG/Integer_function/.local_$bad_=_{exact}_{{variable_select_{1_:integer_select=$bad}}}",
 		"TestMF2WG/Integer_function/.local_$sel_=_{1_:integer_select=exact}_.local_$bad_=_{$sel_:integer}_.match_$bad_1_{{ONE}}_*_{{operand_select_{$bad}}}",
@@ -163,8 +158,9 @@ func TestMF2WG(t *testing.T) {
 func run(t *testing.T, test Test) {
 	options := []template.Option{
 		template.WithFuncs(map[string]template.Func{
-			"test:select": template.RegistryTestFunc("select"),
-			"test:format": template.RegistryTestFunc("format"),
+			"test:function": template.RegistryTestFunc("function"),
+			"test:select":   template.RegistryTestFunc("select"),
+			"test:format":   template.RegistryTestFunc("format"),
 		}),
 	}
 
