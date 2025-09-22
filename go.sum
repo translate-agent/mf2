@@ -8,6 +8,8 @@ go.expect.digital/intl v0.0.0-20250819195547-4ff58d0a254d h1:UGyjJxACzkqigspMEF+
 go.expect.digital/intl v0.0.0-20250819195547-4ff58d0a254d/go.mod h1:lpz4eT8wh4F1coJ5aVeGTc+pf0ewVXNLzLQ++tCiP4w=
 go.expect.digital/intl v0.0.0-20250908145916-0efa921586ca h1:TTXZWk1+G0w5yPH7Q25QbztACYobrqAhErliRUPnObY=
 go.expect.digital/intl v0.0.0-20250908145916-0efa921586ca/go.mod h1:CLD8lukZnVlO8LBHGd5GDGSePI61JRQkrLaCA1mHM4g=
+go.expect.digital/intl v0.0.0-20250922101146-98fa3c01ec9b h1:4on/YCjGKtvE79xnC2YNhHOFqYwGWQHBddIbCGg3HcQ=
+go.expect.digital/intl v0.0.0-20250922101146-98fa3c01ec9b/go.mod h1:CLD8lukZnVlO8LBHGd5GDGSePI61JRQkrLaCA1mHM4g=
 golang.org/x/text v0.27.0 h1:4fGWRpyh641NLlecmyl4LOe6yDdfaYNrGb2zdfo4JV4=
 golang.org/x/text v0.27.0/go.mod h1:1D28KMCvyooCX9hBiosv5Tz/+YLxj0j7XhWjpSUF7CU=
 golang.org/x/text v0.28.0 h1:rhazDwis8INMIwQ4tpjLDzUhx6RlXqZNPEM0huQojng=
