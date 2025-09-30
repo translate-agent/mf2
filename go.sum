@@ -1,5 +1,7 @@
 github.com/yaa110/go-persian-calendar v1.2.2 h1:SRx+IsY4xTaSUKKfpvxvU/xrdREz63xUV2kx5zvUCjI=
 github.com/yaa110/go-persian-calendar v1.2.2/go.mod h1:qtnmHCS9u1EiwzzSCSttGoxD5NfV9ZMzymxFCBYmqfg=
+github.com/yaa110/go-persian-calendar v1.3.0 h1:aGWyS4MO8KQq0y/cqmOwXdDUeEeb88hBi41kKyHKwhw=
+github.com/yaa110/go-persian-calendar v1.3.0/go.mod h1:AM75c681oraAsCdpCMVie7Pvi+FUAOm0k/6cCTCg+oc=
 go.expect.digital/intl v0.0.0-20241011193650-21e732e06d6f h1:+TMwBwr+TWDm1bbKM8KvNkj6vFCgqcM7SjUhyd8STCY=
 go.expect.digital/intl v0.0.0-20241011193650-21e732e06d6f/go.mod h1:YVJFd3vWEEcXboaQwSxRNj/NJXcnoR6mfXcvTZ6EZKY=
 go.expect.digital/intl v0.0.0-20250819192238-ead2bac62fdb h1:EioWfZFzASYY9GIeaqBJlCYfLTgAtqa7p8va9b83joM=
@@ -10,6 +12,8 @@ go.expect.digital/intl v0.0.0-20250908145916-0efa921586ca h1:TTXZWk1+G0w5yPH7Q25
 go.expect.digital/intl v0.0.0-20250908145916-0efa921586ca/go.mod h1:CLD8lukZnVlO8LBHGd5GDGSePI61JRQkrLaCA1mHM4g=
 go.expect.digital/intl v0.0.0-20250922101146-98fa3c01ec9b h1:4on/YCjGKtvE79xnC2YNhHOFqYwGWQHBddIbCGg3HcQ=
 go.expect.digital/intl v0.0.0-20250922101146-98fa3c01ec9b/go.mod h1:CLD8lukZnVlO8LBHGd5GDGSePI61JRQkrLaCA1mHM4g=
+go.expect.digital/intl v0.0.0-20250928164726-2922118fb6c9 h1:ybgg2PsawwF6bKyh4l57tboVUyFP/M/8lxXoo86q5VI=
+go.expect.digital/intl v0.0.0-20250928164726-2922118fb6c9/go.mod h1:JoV/Jp2putX8xerknK+T9lPGsHNNkpamIsuQS3aLpBQ=
 golang.org/x/text v0.27.0 h1:4fGWRpyh641NLlecmyl4LOe6yDdfaYNrGb2zdfo4JV4=
 golang.org/x/text v0.27.0/go.mod h1:1D28KMCvyooCX9hBiosv5Tz/+YLxj0j7XhWjpSUF7CU=
 golang.org/x/text v0.28.0 h1:rhazDwis8INMIwQ4tpjLDzUhx6RlXqZNPEM0huQojng=
