@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	go.expect.digital/intl v0.0.0-20251014152204-8c95788b707a
-	golang.org/x/text v0.28.0
+	golang.org/x/text v0.32.0
 )
 
 require github.com/yaa110/go-persian-calendar v1.3.0 // indirect
