@@ -16,6 +16,8 @@ go.expect.digital/intl v0.0.0-20250928164726-2922118fb6c9 h1:ybgg2PsawwF6bKyh4l5
 go.expect.digital/intl v0.0.0-20250928164726-2922118fb6c9/go.mod h1:JoV/Jp2putX8xerknK+T9lPGsHNNkpamIsuQS3aLpBQ=
 go.expect.digital/intl v0.0.0-20251014152204-8c95788b707a h1:5KQhuExxryoL7nYK8RjkktS9BAbo7e34WFd6h0wlX5c=
 go.expect.digital/intl v0.0.0-20251014152204-8c95788b707a/go.mod h1:Ur2EwH6VtaRovvZTcmW9mGa4rSPIK7A5HcmrCJzwKc0=
+go.expect.digital/intl v0.0.0-20251121084849-cc8b353e6f3d h1:MYoyCoXyk46//y6j7EtFk3jO0+ib/Gn1tsB8zyisvmY=
+go.expect.digital/intl v0.0.0-20251121084849-cc8b353e6f3d/go.mod h1:3F9JgK/zCeCMvav8UzkTrFY1ZiE22p3QE0dmv89r+m0=
 golang.org/x/text v0.27.0 h1:4fGWRpyh641NLlecmyl4LOe6yDdfaYNrGb2zdfo4JV4=
 golang.org/x/text v0.27.0/go.mod h1:1D28KMCvyooCX9hBiosv5Tz/+YLxj0j7XhWjpSUF7CU=
 golang.org/x/text v0.28.0 h1:rhazDwis8INMIwQ4tpjLDzUhx6RlXqZNPEM0huQojng=
