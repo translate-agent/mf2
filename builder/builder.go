@@ -282,7 +282,7 @@ func (e *Expression) Var(name string) *Expression {
 	return e
 }
 
-// Hack: limit to only options and attributes, instead of any.
+// OptsAndAttr limits to only options and attributes, instead of any.
 type OptsAndAttr interface{ optsAndAttr() }
 
 func parseIdentifier(s string) (parse.Identifier, error) {

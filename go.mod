@@ -1,6 +1,8 @@
 module go.expect.digital/mf2
 
-go 1.23.0
+go 1.24.0
+
+toolchain go1.26.0
 
 require (
 	go.expect.digital/intl v0.0.0-20251121084849-cc8b353e6f3d

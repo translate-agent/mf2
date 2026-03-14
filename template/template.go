@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"slices"
 	"sort"
 	"strconv"
@@ -193,9 +194,7 @@ func WithFunc(name string, f Func) Option {
 //	})
 func WithFuncs(reg Registry) Option {
 	return func(t *Template) {
-		for k, f := range reg {
-			t.registry[k] = f
-		}
+		maps.Copy(t.registry, reg)
 	}
 }
 

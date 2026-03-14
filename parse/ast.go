@@ -436,10 +436,13 @@ func sliceToString[T Node](s []T, sep string) string {
 		return ""
 	}
 
-	r := s[0].String()
+	var sb strings.Builder
+
+	sb.WriteString(s[0].String())
+
 	for _, v := range s[1:] {
-		r += sep + v.String()
+		sb.WriteString(sep + v.String())
 	}
 
-	return r
+	return sb.String()
 }

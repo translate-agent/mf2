@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"slices"
 	"testing"
 
@@ -105,16 +104,22 @@ func init() {
 func TestMF2WG(t *testing.T) {
 	t.Parallel()
 
-	err := filepath.Walk(".message-format-wg/test/tests", func(path string, info fs.FileInfo, err error) error {
+	root, err := os.OpenRoot(".message-format-wg/test/tests")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+
+	err = fs.WalkDir(root.FS(), ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if info.IsDir() {
+		if d.IsDir() {
 			return nil
 		}
 
-		f, err := os.Open(path)
+		f, err := root.Open(path)
 		if err != nil {
 			t.Error(err)
 		}
@@ -183,7 +188,7 @@ func run(t *testing.T, test Test) {
 		return
 	}
 
-	input := make(map[string]interface{}, len(test.Params))
+	input := make(map[string]any, len(test.Params))
 
 	for _, v := range test.Params {
 		input[v.Name] = v.Value
