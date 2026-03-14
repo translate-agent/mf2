@@ -32,6 +32,7 @@ linters:
     - varnamelen
     - wastedassign
     - whitespace
+    - wsl # deprecated
     - zerologlint
   settings:
     cyclop:

@@ -937,12 +937,17 @@ func (u UnexpectedTokenError) Error() string {
 		return "want no items, got " + u.actual.String()
 	}
 
-	r := `"` + u.expected[0].String() + `"`
+	var sb strings.Builder
+
+	sb.WriteString(`want item "` + u.expected[0].String() + `"`)
+
 	for _, typ := range u.expected[1:] {
-		r += `, "` + typ.String() + `"`
+		sb.WriteString(`, "` + typ.String() + `"`)
 	}
 
-	return "want item " + r + `, got ` + u.actual.String()
+	sb.WriteString(`, got ` + u.actual.String())
+
+	return sb.String()
 }
 
 func unexpectedErr(actual item, expected ...itemType) error {
