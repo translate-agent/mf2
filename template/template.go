@@ -564,8 +564,8 @@ func (e *executer) bestMatchedPattern(filteredVariants []ast.Variant, pref [][]s
 		sortable = append(sortable, sortableVariant{Score: -1, Variant: variant})
 	}
 
-	for i := len(pref) - 1; i >= 0; i-- {
-		matches := pref[i]
+	for i, v := range slices.Backward(pref) {
+		matches := v
 
 		for tupleIndex, tuple := range sortable {
 			key := tuple.Variant.Keys[i]
