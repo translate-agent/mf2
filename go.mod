@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.26.3
 
 require (
-	go.expect.digital/intl v0.0.0-20260428071144-4bfe8b3d15fe
+	go.expect.digital/intl v0.0.0-20260602225216-f29965b09f0d
 	golang.org/x/text v0.34.0
 )
 
