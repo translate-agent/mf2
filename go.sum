@@ -26,6 +26,8 @@ go.expect.digital/intl v0.0.0-20260602225216-f29965b09f0d h1:GTp+XUNDee3M/2duIlk
 go.expect.digital/intl v0.0.0-20260602225216-f29965b09f0d/go.mod h1:PKDZJnq7fRc1EUHvlfaFAVu/u9XvqTphTd5+xhJi2iA=
 go.expect.digital/intl v0.0.0-20260603082954-601d3736e572 h1:M1he3sCpkS2q0+YLMg2zOiy0301IAxK1J+DSljNDRFk=
 go.expect.digital/intl v0.0.0-20260603082954-601d3736e572/go.mod h1:/3ZXnpjyIc4f3IXYemdlISeBQfh/lUSdae7tp68ArKo=
+go.expect.digital/intl v0.0.0-20260721082308-0145356decb3 h1:RSF9HPwVunKIj4CEPDedFLJNKkpTULtDflmILELEkoA=
+go.expect.digital/intl v0.0.0-20260721082308-0145356decb3/go.mod h1:F4yWzTUOqfszpk3LBeouBwvHBfWXgI748MqUkf6T+CY=
 golang.org/x/text v0.27.0 h1:4fGWRpyh641NLlecmyl4LOe6yDdfaYNrGb2zdfo4JV4=
 golang.org/x/text v0.27.0/go.mod h1:1D28KMCvyooCX9hBiosv5Tz/+YLxj0j7XhWjpSUF7CU=
 golang.org/x/text v0.28.0 h1:rhazDwis8INMIwQ4tpjLDzUhx6RlXqZNPEM0huQojng=
