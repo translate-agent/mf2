@@ -13,7 +13,7 @@ The project implements the following packages (temporary layout):
 
 # Requirements
 
-- Golang 1.23+
+- Golang 1.25+
 - IANA Time Zone database - one of:
   - the directory or uncompressed zip file named by the ZONEINFO environment variable
   - on a Unix system, the system standard installation location

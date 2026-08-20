@@ -3,15 +3,16 @@ name: Check
 on:
   push:
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   check:
+    permissions:
+      contents: read
     runs-on: ubuntu-26.04-arm
     strategy:
       matrix:
-        go-version: ['1.24', '1.25', '1.26']
+        go-version: ['1.25', '1.26', '1.27']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -23,6 +24,7 @@ jobs:
       - name: Test
         run: go test -v ./...
       - name: golangci-lint
+        if: ${{ matrix.go-version == '1.27' }}
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
         with:
           version: v2.13.0
