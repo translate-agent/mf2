@@ -228,7 +228,8 @@ declarationsLoop:
 	switch itm := p.nextNonWS(); itm.typ {
 	default:
 		err := unexpectedErr(
-			itm, itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemQuotedPatternOpen)
+			itm, itemInputKeyword, itemLocalKeyword, itemMatchKeyword, itemQuotedPatternOpen,
+		)
 
 		return errorf("%w", err)
 	case itemQuotedPatternOpen:
@@ -398,7 +399,7 @@ func (p *parser) parseExpression() (Expression, error) {
 		err  error
 	)
 
-	errorf := func(format string, args ...any) (Expression, error) { //nolint:unparam
+	errorf := func(format string, args ...any) (Expression, error) {
 		return Expression{}, fmt.Errorf("expression: "+format, args...)
 	}
 
@@ -550,7 +551,7 @@ func (p *parser) parseFunction() (Function, error) {
 // ------------------------------Declaration------------------------------
 
 func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
-	errorf := func(err error) (LocalDeclaration, error) { //nolint:unparam
+	errorf := func(err error) (LocalDeclaration, error) {
 		return LocalDeclaration{}, fmt.Errorf("local declaration: %w", err)
 	}
 
@@ -601,7 +602,7 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 }
 
 func (p *parser) parseInputDeclaration() (InputDeclaration, error) {
-	errorf := func(format string, args ...any) (InputDeclaration, error) { //nolint:unparam
+	errorf := func(format string, args ...any) (InputDeclaration, error) {
 		return InputDeclaration{}, fmt.Errorf("input declaration: "+format, args...)
 	}
 
