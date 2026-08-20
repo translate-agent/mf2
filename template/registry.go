@@ -136,7 +136,7 @@ func castAs[T any](val any) (T, error) {
 
 	typ := reflect.TypeOf(zeroVal)
 
-	v := (reflect.ValueOf(val))
+	v := reflect.ValueOf(val)
 	if !v.Type().ConvertibleTo(typ) {
 		return zeroVal, fmt.Errorf("convert %v to %T", v.Type(), zeroVal)
 	}
