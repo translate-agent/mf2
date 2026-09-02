@@ -1,13 +1,13 @@
 # Message Format 2
 
-![CI](https://github.com/expect-digital/go-mf2/actions/workflows/ci.yaml/badge.svg)
+![CI](https://github.com/expect-digital/go-mf2/actions/workflows/check.yaml/badge.svg)
 
-The repo implements localization by the [Message Format 2 Draft](https://github.com/unicode-org/message-format-wg/blob/b4fd5a666a02950c57f0a454f65bf16a0bf03bf4/spec/message.abnf) of the Message Format Working Group (MFWG):
+The repo implements localization by the [Message Format 2](https://github.com/unicode-org/message-format-wg/blob/LDML48.2/spec/message.abnf) specification ([release LDML48.2](https://github.com/unicode-org/message-format-wg/releases/tag/LDML48.2)) of the Message Format Working Group (MFWG):
 
 The project implements the following packages (temporary layout):
 
 - `go.expect.digital/mf2/template` executes MF2 templates (**WIP**)
-- `go.expect.digital/mf2/parse` parses MF2 templates (**WIP**)
+- `go.expect.digital/mf2/parse` parses MF2 templates
 - `go.expect.digital/mf2/builder` builds MF2 templates (**WIP**)
 - **CLI** to extract and update localized message strings (**NOT IMPLEMENTED**)
 
@@ -31,7 +31,7 @@ List of the default functions registered in the function registry. The functions
 | date                   | format    | style                                         |   ❌   |
 | datetime               | format    | dateStyle                                     |   ❌   |
 | datetime               | format    | timeStyle                                     |   ❌   |
-| datetime               | format    | timeZone<sup>\*</sup>                         |   ❌   |
+| datetime               | format    | timeZone                                      |   ❌   |
 | datetime               | format    | hourCycle                                     |   ❌   |
 | datetime               | format    | dayPeriod                                     |   ❌   |
 | datetime               | format    | weekday                                       |   ❌   |
@@ -68,9 +68,7 @@ List of the default functions registered in the function registry. The functions
 | number                 | match     | maximumSignificantDigits                      |  ✅︎   |
 | integer (number alias) | format    |                                               |  ✅︎   |
 | integer (number alias) | match     |                                               |  ✅︎   |
-| ordinal (number alias) |           |                                               |   ❌   |
-| plural (number alias)  |           |                                               |   ❌   |
 | string                 |           |                                               |  ✅︎   |
 | time                   | format    | style                                         |   ❌   |
 
-> **<sup>\*</sup>** The options are not part of the default registry. MF2 WG says, "Implementations SHOULD avoid creating options that conflict with these, but are encouraged to track development of these options during Tech Preview".
+> **<sup>\*</sup>** In LDML 48, currency and unit formatting are defined as standalone functions (`:currency`, `:unit`).

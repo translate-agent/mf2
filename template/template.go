@@ -378,7 +378,7 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 
 	switch v := expr.Annotation.(type) {
 	default:
-		return newFallbackValue(expr), fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnsupportedExpression)
+		return newFallbackValue(expr), fmt.Errorf(`expression: %T annotation "%s": %w`, v, v, mf2.ErrUnknownFunction)
 	case ast.Function:
 		funcName = v.Identifier.String()
 

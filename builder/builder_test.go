@@ -127,12 +127,12 @@ func Test_Builder(t *testing.T) {
 				Expr(
 					Var("i").
 						Attr(
-							VarAttribute("attr1", "var"),
-							LiteralAttribute("attr2", "literal"),
+							LiteralAttribute("attr1", "literal1"),
+							LiteralAttribute("attr2", "literal2"),
 							EmptyAttribute("empty"),
 						),
 				),
-			"Attributes for variable expression { $i @attr1 = $var @attr2 = literal @empty }",
+			"Attributes for variable expression { $i @attr1 = literal1 @attr2 = literal2 @empty }",
 		},
 		{
 			"markup",
@@ -146,8 +146,9 @@ func Test_Builder(t *testing.T) {
 				Text(" something ").
 				CloseMarkup(
 					"close",
+					LiteralOption("opt1", "val1"),
 					EmptyAttribute("empty1"),
-					VarAttribute("attr1", "var"),
+					LiteralAttribute("attr1", "val"),
 				).
 				SelfCloseMarkup(
 					"selfClosing",
@@ -160,7 +161,7 @@ func Test_Builder(t *testing.T) {
 				SelfCloseMarkup("nest3").
 				CloseMarkup("nest2").
 				CloseMarkup("nest1"),
-			"{ #open opt1 = val1 opt2 = $var @attr1 = |1| } something { /close @empty1 @attr1 = $var }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| /}{ #nest1 }{ #nest2 }nested{ #nest3 /}{ /nest2 }{ /nest1 }",
+			"{ #open opt1 = val1 opt2 = $var @attr1 = |1| } something { /close opt1 = val1 @empty1 @attr1 = val }{ #selfClosing @attr1 = |༼ つ ◕_◕ ༽つ| /}{ #nest1 }{ #nest2 }nested{ #nest3 /}{ /nest2 }{ /nest1 }",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -214,7 +215,7 @@ func BenchmarkBuildMarkup(b *testing.B) {
 			CloseMarkup(
 				"close",
 				EmptyAttribute("empty1"),
-				VarAttribute("attr1", "var"),
+				LiteralAttribute("attr1", "val"),
 			).
 			SelfCloseMarkup(
 				"selfClosing",

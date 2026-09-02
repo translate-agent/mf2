@@ -301,13 +301,8 @@ func (b *Builder) OpenMarkup(name string, optionsAndAttributes ...OptsAndAttr) *
 	return b.markup(parse.Open, name, optionsAndAttributes)
 }
 
-func (b *Builder) CloseMarkup(name string, attributes ...Attribute) *Builder {
-	optsAndAttr := make([]OptsAndAttr, 0, len(attributes))
-	for _, v := range attributes {
-		optsAndAttr = append(optsAndAttr, v)
-	}
-
-	return b.markup(parse.Close, name, optsAndAttr)
+func (b *Builder) CloseMarkup(name string, optionsAndAttributes ...OptsAndAttr) *Builder {
+	return b.markup(parse.Close, name, optionsAndAttributes)
 }
 
 func (b *Builder) SelfCloseMarkup(name string, optionsAndAttributes ...OptsAndAttr) *Builder {
@@ -417,10 +412,6 @@ func (e *Expression) Attr(attributes ...Attribute) *Expression {
 type Attribute parse.Attribute
 
 func (Attribute) optsAndAttr() {}
-
-func VarAttribute(name, varName string) Attribute {
-	return Attribute(parse.Attribute{Identifier: parse.Identifier{Name: name}, Value: parse.Variable(varName)})
-}
 
 func LiteralAttribute(name string, value any) Attribute {
 	return Attribute(parse.Attribute{Identifier: parse.Identifier{Name: name}, Value: toLiteral(value)})

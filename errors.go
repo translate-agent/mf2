@@ -55,23 +55,19 @@ var (
 	// cannot be determined.
 	//
 	// ErrResolution is returned with:
+	//	- ErrBadSelector
 	//	- ErrUnknownFunction
 	//	- ErrUnresolvedVariable
-	//	- ErrUnsupportedExpression
-	//	- ErrUnsupportedStatement
 	ErrResolution = errors.New("resolution error")
 
+	// ErrBadSelector occurs when a message includes a selector
+	// with a resolved value which does not support selection.
+	ErrBadSelector = fmt.Errorf("%w: %w", ErrResolution, errors.New("bad selector"))
 	// ErrUnknownFunction occurs when an expression includes
 	// a reference to a function which cannot be resolved.
 	ErrUnknownFunction = fmt.Errorf("%w: %w", ErrResolution, errors.New("unknown function"))
 	// ErrUnresolvedVariable occurs when a variable reference cannot be resolved.
 	ErrUnresolvedVariable = fmt.Errorf("%w: %w", ErrResolution, errors.New("unresolved variable"))
-	// ErrUnsupportedExpression occurs when an expression uses
-	// syntax reserved for future standardization,
-	// or for private implementation use that is not supported by the current implementation.
-	ErrUnsupportedExpression = fmt.Errorf("%w: %w", ErrResolution, errors.New("unsupported expression"))
-	// ErrUnsupportedStatement occurs when a message includes a reserved statement.
-	ErrUnsupportedStatement = fmt.Errorf("%w: %w", ErrResolution, errors.New("unsupported statement"))
 
 	// MESSAGE FUNCTION ERRORS.
 
@@ -81,8 +77,8 @@ var (
 	// ErrMessageFunction is returned with:
 	//	- ErrBadOperand
 	//	- ErrBadOption
-	//	- ErrBadSelector
 	//	- ErrBadVariantKey
+	//	- ErrUnsupportedOperation
 	ErrMessageFunction = errors.New("message function error")
 
 	// ErrBadOperand is any error that occurs due to the content or format of the operand,
@@ -95,10 +91,10 @@ var (
 	// ErrBadOption is an error that occurs when there is
 	// an implementation-defined error with an option or its value.
 	ErrBadOption = fmt.Errorf("%w: %w", ErrMessageFunction, errors.New("bad option"))
-	// ErrBadSelector occurs when a message includes a selector
-	// with a resolved value which does not support selection.
-	ErrBadSelector = fmt.Errorf("%w: %w", ErrMessageFunction, errors.New("bad selector"))
 	// ErrBadVariantKey is an error that occurs when a variant key
 	// does not match the expected implementation-defined format.
 	ErrBadVariantKey = fmt.Errorf("%w: %w", ErrMessageFunction, errors.New("bad variant key"))
+	// ErrUnsupportedOperation is an error that occurs when a given option, option value,
+	// operand, or some combination of these are incompatible or not supported by a given function.
+	ErrUnsupportedOperation = fmt.Errorf("%w: %w", ErrMessageFunction, errors.New("unsupported operation"))
 )

@@ -23,6 +23,15 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Test
         run: go test -v ./...
+      - name: Fuzz
+        if: ${{ matrix.go-version == '1.27' }}
+        run: |
+          for pkg in $(go list ./...); do
+            for fuzz in $(go test -list='^Fuzz' "$pkg" | grep '^Fuzz'); do
+              echo "Fuzzing $fuzz in $pkg..."
+              go test -v -run=^$ -fuzz="^${fuzz}\$" -fuzztime=30s "$pkg"
+            done
+          done
       - name: golangci-lint
         if: ${{ matrix.go-version == '1.27' }}
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
