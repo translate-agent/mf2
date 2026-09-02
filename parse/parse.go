@@ -324,71 +324,111 @@ func (p *parser) parseMarkup() (Markup, error) {
 
 	markup.Identifier = p.parseIdentifier()
 
-	// options
+	done, err := p.parseMarkupClose(&markup)
+	if done || err != nil {
+		return markup, err
+	}
 
-optionsLoop:
+	done, err = p.parseMarkupOptions(&markup)
+	if done || err != nil {
+		return markup, err
+	}
+
+	err = p.parseMarkupAttributes(&markup)
+	if err != nil {
+		return markup, err
+	}
+
+	return markup, nil
+}
+
+func (p *parser) parseMarkupOptions(markup *Markup) (bool, error) {
+	opts := make(map[string]struct{})
+
 	for {
-		switch itm := p.nextNonWS(); itm.typ {
+		if itm := p.next(); itm.typ != itemWhitespace || !itm.hasWS() {
+			return false, fmt.Errorf("markup: options: %w", unexpectedErr(itm, itemWhitespace))
+		}
+
+		switch itm := p.next(); itm.typ {
 		default:
 			err := unexpectedErr(itm, itemOption, itemAttribute, itemMarkupClose, itemExpressionClose)
-			return errorf("options: %w", err)
+			return false, fmt.Errorf("markup: options: %w", err)
 		case itemOption:
 			option, err := p.parseOption()
 			if err != nil {
-				return errorf("%w", err)
+				return false, fmt.Errorf("markup: %w", err)
 			}
+
+			if _, ok := opts[option.Identifier.String()]; ok {
+				return false, fmt.Errorf("markup: %w", mf2.ErrDuplicateOptionName)
+			}
+
+			opts[option.Identifier.String()] = struct{}{}
 
 			markup.Options = append(markup.Options, option)
 		case itemAttribute:
 			p.backup()
-			break optionsLoop
-		case itemExpressionClose:
-			return markup, nil
-		case itemMarkupClose:
-			if markup.Typ == Close {
-				return errorf("closing close markup")
-			}
+			p.backup() // whitespace
 
-			if itm := p.next(); itm.typ != itemExpressionClose {
-				return errorf("%w", unexpectedErr(itm, itemExpressionClose))
-			}
+			return false, nil
+		}
 
-			markup.Typ = SelfClose
-
-			return markup, nil
+		done, err := p.parseMarkupClose(markup)
+		if done || err != nil {
+			return done, err
 		}
 	}
+}
 
-	// attributes
-
+func (p *parser) parseMarkupAttributes(markup *Markup) error {
 	for {
-		switch itm := p.nextNonWS(); itm.typ {
+		if itm := p.next(); itm.typ != itemWhitespace || !itm.hasWS() {
+			return fmt.Errorf("markup: %w", unexpectedErr(itm, itemWhitespace))
+		}
+
+		switch itm := p.next(); itm.typ {
 		default:
-			err := unexpectedErr(itm, itemAttribute, itemMarkupClose, itemExpressionClose)
-			return errorf("%w", err)
+			return fmt.Errorf("markup: %w", unexpectedErr(itm, itemAttribute, itemMarkupClose, itemExpressionClose))
 		case itemAttribute:
 			attribute, err := p.parseAttribute()
 			if err != nil {
-				return errorf("%w", err)
+				return fmt.Errorf("markup: %w", err)
 			}
 
 			markup.Attributes = append(markup.Attributes, attribute)
-		case itemExpressionClose:
-			return markup, nil
-		case itemMarkupClose:
-			if markup.Typ == Close {
-				return errorf("closing close markup")
-			}
+		}
 
-			if itm := p.next(); itm.typ != itemExpressionClose {
-				return errorf("%w", unexpectedErr(itm, itemExpressionClose))
-			}
-
-			markup.Typ = SelfClose
-
-			return markup, nil
+		done, err := p.parseMarkupClose(markup)
+		if done || err != nil {
+			return err
 		}
 	}
+}
+
+func (p *parser) parseMarkupClose(markup *Markup) (bool, error) {
+	if p.peekNonWS().typ == itemExpressionClose {
+		p.nextNonWS()
+		return true, nil
+	}
+
+	if p.peekNonWS().typ == itemMarkupClose {
+		if markup.Typ == Close {
+			return false, fmt.Errorf("markup: %w: close markup cannot be self-closing", mf2.ErrSyntax)
+		}
+
+		p.nextNonWS() // consume '/'
+
+		if itm := p.next(); itm.typ != itemExpressionClose {
+			return false, fmt.Errorf("markup: %w", unexpectedErr(itm, itemExpressionClose))
+		}
+
+		markup.Typ = SelfClose
+
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // ------------------------------Expression------------------------------
@@ -451,7 +491,7 @@ func (p *parser) parseExpression() (Expression, error) {
 
 	// ensure whitespace follows operand before annotation
 	if expr.Operand != nil {
-		if itm := p.next(); itm.typ != itemWhitespace {
+		if itm := p.next(); itm.typ != itemWhitespace || !itm.hasWS() {
 			return errorf("between operand and annotation: %w", unexpectedErr(itm, itemWhitespace))
 		}
 	}
@@ -481,7 +521,7 @@ func (p *parser) parseExpression() (Expression, error) {
 	}
 
 	// ensure whitespace follows annotation before attributes
-	if itm := p.next(); itm.typ != itemWhitespace {
+	if itm := p.next(); itm.typ != itemWhitespace || !itm.hasWS() {
 		return errorf("%w", unexpectedErr(itm, itemWhitespace))
 	}
 
@@ -515,7 +555,7 @@ func (p *parser) parseFunction() (Function, error) {
 	opts := make(map[string]struct{})
 
 	for {
-		if itm := p.next(); itm.typ != itemWhitespace {
+		if itm := p.next(); itm.typ != itemWhitespace || !itm.hasWS() {
 			return errorf("%w", unexpectedErr(itm, itemWhitespace))
 		}
 
@@ -560,7 +600,7 @@ func (p *parser) parseLocalDeclaration() (LocalDeclaration, error) {
 	defer func() { p.declaration = "" }()
 
 	next := p.next()
-	if next.typ != itemWhitespace {
+	if next.typ != itemWhitespace || !next.hasWS() {
 		return errorf(unexpectedErr(next, itemWhitespace))
 	}
 
@@ -678,13 +718,16 @@ func (p *parser) parseMatcher(declarations []Declaration) (Matcher, error) {
 selectorsLoop:
 	for {
 		itm := p.next()
-		if itm.typ != itemWhitespace {
-			return errorf("missing whitespace before selector: %w", unexpectedErr(itm, itemWhitespace))
+		if itm.typ != itemWhitespace || !itm.hasWS() {
+			p.backup()
+			break selectorsLoop
 		}
 
 		switch itm := p.next(); itm.typ {
 		default:
-			p.backup()
+			p.backup() // token
+			p.backup() // whitespace
+
 			break selectorsLoop
 		case itemEOF:
 			return errorf("%w", unexpectedErr(itm))
@@ -702,10 +745,11 @@ selectorsLoop:
 		return errorf("%w: missing selector", mf2.ErrSyntax)
 	}
 
-	if v := p.current(); v.typ != itemWhitespace {
-		// there should be a whitespace between selectors and variants
+	if itm := p.next(); itm.typ != itemWhitespace || !itm.hasWS() {
 		return errorf("missing whitespace between selectors and variants: %w", mf2.ErrSyntax)
 	}
+
+	p.backup()
 
 	// parse one or more variants
 	keysLookup := make([][]VariantKey, 0)
@@ -779,7 +823,10 @@ func (p *parser) parseVariantKeys() ([]VariantKey, error) {
 			err := unexpectedErr(itm, itemWhitespace, itemCatchAllKey, itemQuotedLiteral, itemUnquotedLiteral)
 			return errorf("%w", err)
 		case itemWhitespace:
-			spaced = true
+			if itm.hasWS() {
+				spaced = true
+			}
+
 			continue
 		case itemCatchAllKey:
 			if !spaced && len(keys) > 0 {
@@ -823,7 +870,7 @@ func (p *parser) parseOption() (Option, error) {
 		err := unexpectedErr(next, itemVariable, itemQuotedLiteral, itemUnquotedLiteral)
 		return errorf("%w", err)
 	case itemVariable:
-		variable := Variable(next.val)
+		variable := Variable(norm.NFC.String(next.val))
 		if variable == p.reservedVariable {
 			return errorf("%w: %s", mf2.ErrDuplicateDeclaration, variable)
 		}
@@ -851,7 +898,7 @@ func (p *parser) parseAttributes() ([]Attribute, error) {
 
 	for {
 		if len(attributes) > 0 {
-			if itm := p.next(); itm.typ != itemWhitespace {
+			if itm := p.next(); itm.typ != itemWhitespace || !itm.hasWS() {
 				return errorf("%w", unexpectedErr(itm, itemWhitespace))
 			}
 		}
@@ -876,17 +923,15 @@ func (p *parser) parseAttributes() ([]Attribute, error) {
 
 func (p *parser) parseAttribute() (Attribute, error) {
 	attribute := Attribute{Identifier: p.parseIdentifier()}
-	errorf := func(format string, args ...any) (Attribute, error) {
-		return Attribute{}, fmt.Errorf("attribute: "+format, args...)
+
+	if p.peekNonWS().typ != itemOperator {
+		return attribute, nil
 	}
 
-	switch itm := p.peekNonWS(); itm.typ {
-	default:
-		return errorf("%w", unexpectedErr(itm, itemAttribute, itemOperator, itemExpressionClose))
-	case itemOperator:
-		p.nextNonWS() // skip it
-	case itemExpressionClose, itemAttribute:
-		return attribute, nil
+	p.nextNonWS() // skip it
+
+	errorf := func(format string, args ...any) (Attribute, error) {
+		return Attribute{}, fmt.Errorf("attribute: "+format, args...)
 	}
 
 	var err error
@@ -912,7 +957,7 @@ func (p *parser) parseLiteral() (Literal, error) {
 	case itemQuotedLiteral:
 		return QuotedLiteral(itm.val), nil
 	case itemUnquotedLiteral:
-		return NameLiteral(norm.NFC.String(itm.val)), nil
+		return NameLiteral(itm.val), nil
 	}
 }
 
@@ -920,10 +965,10 @@ func (p *parser) parseIdentifier() Identifier {
 	split := strings.Split(p.current().val, ":") // namespace:name
 
 	if len(split) == 1 {
-		return Identifier{Name: split[0]}
+		return Identifier{Name: norm.NFC.String(split[0])}
 	}
 
-	return Identifier{Namespace: split[0], Name: split[1]}
+	return Identifier{Namespace: norm.NFC.String(split[0]), Name: norm.NFC.String(split[1])}
 }
 
 // UnexpectedTokenError is returned when parser encounters unexpected token.

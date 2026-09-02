@@ -648,6 +648,15 @@ func TestParseErrors(t *testing.T) {
 			in:      "Hello, { :number style=decimal style=percent }!",
 			wantErr: "parse MF2: simple message: pattern: expression: function: data model error: duplicate option name",
 		},
+		{
+			in:      "{/close /}",
+			wantErr: "parse MF2: simple message: pattern: markup: syntax error: close markup cannot be self-closing",
+		},
+		{
+			in: "{#tag / }",
+			wantErr: "parse MF2: simple message: pattern: markup: syntax error: " +
+				`want item "expression close", got whitespace token " "`,
+		},
 	} {
 		t.Run(test.in, func(t *testing.T) {
 			t.Parallel()
@@ -692,4 +701,89 @@ one {{\|one\|}}
 	}
 
 	runtime.KeepAlive(tree)
+}
+
+func FuzzParse(f *testing.F) {
+	seeds := []string{
+		"",
+		"Hello, World!",
+		"Hello, \\{World!\\}",
+		"Hello, { $variable } World!",
+		"{ $variable } Hello, World!",
+		"Hello, World! { $variable }",
+		"{ 42 }",
+		"{ |quoted literal| }",
+		"{ $var :number }",
+		"{ $var :number min=1 max=2 }",
+		"{ :number min=1 }",
+		"{ $var @attr }",
+		"{ $var @attr=literal }",
+		"{ $var :number opt=val @attr=literal }",
+		"{ #bold }bold text{ /bold }",
+		"{ #tag opt=1 @attr=2 /}",
+		"{ #tag opt=1 @attr /}",
+		"{ #tag @empty /}",
+		"{ /tag opt=1 @attr=2 }",
+		".local $x = { 1 } {{ Hello { $x } }}",
+		".input { $x :number } {{ Number: { $x } }}",
+		".local $x = { 1 :number }\n.match $x\n1 {{ one }}\n* {{ other }}",
+		".input { $x :number }\n.local $y = { $x }\n.match $y\n1 {{ one }}\n2 {{ two }}\n* {{ other }}",
+		"  \u061C Hello world!",
+		"\u200E .local $x = {1} {{ {$x}}}",
+		".local $x = {1} \u200F {{ {$x}}}",
+		".local $x = {1} {{ {$x}}} \u2066",
+		".input \u2067 {$x :number} {{hello}}",
+		".local $x \u2068 = \u2069 {1} {{hello}}",
+		"{\u200E hello \u200F}",
+		"{1 \u200E :number \u200F}",
+		"{\u200F #b \u200E }",
+		"{\u200F /b \u200E }",
+		"{",
+		"}",
+		"{{",
+		"}}",
+		"$",
+		"\\",
+		"|",
+		"@",
+		":",
+		"#",
+		"/",
+		".local $foo\u200Ebar = {1} {{hello}}",
+		".local $foo\u061Cbar = {1} {{hello}}",
+	}
+
+	for _, seed := range seeds {
+		f.Add(seed)
+	}
+
+	f.Fuzz(func(t *testing.T, input string) {
+		ast, err := Parse(input)
+		if err != nil {
+			// Parsing returned an error, which is expected for invalid inputs.
+			return
+		}
+
+		if ast.Message == nil {
+			if input != "" {
+				t.Fatalf("AST Message is nil for non-empty input: %q", input)
+			}
+
+			return
+		}
+
+		formatted := ast.String()
+
+		// Round-trip property: formatted output must be valid MessageFormat 2 syntax
+		ast2, err2 := Parse(formatted)
+		if err2 != nil {
+			t.Fatalf("failed to re-parse formatted AST string %q (original input: %q): %v", formatted, input, err2)
+		}
+
+		// Idempotency property: re-formatting must produce identical output
+		formatted2 := ast2.String()
+		if formatted != formatted2 {
+			t.Fatalf("formatting is not idempotent:\nfirst:  %q\nsecond: %q\noriginal: %q", formatted, formatted2, input)
+		}
+	})
 }

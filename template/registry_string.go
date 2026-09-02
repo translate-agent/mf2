@@ -2,7 +2,6 @@ package template
 
 import (
 	"fmt"
-	"slices"
 
 	"golang.org/x/text/language"
 	"golang.org/x/text/unicode/norm"
@@ -26,8 +25,10 @@ func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*Resol
 	selectKey := func(keys []string) string {
 		value := norm.NFC.String(format())
 
-		if slices.Contains(keys, value) {
-			return value
+		for _, k := range keys {
+			if norm.NFC.String(k) == value {
+				return k
+			}
 		}
 
 		return ""

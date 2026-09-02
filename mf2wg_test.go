@@ -86,17 +86,15 @@ func init() {
 		"TestMF2WG/u:_Options/hello_{world_:string_u:dir=rtl}",
 		"TestMF2WG/u:_Options/.local_$world_=_{world_:string_u:dir=ltr_u:id=foo}_{{hello_{$world}}}",
 
-		"TestMF2WG/Bidi_support/.local_$\\u200efoo\\u200f_=_{3}_{{{$\\u200efoo\\u200f}}}",
-		"TestMF2WG/Bidi_support/.local_$\\u200efoo\\u200f_=_{5}_{{{$foo}}}",
+		"TestMF2WG/Bidi_support/{\\u200e_hello_\\u200f}",
 		"TestMF2WG/Bidi_support/.local_$\\u061cfoo_=_{1}_{{_{$\\u061cfoo}_}}",
 		"TestMF2WG/Bidi_support/.local_$foo_=_{4}_{{{$\\u200efoo\\u200f}}}",
-		"TestMF2WG/Bidi_support/.local_$x_=_{1}_{{_{\\u200e_$x_\\u200f}_}}",
-		"TestMF2WG/Bidi_support/.local_$x_=_{1_:number}.match_$x\\u061c1_{{one}}_*_{{other}}",
-		"TestMF2WG/Bidi_support/.local_$x_=_{1_:number}.match_$x\\u061c1_{{one}}*_{{other}}",
-		"TestMF2WG/Bidi_support/.local_$x_=_{1}_\\u200f_{{_{$x}}}",
 		"TestMF2WG/Bidi_support/.local_$x_=_{1}_{{_{$x}}}_\\u2066",
-		"TestMF2WG/Bidi_support/{\\u200e_hello_\\u200f}",
+		"TestMF2WG/Bidi_support/.local_$x_=_{1}_\\u200f_{{_{$x}}}",
 		"TestMF2WG/Bidi_support/\\u200e_.local_$x_=_{1}_{{_{$x}}}",
+		"TestMF2WG/Bidi_support/.local_$x_=_{1}_{{_{\\u200e_$x_\\u200f}_}}",
+		"TestMF2WG/Bidi_support/.local_$\\u200efoo\\u200f_=_{3}_{{{$\\u200efoo\\u200f}}}",
+		"TestMF2WG/Bidi_support/.local_$\\u200efoo\\u200f_=_{5}_{{{$foo}}}",
 	}
 }
 
@@ -305,10 +303,8 @@ func assertErr(t *testing.T, want []Error, err error) {
 			wantErr(mf2.ErrUnknownFunction)
 		case "unresolved-variable":
 			wantErr(mf2.ErrUnresolvedVariable)
-		case "unsupported-expression":
-			wantErr(mf2.ErrUnsupportedExpression)
-		case "unsupported-statement":
-			wantErr(mf2.ErrUnsupportedStatement)
+		case "unsupported-operation":
+			wantErr(mf2.ErrUnsupportedOperation)
 		case "variant-key-mismatch":
 			wantErr(mf2.ErrVariantKeyMismatch)
 		}

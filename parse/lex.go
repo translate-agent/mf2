@@ -112,6 +112,11 @@ func (i item) String() string {
 	return i.typ.String() + ` token "` + v + `"`
 }
 
+// hasWS returns true if the whitespace token contains at least one whitespace character (satisfying 's').
+func (i item) hasWS() bool {
+	return strings.ContainsAny(i.val, " \t\r\n\u3000")
+}
+
 // mk creates a new item with the given type and value.
 func mk(typ itemType, val string) item {
 	return item{typ: typ, val: val}
@@ -268,7 +273,7 @@ func lexStart(l *lexer) stateFn {
 		switch {
 		default:
 			return l.emitErrorf(`unexpected start char "%c"`, r)
-		case isWhitespace(r):
+		case isWhitespaceOrBidi(r):
 		case isSimpleStart(r):
 			return simpleItem()
 		case r == '\\':
@@ -389,7 +394,7 @@ func lexComplexMessage(l *lexer) stateFn {
 		case r == variablePrefix:
 			l.start++ // skip $
 			return lexName(l, itemVariable)
-		case isWhitespace(r):
+		case isWhitespaceOrBidi(r):
 			return lexWhitespace(l)
 		case r == '=':
 			return l.emit(itemOperator)
@@ -472,7 +477,7 @@ func lexExpr(l *lexer) stateFn {
 		l.isMarkup = false
 
 		return l.emit(itemExpressionClose)
-	case isWhitespace(r):
+	case isWhitespaceOrBidi(r):
 		return lexWhitespace(l)
 	case (l.isFunction || l.isMarkup) && isNameStart(r):
 		l.backup()
@@ -548,18 +553,25 @@ func lexWhitespace(l *lexer) stateFn {
 		default:
 			l.backup()
 			return l.emit(itemWhitespace)
-		case isWhitespace(r):
+		case isWhitespaceOrBidi(r):
 		case r == eof:
 			return l.emit(itemWhitespace)
 		}
 	}
 }
 
-// lexName is the state function for lexing names.
-func lexName(l *lexer, typ itemType) stateFn {
+// scanName scans a [bidi] name-start *name-char [bidi] sequence.
+func (l *lexer) scanName(kind string) (string, bool) {
+	start := l.end
+
 	r := l.next()
+	if isBidi(r) {
+		r = l.next()
+	}
+
 	if !isNameStart(r) {
-		return l.emitErrorf(`bad %s name "%s"`, typ, string(r))
+		l.emitErrorf(`bad %s "%s"`, kind, l.val())
+		return "", false
 	}
 
 	for {
@@ -568,53 +580,53 @@ func lexName(l *lexer, typ itemType) stateFn {
 		}
 	}
 
-	if r != eof {
+	if isBidi(r) {
+		if next := l.peek(); isName(next) || isBidi(next) {
+			l.emitErrorf(`bad %s "%s"`, kind, l.val())
+			return "", false
+		}
+	} else if r != eof {
 		l.backup()
 	}
 
-	return l.emit(typ)
+	return stripBidi(l.input[start:l.end]), true
+}
+
+// lexName is the state function for lexing names.
+//
+// ABNF: name = [bidi] name-start *name-char [bidi].
+func lexName(l *lexer, typ itemType) stateFn {
+	name, ok := l.scanName(typ.String() + " name")
+	if !ok {
+		return nil
+	}
+
+	return l.emitItem(mk(typ, name))
 }
 
 // lexIdentifier is the state function for lexing identifiers.
+//
+// ABNF:
+// identifier = [namespace ":"] name
+// namespace  = [bidi] name-start *name-char [bidi].
 func lexIdentifier(l *lexer, typ itemType) stateFn {
-	r := l.next()
-	if !isNameStart(r) {
-		return l.emitErrorf(`bad %s identifier "%s"`, typ, string(r))
+	name, ok := l.scanName(typ.String() + " identifier")
+	if !ok {
+		return nil
 	}
 
-	for {
-		if r = l.next(); !isName(r) {
-			break
-		}
+	if l.peek() != ':' {
+		return l.emitItem(mk(typ, name))
 	}
 
-	switch r {
-	default:
-		l.backup()
+	l.next() // consume ':'
 
-		return l.emit(typ)
-	case ':': // identifier with namespace
-	case eof:
-		return l.emit(typ)
+	name2, ok := l.scanName(typ.String() + " identifier")
+	if !ok {
+		return nil
 	}
 
-	r = l.next()
-
-	if !isNameStart(r) {
-		return l.emitErrorf(`bad %s identifier "%s"`, typ, l.val())
-	}
-
-	for {
-		if r = l.next(); !isName(r) {
-			break
-		}
-	}
-
-	if r != eof {
-		l.backup()
-	}
-
-	return l.emit(typ)
+	return l.emitItem(mk(typ, name+":"+name2))
 }
 
 // helpers
@@ -719,21 +731,40 @@ func isQuoted(r rune) bool {
 		0x7D <= r && r <= 0x10FFFF
 }
 
-// isWhitespace returns true if r is whitespace character.
+// isWS returns true if r is whitespace character.
 //
-// ABNF:
-//
-// s = 1*( SP / HTAB / CR / LF / %x3000 ).
-func isWhitespace(r rune) bool {
+// ABNF: ws = SP / HTAB / CR / LF / %x3000.
+func isWS(r rune) bool {
 	switch r {
-	default:
-		return false
-	case '\u061C', '\u200E', '\u200F', '\u2066', '\u2067', '\u2068', '\u2069':
-		// TODO: should we separate it into `bidi`?
-		return true
 	case ' ', '\t', '\r', '\n', '\u3000':
 		return true
+	default:
+		return false
 	}
+}
+
+// isBidi returns true if r is bidirectional mark or isolate control.
+//
+// ABNF: bidi = %x061C / %x200E / %x200F / %x2066-2069.
+func isBidi(r rune) bool {
+	switch r {
+	case '\u061C', '\u200E', '\u200F', '\u2066', '\u2067', '\u2068', '\u2069':
+		return true
+	default:
+		return false
+	}
+}
+
+// isWhitespaceOrBidi returns true if r is whitespace or bidi character.
+func isWhitespaceOrBidi(r rune) bool {
+	return isWS(r) || isBidi(r)
+}
+
+// stripBidi strips leading and trailing bidi characters.
+func stripBidi(s string) string {
+	s = strings.TrimLeftFunc(s, isBidi)
+
+	return strings.TrimRightFunc(s, isBidi)
 }
 
 // isEscapedChar returns true if r is an escaped character.

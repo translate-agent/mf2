@@ -101,7 +101,7 @@ func (m SimpleMessage) message() {}
 
 type ComplexMessage struct {
 	ComplexBody  ComplexBody   // Matcher or QuotedPattern
-	Declarations []Declaration // Optional: InputDeclaration, LocalDeclaration or ReservedStatement
+	Declarations []Declaration // Optional: InputDeclaration or LocalDeclaration
 }
 
 // String returns MF2 formatted string.
@@ -144,7 +144,7 @@ func (Text) patternPart() {}
 
 type Expression struct {
 	Operand    Value       // Literal or Variable
-	Annotation Annotation  // Function, PrivateUseAnnotation or ReservedAnnotation
+	Annotation Annotation  // Function
 	Attributes []Attribute // Optional
 }
 
@@ -357,55 +357,43 @@ type Markup struct {
 	PatternPart
 
 	Identifier Identifier
-	Options    []Option    // Optional. Options for Identifier, only allowed when markup-open.
+	Options    []Option    // Optional
 	Attributes []Attribute // Optional
 	Typ        MarkupType
 }
 
 // String returns MF2 formatted string.
 func (m Markup) String() string {
+	prefix := "{ #"
+	suffix := " }"
+
 	switch m.Typ {
 	default:
 		return ""
 	case Open:
-		s := "{ #" + m.Identifier.String()
-
-		if len(m.Options) > 0 {
-			s += " " + sliceToString(m.Options, " ")
-		}
-
-		if len(m.Attributes) > 0 {
-			s += " " + sliceToString(m.Attributes, " ")
-		}
-
-		return s + " }"
 	case Close:
-		s := "{ /" + m.Identifier.String()
-
-		if len(m.Attributes) > 0 {
-			s += " " + sliceToString(m.Attributes, " ")
-		}
-
-		return s + " }"
+		prefix = "{ /"
 	case SelfClose:
-		s := "{ #" + m.Identifier.String()
-
-		if len(m.Options) > 0 {
-			s += " " + sliceToString(m.Options, " ")
-		}
-
-		if len(m.Attributes) > 0 {
-			s += " " + sliceToString(m.Attributes, " ")
-		}
-
-		return s + " /}"
+		suffix = " /}"
 	}
+
+	s := prefix + m.Identifier.String()
+
+	if len(m.Options) > 0 {
+		s += " " + sliceToString(m.Options, " ")
+	}
+
+	if len(m.Attributes) > 0 {
+		s += " " + sliceToString(m.Attributes, " ")
+	}
+
+	return s + suffix
 }
 
 type Attribute struct {
 	Node
 
-	Value      Value // Optional: Literal or Variable
+	Value      Literal // Optional: QuotedLiteral or NameLiteral
 	Identifier Identifier
 }
 
