@@ -22,6 +22,55 @@ type Template struct {
 	ast      *ast.AST
 	registry Registry
 	locale   language.Tag
+	dir      Direction
+	bidi     bool
+}
+
+// Direction represents text directionality.
+type Direction uint8
+
+const (
+	DirUnknown Direction = iota
+	DirLTR
+	DirRTL
+)
+
+const (
+	bidiLRI = "\u2066" // LEFT-TO-RIGHT ISOLATE
+	bidiRLI = "\u2067" // RIGHT-TO-LEFT ISOLATE
+	bidiFSI = "\u2068" // FIRST STRONG ISOLATE
+	bidiPDI = "\u2069" // POP DIRECTIONAL ISOLATE
+
+	// Universal Unicode namespace options (spec/u-namespace.md).
+	optUDir = "u:dir"
+	optUID  = "u:id"
+)
+
+type uDirMode uint8
+
+const (
+	uDirNone uDirMode = iota
+	uDirLTR
+	uDirRTL
+	uDirAuto
+	uDirInherit
+)
+
+// String returns the directionality name ("unknown", "ltr", "rtl").
+func (d Direction) String() string {
+	switch d {
+	case DirLTR:
+		return "ltr"
+	case DirRTL:
+		return "rtl"
+	default:
+		return "unknown"
+	}
+}
+
+// Direction returns the base directionality of the template based on its locale or explicit direction.
+func (t *Template) Direction() Direction {
+	return t.dir
 }
 
 // ResolvedValue keeps the result of the Expression resolution with optionally
@@ -33,6 +82,8 @@ type ResolvedValue struct {
 	options   Options
 	err       error
 	function  string
+	dir       Direction
+	isolate   bool
 }
 
 // NewResolvedValue creates a new variable of type [*ResolvedValue].
@@ -94,11 +145,24 @@ func defaultFormat(value any) string {
 
 // String returns formatted string value.
 func (r *ResolvedValue) String() string {
+	if r == nil {
+		return ""
+	}
+
 	if r.format != nil {
 		return r.format()
 	}
 
 	return defaultFormat(r.value)
+}
+
+// Direction returns the text directionality of the [ResolvedValue].
+func (r *ResolvedValue) Direction() Direction {
+	if r == nil {
+		return DirUnknown
+	}
+
+	return r.dir
 }
 
 // ResolvedValueOpt is a function to apply to the [ResolvedValue].
@@ -119,6 +183,13 @@ func WithFormat(format func() string) ResolvedValueOpt {
 func WithSelectKey(selectKey func(keys []string) string) ResolvedValueOpt {
 	return func(r *ResolvedValue) {
 		r.selectKey = selectKey
+	}
+}
+
+// WithValueDirection sets the text directionality of the [ResolvedValue].
+func WithValueDirection(dir Direction) ResolvedValueOpt {
+	return func(r *ResolvedValue) {
+		r.dir = dir
 	}
 }
 
@@ -160,6 +231,7 @@ func New(options ...Option) *Template {
 	t := &Template{
 		registry: NewRegistry(),
 		locale:   language.AmericanEnglish,
+		dir:      DirLTR,
 	}
 
 	for _, o := range options {
@@ -202,6 +274,28 @@ func WithFuncs(reg Registry) Option {
 func WithLocale(locale language.Tag) Option {
 	return func(t *Template) {
 		t.locale = locale
+		switch {
+		case locale == language.Tag{}:
+			t.dir = DirUnknown
+		case isRTL(locale):
+			t.dir = DirRTL
+		default:
+			t.dir = DirLTR
+		}
+	}
+}
+
+// WithDirection sets the base text directionality of the template.
+func WithDirection(dir Direction) Option {
+	return func(t *Template) {
+		t.dir = dir
+	}
+}
+
+// WithBidi enables or disables the bidirectional isolation strategy.
+func WithBidi(bidi bool) Option {
+	return func(t *Template) {
+		t.bidi = bidi
 	}
 }
 
@@ -223,7 +317,12 @@ func (t *Template) Execute(w io.Writer, input map[string]any) error {
 		return errors.New("execute template: AST is nil")
 	}
 
-	executer := &executer{template: t, w: w, variables: make(map[string]*ResolvedValue, len(input))}
+	executer := &executer{
+		template:  t,
+		w:         w,
+		variables: make(map[string]*ResolvedValue, len(input)),
+		dir:       t.dir,
+	}
 
 	for k, v := range input {
 		var f Func
@@ -266,6 +365,7 @@ type executer struct {
 	template  *Template
 	w         io.Writer
 	variables map[string]*ResolvedValue
+	dir       Direction
 }
 
 func (e *executer) execute() error {
@@ -341,7 +441,7 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 	for _, part := range pattern {
 		switch v := part.(type) {
 		case ast.Text:
-			_, err := e.w.Write([]byte(v))
+			_, err := io.WriteString(e.w, string(v))
 			if err != nil {
 				return errorf("write text: %w", err)
 			}
@@ -351,17 +451,146 @@ func (e *executer) resolvePattern(pattern []ast.PatternPart) error {
 				resolutionErr = errors.Join(resolutionErr, err)
 			}
 
-			_, err = e.w.Write([]byte(resolved.String()))
+			err = e.writeResolved(resolved)
 			if err != nil {
 				return errorf("write resolved expression: %w", err)
 			}
 		// When formatting to a string, markup placeholders format to an empty string by default.
-		// See ".message-format-wg/exploration/open-close-placeholders.md#formatting-to-a-string"
+		// Per spec/u-namespace.md#udir, setting u:dir on markup emits a Bad Option error.
 		case ast.Markup:
+			for _, opt := range v.Options {
+				if opt.Identifier.String() == optUDir {
+					resolutionErr = errors.Join(resolutionErr, fmt.Errorf(`markup "%s": %w`, optUDir, mf2.ErrBadOption))
+				}
+			}
 		}
 	}
 
 	return resolutionErr
+}
+
+func (e *executer) bidiPrefix(resolved *ResolvedValue) string {
+	if resolved == nil {
+		return bidiFSI
+	}
+
+	switch resolved.dir {
+	case DirLTR:
+		if e.dir == DirLTR && !resolved.isolate {
+			return ""
+		}
+
+		return bidiLRI
+	case DirRTL:
+		return bidiRLI
+	default:
+		return bidiFSI
+	}
+}
+
+func (e *executer) writeResolved(resolved *ResolvedValue) error {
+	str := resolved.String()
+	if !e.template.bidi {
+		_, err := io.WriteString(e.w, str)
+		if err != nil {
+			return fmt.Errorf("write resolved: %w", err)
+		}
+
+		return nil
+	}
+
+	prefix := e.bidiPrefix(resolved)
+	if prefix == "" {
+		_, err := io.WriteString(e.w, str)
+		if err != nil {
+			return fmt.Errorf("write resolved: %w", err)
+		}
+
+		return nil
+	}
+
+	_, err := io.WriteString(e.w, prefix+str+bidiPDI)
+	if err != nil {
+		return fmt.Errorf("write resolved: %w", err)
+	}
+
+	return nil
+}
+
+// isRTL reports whether the language tag has right-to-left directionality
+// based on its inferred or explicit script (e.g. Arabic, Hebrew, Syriac, Thaana).
+func isRTL(tag language.Tag) bool {
+	script, _ := tag.Script()
+	switch script.String() {
+	case "Arab", "Hebr", "Syrc", "Thaa", "Adlm", "Rohg", "Nkoo", "Samr", "Mand", "Mend", "Yezi":
+		return true
+	default:
+		return false
+	}
+}
+
+// resolveUOptions processes and strips Universal Unicode namespace options (spec/u-namespace.md).
+func resolveUOptions(options Options) (uDirMode, error) {
+	var (
+		udir uDirMode
+		err  error
+	)
+
+	if opt, ok := options[optUDir]; ok {
+		delete(options, optUDir)
+
+		switch opt.String() {
+		case "ltr":
+			udir = uDirLTR
+		case "rtl":
+			udir = uDirRTL
+		case "auto":
+			udir = uDirAuto
+		case "inherit":
+			udir = uDirInherit
+		default:
+			err = fmt.Errorf(`option "%s": %w`, optUDir, mf2.ErrBadOption)
+		}
+	}
+
+	if opt, ok := options[optUID]; ok {
+		delete(options, optUID)
+
+		if opt.err != nil {
+			err = errors.Join(err, fmt.Errorf(`option "%s": %w`, optUID, mf2.ErrBadOption))
+		}
+	}
+
+	return udir, err
+}
+
+func applyDirection(result *ResolvedValue, udir uDirMode, operandValue any, contextDir Direction) {
+	switch udir {
+	case uDirLTR:
+		result.dir = DirLTR
+		result.isolate = true
+	case uDirRTL:
+		result.dir = DirRTL
+		result.isolate = true
+	case uDirAuto:
+		result.dir = DirUnknown
+		result.isolate = true
+	case uDirInherit:
+		if r, ok := operandValue.(*ResolvedValue); ok && r.dir != DirUnknown {
+			result.dir = r.dir
+		} else if result.dir == DirUnknown {
+			result.dir = contextDir
+		}
+
+		result.isolate = false
+	case uDirNone:
+		if result.dir == DirUnknown {
+			if r, ok := operandValue.(*ResolvedValue); ok && r.dir != DirUnknown {
+				result.dir = r.dir
+				result.isolate = r.isolate
+			}
+		}
+	}
 }
 
 func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error) {
@@ -369,6 +598,8 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 		funcName      string
 		options       Options
 		resolutionErr error
+		uErr          error
+		udir          uDirMode
 	)
 
 	value, err := e.resolveValue(expr.Operand)
@@ -385,6 +616,11 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 		options, err = e.resolveOptions(v.Options)
 		if err != nil {
 			return newFallbackValue(expr), fmt.Errorf("expression: %w", err)
+		}
+
+		udir, uErr = resolveUOptions(options)
+		if uErr != nil {
+			resolutionErr = errors.Join(resolutionErr, uErr)
 		}
 	case nil: // noop, no annotation
 	}
@@ -412,6 +648,8 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 	if err != nil {
 		return newFallbackValue(expr), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
 	}
+
+	applyDirection(result, udir, value, e.dir)
 
 	return result, resolutionErr
 }
@@ -449,7 +687,7 @@ func (e *executer) resolveOptions(options []ast.Option) (Options, error) {
 			return nil, fmt.Errorf("option: %w", err)
 		}
 
-		m[opt.Identifier.Name] = NewResolvedValue(value)
+		m[opt.Identifier.String()] = NewResolvedValue(value)
 	}
 
 	return m, nil

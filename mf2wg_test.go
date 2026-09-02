@@ -73,28 +73,6 @@ func init() {
 		"TestMF2WG/Number_function/.local_$sel_=_{1_:number_select=exact}_.local_$bad_=_{$sel_:number}_.match_$bad_1_{{ONE}}_*_{{operand_select_{$bad}}}",
 		"TestMF2WG/Number_function/.local_$sel_=_{1_:number_select=$bad}_.match_$sel_1_{{ONE}}_*_{{variable_select_{$sel}}}",
 		"TestMF2WG/Number_function/variable_select_{1_:number_select=$bad}",
-
-		"TestMF2WG/u:_Options/أهلاً_{بالعالم_:string}",
-		"TestMF2WG/u:_Options/hello_{world_:string_u:dir=auto}",
-		"TestMF2WG/u:_Options/أهلاً_{world_:string_u:dir=ltr}",
-		"TestMF2WG/u:_Options/أهلاً_{بالعالم_:string_u:dir=auto}",
-		"TestMF2WG/u:_Options/أهلاً_{بالعالم_:string_u:dir=rtl}",
-		"TestMF2WG/u:_Options/hello_{world_:string_u:dir=ltr_u:id=foo}",
-		"TestMF2WG/u:_Options/hello_{4.2_:number_u:locale=fr}",
-		"TestMF2WG/u:_Options/{#tag_u:dir=rtl_u:locale=ar}content{/ns:tag}",
-		"TestMF2WG/u:_Options/{#tag_u:dir=rtl}content{/ns:tag}",
-		"TestMF2WG/u:_Options/hello_{world_:string_u:dir=rtl}",
-		"TestMF2WG/u:_Options/.local_$world_=_{world_:string_u:dir=ltr_u:id=foo}_{{hello_{$world}}}",
-
-		"TestMF2WG/Bidi_support/{\\u200e_hello_\\u200f}",
-		"TestMF2WG/Bidi_support/.local_$\\u061cfoo_=_{1}_{{_{$\\u061cfoo}_}}",
-		"TestMF2WG/Bidi_support/.local_$foo_=_{4}_{{{$\\u200efoo\\u200f}}}",
-		"TestMF2WG/Bidi_support/.local_$x_=_{1}_{{_{$x}}}_\\u2066",
-		"TestMF2WG/Bidi_support/.local_$x_=_{1}_\\u200f_{{_{$x}}}",
-		"TestMF2WG/Bidi_support/\\u200e_.local_$x_=_{1}_{{_{$x}}}",
-		"TestMF2WG/Bidi_support/.local_$x_=_{1}_{{_{\\u200e_$x_\\u200f}_}}",
-		"TestMF2WG/Bidi_support/.local_$\\u200efoo\\u200f_=_{3}_{{{$\\u200efoo\\u200f}}}",
-		"TestMF2WG/Bidi_support/.local_$\\u200efoo\\u200f_=_{5}_{{{$foo}}}",
 	}
 }
 
@@ -168,6 +146,10 @@ func run(t *testing.T, test Test) {
 		options = append(options, template.WithLocale(*test.Locale))
 	}
 
+	if test.BidiIsolation == "default" {
+		options = append(options, template.WithBidi(true))
+	}
+
 	t.Log(cmp.Or(test.Description, "no test description"))
 
 	templ, err := template.New(options...).Parse(test.Src)
@@ -207,10 +189,10 @@ func run(t *testing.T, test Test) {
 // Tests contains harness tests by MF2 WG, schema defined in
 // ".message-format-wg/spec/schemas/v0/tests.schema.json".
 type Tests struct {
+	DefaultTestProperties DefaultTestProperties `json:"defaultTestProperties"`
 	Scenario              string                `json:"scenario"`
 	Description           string                `json:"description"`
 	Tests                 []Test                `json:"tests"`
-	DefaultTestProperties DefaultTestProperties `json:"defaultTestProperties"`
 }
 
 type Test struct {
@@ -248,12 +230,17 @@ func (t Test) Apply(defaultProperties DefaultTestProperties) Test {
 		t.Locale = defaultProperties.Locale
 	}
 
+	if t.BidiIsolation == "" {
+		t.BidiIsolation = defaultProperties.BidiIsolation
+	}
+
 	return t
 }
 
 type DefaultTestProperties struct {
-	Locale    *language.Tag `json:"locale"`
-	ExpErrors []Error       `json:"expErrors"`
+	Locale        *language.Tag `json:"locale"`
+	BidiIsolation string        `json:"bidiIsolation"`
+	ExpErrors     []Error       `json:"expErrors"`
 }
 
 type Error struct {

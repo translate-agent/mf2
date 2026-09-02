@@ -290,6 +290,234 @@ func Test_ExecuteErrors(t *testing.T) {
 	}
 }
 
+func Test_ExecuteBidi(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		locale language.Tag
+		input  map[string]any
+		name   string
+		text   string
+		want   string
+		bidi   bool
+	}{
+		{
+			name: "disabled by default",
+			text: "Hello, {$name}!",
+			input: map[string]any{
+				"name": "World",
+			},
+			bidi: false,
+			want: "Hello, World!",
+		},
+		{
+			name: "default bidi isolation wraps unannotated expressions",
+			text: "Hello, {$name}!",
+			input: map[string]any{
+				"name": "World",
+			},
+			bidi: true,
+			want: "Hello, \u2068World\u2069!",
+		},
+		{
+			name: "number in LTR context is not isolated",
+			text: "Count: {1 :number}",
+			bidi: true,
+			want: "Count: 1",
+		},
+		{
+			name:   "number in RTL context is isolated with LRI",
+			text:   "{1 :number}",
+			locale: language.Arabic,
+			bidi:   true,
+			want:   "\u2066١\u2069",
+		},
+		{
+			name:   "ar-Latn is treated as LTR context so number is not isolated",
+			text:   "{1 :number}",
+			locale: language.MustParse("ar-Latn"),
+			bidi:   true,
+			want:   "1",
+		},
+		{
+			name: "explicit u:dir options",
+			text: "{world :string u:dir=ltr} and {world :string u:dir=rtl}",
+			bidi: true,
+			want: "\u2066world\u2069 and \u2067world\u2069",
+		},
+		{
+			name: "u:dir=auto overrides number default LTR direction",
+			text: "{1 :number u:dir=auto}",
+			bidi: true,
+			want: "\u20681\u2069",
+		},
+		{
+			name: "u:dir=rtl overrides number default LTR direction in LTR context",
+			text: "{1 :number u:dir=rtl}",
+			bidi: true,
+			want: "\u20671\u2069",
+		},
+		{
+			name: "u:dir=inherit prevents isolation in LTR context",
+			text: "{1 :number u:dir=inherit}",
+			bidi: true,
+			want: "1",
+		},
+		{
+			name: "u:id option is stripped without error",
+			text: "Hello, {world :string u:id=greeting}!",
+			bidi: true,
+			want: "Hello, \u2068world\u2069!",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := []Option{WithBidi(test.bidi)}
+			if test.locale != (language.Tag{}) {
+				opts = append(opts, WithLocale(test.locale))
+			}
+
+			tmpl, err := New(opts...).Parse(test.text)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := tmpl.Sprint(test.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if test.want != got {
+				t.Errorf("want '%s', got '%s'", test.want, got)
+			}
+		})
+	}
+}
+
+func Test_ExecuteBidi_Errors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		text string
+	}{
+		{
+			name: "invalid u:dir value",
+			text: "{world :string u:dir=invalid}",
+		},
+		{
+			name: "markup with u:dir",
+			text: "{#tag u:dir=rtl}content{/ns:tag}",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpl, err := New().Parse(test.text)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = tmpl.Sprint(nil)
+			if !errors.Is(err, mf2.ErrBadOption) {
+				t.Errorf("expected ErrBadOption, got %v", err)
+			}
+		})
+	}
+}
+
+func Test_Direction(t *testing.T) {
+	t.Parallel()
+
+	if got := DirLTR.String(); got != "ltr" {
+		t.Errorf("expected 'ltr', got '%s'", got)
+	}
+
+	if got := DirRTL.String(); got != "rtl" {
+		t.Errorf("expected 'rtl', got '%s'", got)
+	}
+
+	if got := DirUnknown.String(); got != "unknown" {
+		t.Errorf("expected 'unknown', got '%s'", got)
+	}
+
+	if got := Direction(42).String(); got != "unknown" {
+		t.Errorf("expected 'unknown', got '%s'", got)
+	}
+
+	ltrTmpl := New(WithLocale(language.English))
+	if got := ltrTmpl.Direction(); got != DirLTR {
+		t.Errorf("expected DirLTR for English template, got %v", got)
+	}
+
+	rtlTmpl := New(WithLocale(language.Arabic))
+	if got := rtlTmpl.Direction(); got != DirRTL {
+		t.Errorf("expected DirRTL for Arabic template, got %v", got)
+	}
+
+	undTmpl := New(WithLocale(language.Tag{}))
+	if got := undTmpl.Direction(); got != DirUnknown {
+		t.Errorf("expected DirUnknown for empty locale, got %v", got)
+	}
+}
+
+func Test_Template_WithDirection(t *testing.T) {
+	t.Parallel()
+
+	ltrTmpl := New(WithDirection(DirLTR))
+	if got := ltrTmpl.Direction(); got != DirLTR {
+		t.Errorf("expected DirLTR, got %v", got)
+	}
+
+	rtlTmpl := New(WithDirection(DirRTL))
+	if got := rtlTmpl.Direction(); got != DirRTL {
+		t.Errorf("expected DirRTL, got %v", got)
+	}
+
+	unkTmpl := New(WithDirection(DirUnknown))
+	if got := unkTmpl.Direction(); got != DirUnknown {
+		t.Errorf("expected DirUnknown, got %v", got)
+	}
+}
+
+func Test_ExecuteBidi_ExplicitDirection(t *testing.T) {
+	t.Parallel()
+
+	tmpl, err := New(WithBidi(true), WithDirection(DirRTL)).Parse("{1 :number}")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := tmpl.Sprint(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := "\u20661\u2069"
+	if got != want {
+		t.Errorf("want '%s', got '%s'", want, got)
+	}
+}
+
+func Test_ResolvedValue_Direction(t *testing.T) {
+	t.Parallel()
+
+	var nilVal *ResolvedValue
+	if got := nilVal.Direction(); got != DirUnknown {
+		t.Errorf("expected DirUnknown for nil value, got %v", got)
+	}
+
+	val := NewResolvedValue("hello", WithValueDirection(DirRTL))
+	if got := val.Direction(); got != DirRTL {
+		t.Errorf("expected DirRTL, got %v", got)
+	}
+}
+
 func BenchmarkTemplate_Sprint(b *testing.B) {
 	//nolint:dupword
 	tmpl, err := New().Parse(`.input {$foo :string}

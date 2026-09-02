@@ -348,7 +348,8 @@ func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*
 		return pluralFormString(form)
 	}
 
-	return NewResolvedValue(value, WithFormat(format), WithSelectKey(selectKey)), nil
+	// Numbers default to LTR directionality per Unicode MF2 bidirectional guidelines.
+	return NewResolvedValue(value, WithFormat(format), WithSelectKey(selectKey), WithValueDirection(DirLTR)), nil
 }
 
 // hasExactKey returns true if the variant keys contain exact value besides the plural categories.
