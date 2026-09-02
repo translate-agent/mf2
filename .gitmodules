@@ -1,4 +1,5 @@
 [submodule ".message-format-wg"]
 	path = .message-format-wg
 	url = git@github.com:unicode-org/message-format-wg
+	branch = LDML48.2
 	shallow = true
