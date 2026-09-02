@@ -9,4 +9,16 @@
   "git-submodules": {
     enabled: true,
   },
+  packageRules: [
+    {
+      matchManagers: ["git-submodules"],
+      matchDepNames: [".message-format-wg"],
+      overrideDatasource: "github-releases",
+      overridePackageName: "unicode-org/message-format-wg",
+      versioning: "regex:^LDML(?<major>\\d+)(?:\\.(?<minor>\\d+))?(?:\\.(?<patch>\\d+))?(?:-(?<prerelease>.*))?$",
+      digest: {
+        enabled: false,
+      },
+    },
+  ],
 }
