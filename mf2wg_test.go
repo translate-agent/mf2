@@ -31,12 +31,6 @@ func init() {
 		"TestMF2WG/Currency_function/{42_:currency_currency=EUR_fractionDigits=auto}",
 		"TestMF2WG/Currency_function/{42_:currency_currency=EUR}",
 
-		"TestMF2WG/Integer_function/.local_$bad_=_{exact}_{{variable_select_{1_:integer_select=$bad}}}",
-		"TestMF2WG/Integer_function/.local_$sel_=_{1_:integer_select=exact}_.local_$bad_=_{$sel_:integer}_.match_$bad_1_{{ONE}}_*_{{operand_select_{$bad}}}",
-		"TestMF2WG/Integer_function/.local_$sel_=_{1_:integer_select=$bad}_.match_$sel_1_{{ONE}}_*_{{variable_select_{$sel}}}",
-		"TestMF2WG/Integer_function/.local_$x_=_{1.25_:integer}_.local_$y_=_{$x_:number}_{{{$y}}}",
-		"TestMF2WG/Integer_function/variable_select_{1_:integer_select=$bad}",
-
 		"TestMF2WG/Offset_function/.local_$x_=_{52_:number_signDisplay=always}_{{{$x_:offset_subtract=10}}}",
 		"TestMF2WG/Offset_function/.local_$x_=_{1_:offset_add=1}_.match_$x_1_{{=1}}_2_{{=2}}_*_{{other}}",
 		"TestMF2WG/Offset_function/{:offset_add=13}",
@@ -67,12 +61,6 @@ func init() {
 		"TestMF2WG/Percent_function/{1_:percent}",
 		"TestMF2WG/Percent_function/{0.12345678_:percent}",
 		"TestMF2WG/Percent_function/{0.12_:percent_minimumFractionDigits=1}",
-
-		"TestMF2WG/Number_function/.local_$foo_=_{$bar_:number}_{{bar_{$foo}}}#01",
-		"TestMF2WG/Number_function/.local_$bad_=_{exact}_{{variable_select_{1_:number_select=$bad}}}",
-		"TestMF2WG/Number_function/.local_$sel_=_{1_:number_select=exact}_.local_$bad_=_{$sel_:number}_.match_$bad_1_{{ONE}}_*_{{operand_select_{$bad}}}",
-		"TestMF2WG/Number_function/.local_$sel_=_{1_:number_select=$bad}_.match_$sel_1_{{ONE}}_*_{{variable_select_{$sel}}}",
-		"TestMF2WG/Number_function/variable_select_{1_:number_select=$bad}",
 	}
 }
 

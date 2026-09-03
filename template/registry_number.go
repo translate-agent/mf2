@@ -3,6 +3,7 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
@@ -76,9 +77,12 @@ type numberOptions struct {
 	// are encouraged to track development of these options during Tech Preview.
 	UnitDisplay string
 	// (plural, ordinal, exact)
-	Select string
+	Select    string
+	SelectErr error
+
 	// (auto, always, never, min2)
 	UseGrouping string
+
 	// The currency to use in currency formatting.
 	// Possible values are the ISO 4217 currency codes, such as "USD" for the US dollar,
 	// "EUR" for the euro, or "CNY" for the Chinese RMB — see the
@@ -90,6 +94,9 @@ type numberOptions struct {
 	// Implementations SHOULD avoid creating options that conflict with these, but
 	// are encouraged to track development of these options during Tech Preview.
 	Currency currency.Unit
+
+	DisableSelect bool
+
 	// The unit to use in unit formatting.
 	// Possible values are core unit identifiers, defined in UTS #35, Part 2, Section 6.
 	// A subset of units from the full list was selected for use in ECMAScript.
@@ -123,6 +130,33 @@ type numberOptions struct {
 	MaximumSignificantDigits int
 }
 
+func parseSelectOption(opts Options, options *numberOptions) error {
+	if opts == nil || opts["select"] == nil {
+		options.Select = "plural"
+
+		return nil
+	}
+
+	if !opts.isLiteral("select") {
+		options.SelectErr = fmt.Errorf("%w: select option must be a literal", mf2.ErrBadOption)
+		options.DisableSelect = true
+		options.Select = "plural"
+
+		return nil
+	}
+
+	validate := oneOf("plural", "ordinal", "exact")
+
+	var err error
+
+	options.Select, err = opts.GetString("select", "plural", validate)
+	if err != nil {
+		return fmt.Errorf("%w: %w", mf2.ErrBadOption, err)
+	}
+
+	return nil
+}
+
 func parseNumberOptions(opts Options) (*numberOptions, error) {
 	errorf := func(format string, args ...any) (*numberOptions, error) {
 		return nil, fmt.Errorf("%w: "+format, append([]any{mf2.ErrBadOption}, args...)...)
@@ -143,11 +177,9 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		options numberOptions
 	)
 
-	selects := oneOf("plural", "ordinal", "exact")
-
-	options.Select, err = opts.GetString("select", "plural", selects)
+	err = parseSelectOption(opts, &options)
 	if err != nil {
-		return errorf("%w", err)
+		return nil, err
 	}
 
 	useGroupings := oneOf("auto", "always", "never", "min2")
@@ -273,6 +305,26 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 	return &options, nil
 }
 
+func applySignDisplay(result string, signDisplay string, value float64) string {
+	switch signDisplay {
+	case "auto", "negative":
+	case "always":
+		if value >= 0 {
+			result = "+" + result
+		}
+	case "exceptZero":
+		if value > 0 {
+			result = "+" + result
+		}
+	case "never":
+		if value < 0 {
+			result = result[1:]
+		}
+	}
+
+	return result
+}
+
 // numberFunc is the implementation of the number function. Locale-sensitive number formatting.
 func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
@@ -284,9 +336,27 @@ func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*
 		return errorf("%w", err)
 	}
 
+	// Merge options from operand if operand was produced by :number or :integer
+	var selectInheritedFromOperand bool
+
+	if operand != nil && (operand.function == ":number" || operand.function == ":integer") && operand.options != nil {
+		merged := maps.Clone(operand.options)
+		if _, ok := merged["select"]; ok && (options == nil || options["select"] == nil) {
+			selectInheritedFromOperand = true
+		}
+
+		maps.Copy(merged, options)
+		options = merged
+	}
+
 	opts, err := parseNumberOptions(options)
 	if err != nil {
 		return errorf("%w", err)
+	}
+
+	if selectInheritedFromOperand {
+		opts.SelectErr = fmt.Errorf("%w: select option cannot be inherited from operand", mf2.ErrBadOption)
+		opts.DisableSelect = true
 	}
 
 	p := message.NewPrinter(locale)
@@ -309,31 +379,16 @@ func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*
 	}
 
 	format := func() string {
-		result := p.Sprint(num)
-
-		switch opts.SignDisplay {
-		case "auto":
-		case "negative":
-		case "always":
-			if value >= 0 {
-				result = "+" + result
-			}
-		case "exceptZero":
-			if value > 0 {
-				result = "+" + result
-			}
-		case "never":
-			if value < 0 {
-				result = result[1:]
-			}
-		}
-
-		return result
+		return applySignDisplay(p.Sprint(num), opts.SignDisplay, value)
 	}
 
 	selectKey := func(keys []string) string {
 		if hasExactKey(keys) {
 			return format()
+		}
+
+		if opts.Select == "exact" {
+			return ""
 		}
 
 		scale := -1
@@ -343,13 +398,35 @@ func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*
 		}
 
 		digits := num.Digits(nil, locale, scale)
-		form := plural.Cardinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
+
+		var form plural.Form
+
+		if opts.Select == "ordinal" {
+			form = plural.Ordinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
+		} else {
+			form = plural.Cardinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
+		}
 
 		return pluralFormString(form)
 	}
 
-	// Numbers default to LTR directionality per Unicode MF2 bidirectional guidelines.
-	return NewResolvedValue(value, WithFormat(format), WithSelectKey(selectKey), WithValueDirection(DirLTR)), nil
+	withFunc := withFunction(":number", options)
+
+	var resOpts []ResolvedValueOpt
+
+	resOpts = append(resOpts, WithFormat(format), WithValueDirection(DirLTR), withFunc)
+	if !opts.DisableSelect {
+		resOpts = append(resOpts, WithSelectKey(selectKey))
+	}
+
+	result := NewResolvedValue(value, resOpts...)
+	if opts.SelectErr != nil {
+		result.err = opts.SelectErr
+
+		return result, opts.SelectErr
+	}
+
+	return result, nil
 }
 
 // hasExactKey returns true if the variant keys contain exact value besides the plural categories.

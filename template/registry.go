@@ -83,13 +83,24 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 	}
 
 	for _, f := range validate {
-		err = f(i)
+		err := f(i)
 		if err != nil {
 			return errorf("%w", err)
 		}
 	}
 
 	return i, nil
+}
+
+// isLiteral reports whether the option value was directly set by a literal.
+func (o Options) isLiteral(name string) bool {
+	if o == nil {
+		return false
+	}
+
+	v, ok := o[name]
+
+	return ok && v.isLiteral
 }
 
 // NewRegistry returns a new registry with default functions.
