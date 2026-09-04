@@ -1,8 +1,10 @@
 package template
 
 import (
+	"errors"
 	"testing"
 
+	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
 )
 
@@ -10,11 +12,11 @@ func Test_Time(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		input   any
 		options map[string]any
+		wantErr error
+		input   any
 		name    string
 		want    string
-		wantErr bool
 	}{
 		{
 			name:  "no options",
@@ -39,16 +41,64 @@ func Test_Time(t *testing.T) {
 			options: map[string]any{"style": "full"},
 			want:    "03:04:05 UTC",
 		},
+		{
+			name:    "precision second",
+			input:   testDate,
+			options: map[string]any{"precision": "second"},
+			want:    "03:04:05",
+		},
+		{
+			name:    "precision minute",
+			input:   testDate,
+			options: map[string]any{"precision": "minute"},
+			want:    "03:04",
+		},
 		// errors
 		{
 			name:    "nil operand",
 			input:   nil,
-			wantErr: true,
+			wantErr: mf2.ErrBadOperand,
 		},
 		{
 			name:    "bad operand",
 			input:   "testDate",
-			wantErr: true,
+			wantErr: mf2.ErrBadOperand,
+		},
+		{
+			name:    "illegal option",
+			input:   testDate,
+			options: map[string]any{"invalid": "option"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "illegal style",
+			input:   testDate,
+			options: map[string]any{"style": "invalid"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "illegal precision",
+			input:   testDate,
+			options: map[string]any{"precision": "invalid"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "unimplemented calendar",
+			input:   testDate,
+			options: map[string]any{"calendar": "buddhist"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "unimplemented hour12",
+			input:   testDate,
+			options: map[string]any{"hour12": true},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "unimplemented timeZoneStyle",
+			input:   testDate,
+			options: map[string]any{"timeZoneStyle": "short"},
+			wantErr: mf2.ErrBadOption,
 		},
 	}
 
@@ -62,9 +112,9 @@ func Test_Time(t *testing.T) {
 			}
 
 			v, err := timeFunc(NewResolvedValue(test.input), opts, language.AmericanEnglish)
-			if test.wantErr {
-				if err == nil {
-					t.Error("want error, got nil")
+			if test.wantErr != nil {
+				if !errors.Is(err, test.wantErr) {
+					t.Errorf("want %v, got %v", test.wantErr, err)
 				}
 
 				return

@@ -78,129 +78,177 @@ func parseDatetimeOperand(operand *ResolvedValue) (time.Time, error) {
 	}
 }
 
+func validateDatetimeOptions(options Options) error {
+	validate := oneOf(
+		"calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
+		"month", "hour", "minute", "second", "fractionalSecondDigits",
+		"dateStyle", "timeStyle", "timeZone", "year", "day", "timeZoneName",
+		"dateLength", "timePrecision", "dateFields", "hour12", "timeZoneStyle",
+	)
+
+	for opt := range options {
+		err := validate(opt)
+		if err != nil {
+			return err
+		}
+
+		switch opt {
+		case "calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
+			"month", "hour", "minute", "second", "fractionalSecondDigits",
+			"dateFields", "hour12", "timeZoneStyle":
+			return fmt.Errorf(`option "%s" is not implemented`, opt)
+		}
+	}
+
+	return nil
+}
+
 // parseDatetimeOptions parses :datetime options.
 func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
-	errorf := func(format string, args ...any) (*datetimeOptions, error) {
-		return nil, fmt.Errorf("parse options: "+format, args...)
+	errorf := func(err error) (*datetimeOptions, error) {
+		return nil, fmt.Errorf("%w: parse options: %w", mf2.ErrBadOption, err)
 	}
 
 	if len(options) == 0 {
 		return &datetimeOptions{DateStyle: "medium", TimeStyle: "short"}, nil
 	}
 
-	for opt := range options {
-		switch opt {
-		case "calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
-			"month", "hour", "minute", "second", "fractionalSecondDigits":
-			return errorf(`option "%s" is not implemented`, opt)
-		}
+	err := validateDatetimeOptions(options)
+	if err != nil {
+		return errorf(err)
 	}
 
 	var (
-		opts datetimeOptions
-		err  error
+		opts      datetimeOptions
+		precision string
 	)
 
 	dateStyles := oneOf("full", "long", "medium", "short")
 
-	opts.DateStyle, err = options.GetString("dateStyle", "", dateStyles)
+	if _, ok := options["dateLength"]; ok && options["dateStyle"] == nil {
+		opts.DateStyle, err = options.GetString("dateLength", "", dateStyles)
+	} else {
+		opts.DateStyle, err = options.GetString("dateStyle", "", dateStyles)
+	}
+
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	timeStyles := oneOf("full", "long", "medium", "short")
+	timePrecisions := oneOf("hour", "minute", "second")
 
-	opts.TimeStyle, err = options.GetString("timeStyle", "", timeStyles)
-	if err != nil {
-		return errorf("%w", err)
+	if _, ok := options["timePrecision"]; ok && options["timeStyle"] == nil {
+		precision, err = options.GetString("timePrecision", "", timePrecisions)
+		if err != nil {
+			return errorf(err)
+		}
+
+		switch precision {
+		case "second":
+			opts.TimeStyle = "medium"
+		case "minute", "hour":
+			opts.TimeStyle = "short"
+		}
+	} else {
+		opts.TimeStyle, err = options.GetString("timeStyle", "", timeStyles)
+		if err != nil {
+			return errorf(err)
+		}
 	}
 
 	opts.TimeZone, err = getTZ(options)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	hourCycles := oneOf("h11", "h12", "h23", "h24")
 
 	opts.HourCycle, err = options.GetString("hourCycle", "", hourCycles)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	dayPeriods := oneOf("short", "long")
 
 	opts.DayPeriod, err = options.GetString("dayPeriod", "", dayPeriods)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	weekdays := oneOf("narrow", "short", "long")
 
 	opts.Weekday, err = options.GetString("weekday", "", weekdays)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	eras := oneOf("narrow", "short", "long")
 
 	opts.Era, err = options.GetString("era", "", eras)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	years := oneOf("numeric", "2-digit")
 
 	opts.Year, err = options.GetString("year", "", years)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	months := oneOf("numeric", "2-digit", "narrow", "short", "long")
 
 	opts.Month, err = options.GetString("month", "", months)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	days := oneOf("numeric", "2-digit")
 
 	opts.Day, err = options.GetString("day", "", days)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	hours := oneOf("numeric", "2-digit")
 
 	opts.Hour, err = options.GetString("hour", "", hours)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	minutes := oneOf("numeric", "2-digit")
 
 	opts.Minute, err = options.GetString("minute", "", minutes)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	seconds := oneOf("numeric", "2-digit")
 
 	opts.Second, err = options.GetString("second", "", seconds)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
-	//nolint:mnd
-	opts.FractionalSecondDigits, err = options.GetInt("fractionalSecondDigits", 0, oneOf(1, 2, 3))
+	const (
+		minFractionalDigits = 1
+		medFractionalDigits = 2
+		maxFractionalDigits = 3
+	)
+
+	opts.FractionalSecondDigits, err = options.GetInt("fractionalSecondDigits", 0,
+		oneOf(minFractionalDigits, medFractionalDigits, maxFractionalDigits))
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	timeZoneNames := oneOf("long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric")
 
 	opts.TimeZoneName, err = options.GetString("timeZoneName", "", timeZoneNames)
 	if err != nil {
-		return errorf("%w", err)
+		return errorf(err)
 	}
 
 	return &opts, nil

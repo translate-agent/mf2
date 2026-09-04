@@ -3,6 +3,7 @@ package template
 import (
 	"fmt"
 
+	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/unicode/norm"
 )
@@ -11,7 +12,7 @@ import (
 // Formatting of strings as a literal and selection based on string equality.
 func stringFunc(operand *ResolvedValue, options Options, _ language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
-		return nil, fmt.Errorf("exec string function: "+format, args...)
+		return nil, fmt.Errorf("%w: exec string function: "+format, append([]any{mf2.ErrBadOption}, args...)...)
 	}
 
 	if len(options) > 0 {

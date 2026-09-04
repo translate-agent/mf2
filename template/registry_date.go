@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
 )
 
@@ -21,7 +22,21 @@ type dateOptions struct {
 // parseDateOptions parses :date options.
 func parseDateOptions(options Options) (*dateOptions, error) {
 	errorf := func(format string, args ...any) (*dateOptions, error) {
-		return nil, fmt.Errorf("parse options: "+format, args...)
+		return nil, fmt.Errorf("%w: parse options: "+format, append([]any{mf2.ErrBadOption}, args...)...)
+	}
+
+	validate := oneOf("style", "length", "timeZone", "calendar", "fields")
+
+	for k := range options {
+		err := validate(k)
+		if err != nil {
+			return errorf("%w", err)
+		}
+
+		switch k {
+		case "calendar", "fields":
+			return errorf(`option "%s" is not implemented`, k)
+		}
 	}
 
 	var (
@@ -31,7 +46,12 @@ func parseDateOptions(options Options) (*dateOptions, error) {
 
 	styles := oneOf("full", "long", "medium", "short")
 
-	opts.Style, err = options.GetString("style", "short", styles)
+	if _, ok := options["length"]; ok && options["style"] == nil {
+		opts.Style, err = options.GetString("length", "short", styles)
+	} else {
+		opts.Style, err = options.GetString("style", "short", styles)
+	}
+
 	if err != nil {
 		return errorf("%w", err)
 	}
