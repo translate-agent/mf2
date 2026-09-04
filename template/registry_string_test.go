@@ -1,9 +1,11 @@
 package template
 
 import (
+	"errors"
 	"testing"
 	"time"
 
+	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
 )
 
@@ -11,11 +13,11 @@ func Test_String(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		input   any
 		options map[string]any
+		wantErr error
+		input   any
+		name    string
 		want    string
-		wantErr bool
 	}{
 		// positive
 		{
@@ -41,7 +43,7 @@ func Test_String(t *testing.T) {
 			name:    "illegal options", // string function does not support any options
 			input:   2,
 			options: map[string]any{"will": "fail"},
-			wantErr: true,
+			wantErr: mf2.ErrBadOption,
 		},
 	}
 
@@ -55,9 +57,9 @@ func Test_String(t *testing.T) {
 			}
 
 			v, err := stringFunc(NewResolvedValue(test.input), opts, language.AmericanEnglish)
-			if test.wantErr {
-				if err == nil {
-					t.Error("want error, got nil")
+			if test.wantErr != nil {
+				if !errors.Is(err, test.wantErr) {
+					t.Errorf("want %v, got %v", test.wantErr, err)
 				}
 
 				if v != nil {

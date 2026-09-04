@@ -1,9 +1,11 @@
 package template
 
 import (
+	"errors"
 	"testing"
 	"time"
 
+	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
 )
 
@@ -13,11 +15,11 @@ func Test_Datetime(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		input   any
 		options map[string]any
+		wantErr error
+		input   any
 		name    string
 		want    string
-		wantErr bool
 	}{
 		// positive tests
 		{
@@ -31,6 +33,24 @@ func Test_Datetime(t *testing.T) {
 			input:   testDate,
 			options: map[string]any{"dateStyle": "full"},
 			want:    "Saturday, 02 January 2021",
+		},
+		{
+			name:    "dateLength",
+			input:   testDate,
+			options: map[string]any{"dateLength": "full"},
+			want:    "Saturday, 02 January 2021",
+		},
+		{
+			name:    "dateStyle overrides dateLength",
+			input:   testDate,
+			options: map[string]any{"dateStyle": "short", "dateLength": "full"},
+			want:    "02/01/21",
+		},
+		{
+			name:    "dateLength and timePrecision",
+			input:   testDate,
+			options: map[string]any{"dateLength": "short", "timePrecision": "second"},
+			want:    "02/01/21 03:04:05",
 		},
 		{
 			name:    "timeStyle",
@@ -68,18 +88,66 @@ func Test_Datetime(t *testing.T) {
 			options: map[string]any{"day": "2-digit"},
 			want:    "02",
 		},
+		{
+			name:    "timePrecision second",
+			input:   testDate,
+			options: map[string]any{"timePrecision": "second"},
+			want:    "03:04:05",
+		},
+		{
+			name:    "timePrecision minute",
+			input:   testDate,
+			options: map[string]any{"timePrecision": "minute"},
+			want:    "03:04",
+		},
 		// negative tests
 		{
 			name:    "not implemented",
 			input:   testDate,
 			options: map[string]any{"calendar": "buddhist"},
-			wantErr: true,
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "unimplemented dateFields",
+			input:   testDate,
+			options: map[string]any{"dateFields": "month-day"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "illegal timePrecision",
+			input:   testDate,
+			options: map[string]any{"timePrecision": "invalid"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "illegal dateLength",
+			input:   testDate,
+			options: map[string]any{"dateLength": "invalid"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "unimplemented hour12",
+			input:   testDate,
+			options: map[string]any{"hour12": true},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "unimplemented timeZoneStyle",
+			input:   testDate,
+			options: map[string]any{"timeZoneStyle": "short"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "illegal option",
+			input:   testDate,
+			options: map[string]any{"invalid": "option"},
+			wantErr: mf2.ErrBadOption,
 		},
 		{
 			name:    "illegal type",
 			input:   struct{}{},
 			options: nil,
-			wantErr: true,
+			wantErr: mf2.ErrBadOperand,
 		},
 	}
 
@@ -93,10 +161,9 @@ func Test_Datetime(t *testing.T) {
 			}
 
 			v, err := datetimeFunc(NewResolvedValue(test.input), opts, language.AmericanEnglish)
-
-			if test.wantErr {
-				if err == nil {
-					t.Error("want error, got nil")
+			if test.wantErr != nil {
+				if !errors.Is(err, test.wantErr) {
+					t.Errorf("want %v, got %v", test.wantErr, err)
 				}
 
 				return

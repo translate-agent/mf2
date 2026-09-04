@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
 )
 
@@ -21,19 +22,49 @@ type timeOptions struct {
 // parseTimeOptions parses :time options.
 func parseTimeOptions(options Options) (*timeOptions, error) {
 	errorf := func(format string, args ...any) (*timeOptions, error) {
-		return nil, fmt.Errorf("parse options: "+format, args...)
+		return nil, fmt.Errorf("%w: parse options: "+format, append([]any{mf2.ErrBadOption}, args...)...)
+	}
+
+	validate := oneOf("style", "precision", "timeZone", "calendar", "hour12", "timeZoneStyle")
+
+	for k := range options {
+		err := validate(k)
+		if err != nil {
+			return errorf("%w", err)
+		}
+
+		switch k {
+		case "calendar", "hour12", "timeZoneStyle":
+			return errorf(`option "%s" is not implemented`, k)
+		}
 	}
 
 	var (
-		opts timeOptions
-		err  error
+		opts      timeOptions
+		precision string
+		err       error
 	)
 
 	styles := oneOf("full", "long", "medium", "short")
+	precisions := oneOf("hour", "minute", "second")
 
-	opts.Style, err = options.GetString("style", "short", styles)
-	if err != nil {
-		return errorf("%w", err)
+	if _, ok := options["precision"]; ok && options["style"] == nil {
+		precision, err = options.GetString("precision", "minute", precisions)
+		if err != nil {
+			return errorf("%w", err)
+		}
+
+		switch precision {
+		case "second":
+			opts.Style = "medium"
+		case "minute", "hour":
+			opts.Style = "short"
+		}
+	} else {
+		opts.Style, err = options.GetString("style", "short", styles)
+		if err != nil {
+			return errorf("%w", err)
+		}
 	}
 
 	opts.TimeZone, err = getTZ(options)

@@ -118,11 +118,11 @@ func NewRegistry() Registry {
 type Validate[T any] func(T) error
 
 func oneOf[T comparable](values ...T) func(T) error {
-	return func(value T) error {
-		if len(values) == 0 {
-			return nil
-		}
+	if len(values) == 0 {
+		panic("oneOf: values cannot be empty")
+	}
 
+	return func(value T) error {
 		if slices.Contains(values, value) {
 			return nil
 		}

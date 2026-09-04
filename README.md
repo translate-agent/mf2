@@ -62,7 +62,7 @@ List of the default functions registered in the function registry. The functions
 | number   | format    | maximumSignificantDigits                                                                          |  ✅︎   |
 | number   | format    | minimumFractionDigits                                                                             |  ✅︎   |
 | number   | format    | minimumIntegerDigits                                                                              |  ✅︎   |
-| number   | format    | minimumSignificantDigits                                                                          |   ❌   |
+| number   | format    | minimumSignificantDigits                                                                          |  ✅︎   |
 | number   | format    | roundingIncrement                                                                                 |   ❌   |
 | number   | format    | roundingMode (ceil, floor, expand, trunc, halfCeil, halfFloor, halfExpand, halfTrunc, halfEven)          |   ❌   |
 | number   | format    | roundingPriority (auto, morePrecision, lessPrecision)                                             |   ❌   |
@@ -73,7 +73,7 @@ List of the default functions registered in the function registry. The functions
 | number   | match     | maximumSignificantDigits                                                                          |  ✅︎   |
 | number   | match     | minimumFractionDigits                                                                             |  ✅︎   |
 | number   | match     | minimumIntegerDigits                                                                              |  ✅︎   |
-| number   | match     | minimumSignificantDigits                                                                          |   ❌   |
+| number   | match     | minimumSignificantDigits                                                                          |  ✅︎   |
 | number   | match     | select (plural, ordinal, exact)                                                                   |  ✅︎   |
 | offset   | format    | add                                                                                               |   ❌   |
 | offset   | format    | subtract                                                                                          |   ❌   |

@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"math"
+	"strconv"
+	"strings"
 
 	"go.expect.digital/mf2"
 	"golang.org/x/text/currency"
@@ -162,13 +165,16 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		return nil, fmt.Errorf("%w: "+format, append([]any{mf2.ErrBadOption}, args...)...)
 	}
 
+	validate := oneOf(
+		"compactDisplay", "currency", "currencyDisplay", "currencySign", "notation", "numberingSystem",
+		"signDisplay", "style", "unit", "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits",
+		"maximumFractionDigits", "minimumSignificantDigits", "maximumSignificantDigits", "select", "useGrouping",
+	)
+
 	for k := range opts {
-		switch k {
-		default:
-			return errorf("unsupported option: %s", k)
-		case "compactDisplay", "currency", "currencyDisplay", "currencySign", "notation", "numberingSystem",
-			"signDisplay", "style", "unit", "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits",
-			"maximumFractionDigits", "minimumSignificantDigits", "maximumSignificantDigits", "select", "useGrouping": // noop
+		err := validate(k)
+		if err != nil {
+			return errorf("%w", err)
 		}
 	}
 
@@ -264,45 +270,99 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		return errorf("%w", err)
 	}
 
-	unitDisplays := oneOf("short", "narrow")
+	unitDisplays := oneOf("short", "narrow", "long")
 
 	options.UnitDisplay, err = opts.GetString("unitDisplay", "short", unitDisplays)
 	if err != nil {
 		return errorf("%w", err)
 	}
 
-	options.MinimumIntegerDigits, err = opts.GetInt("minimumIntegerDigits", 1, eqOrGreaterThan(1))
-	if err != nil {
-		return errorf("%w", err)
-	}
-
-	options.MinimumFractionDigits, err = opts.GetInt("minimumFractionDigits", 0, eqOrGreaterThan(0))
-	if err != nil {
-		return errorf("%w", err)
-	}
-
-	var maxFractionDigits int // percent default
-
-	if options.Style == "decimal" {
-		maxFractionDigits = 3 // decimal default
-	}
-
-	options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, eqOrGreaterThan(0))
-	if err != nil {
-		return errorf("%w", err)
-	}
-
-	options.MinimumSignificantDigits, err = opts.GetInt("minimumSignificantDigits", 1, eqOrGreaterThan(1))
-	if err != nil {
-		return errorf("%w", err)
-	}
-
-	options.MaximumSignificantDigits, err = opts.GetInt("maximumSignificantDigits", -1)
+	err = parseDigitOptions(opts, &options)
 	if err != nil {
 		return errorf("%w", err)
 	}
 
 	return &options, nil
+}
+
+func parseDigitOptions(opts Options, options *numberOptions) error {
+	var err error
+
+	options.MinimumIntegerDigits, err = opts.GetInt("minimumIntegerDigits", 1, eqOrGreaterThan(1))
+	if err != nil {
+		return err
+	}
+
+	options.MinimumFractionDigits, err = opts.GetInt("minimumFractionDigits", 0, eqOrGreaterThan(0))
+	if err != nil {
+		return err
+	}
+
+	options.MinimumSignificantDigits, err = opts.GetInt("minimumSignificantDigits", 0, eqOrGreaterThan(1))
+	if err != nil {
+		return err
+	}
+
+	options.MaximumSignificantDigits, err = opts.GetInt("maximumSignificantDigits", -1, eqOrGreaterThan(1))
+	if err != nil {
+		return err
+	}
+
+	if options.MaximumSignificantDigits > 0 && options.MinimumSignificantDigits > options.MaximumSignificantDigits {
+		return fmt.Errorf("minimumSignificantDigits (%d) cannot be greater than maximumSignificantDigits (%d)",
+			options.MinimumSignificantDigits, options.MaximumSignificantDigits)
+	}
+
+	var maxFractionDigits int
+
+	switch {
+	case options.MinimumSignificantDigits > 0 || options.MaximumSignificantDigits != -1:
+		maxFractionDigits = -1
+	case options.Style == "decimal":
+		maxFractionDigits = 3
+	default:
+		maxFractionDigits = 0
+	}
+
+	options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, eqOrGreaterThan(0))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// minFractionDigitsForSigDigits returns the minimum fraction digits required to satisfy minSig significant digits,
+// accounting for rounding when maxSig > 0.
+func minFractionDigitsForSigDigits(val float64, minSig, maxSig int) int {
+	if minSig <= 0 {
+		return 0
+	}
+
+	val = math.Abs(val)
+	if math.IsNaN(val) || math.IsInf(val, 0) {
+		return 0
+	}
+
+	if val == 0 {
+		return max(0, minSig-1)
+	}
+
+	prec := -1
+	if maxSig > 0 {
+		prec = maxSig - 1
+	}
+
+	s := strconv.FormatFloat(val, 'e', prec, 64)
+
+	_, expStr, ok := strings.Cut(s, "e")
+	if !ok {
+		return 0
+	}
+
+	exp, _ := strconv.Atoi(expStr)
+
+	return max(0, minSig-(exp+1))
 }
 
 func applySignDisplay(result string, signDisplay string, value float64) string {
@@ -359,10 +419,26 @@ func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*
 		opts.DisableSelect = true
 	}
 
+	calcVal := value
+
+	if opts.Style == "percent" {
+		const percentMultiplier = 100
+
+		calcVal = value * percentMultiplier
+	}
+
+	minFrac := max(opts.MinimumFractionDigits,
+		minFractionDigitsForSigDigits(calcVal, opts.MinimumSignificantDigits, opts.MaximumSignificantDigits))
+
+	maxFrac := opts.MaximumFractionDigits
+	if maxFrac >= 0 && minFrac > maxFrac {
+		maxFrac = minFrac
+	}
+
 	p := message.NewPrinter(locale)
 	numberOpts := []number.Option{
-		number.MinFractionDigits(opts.MinimumFractionDigits),
-		number.MaxFractionDigits(opts.MaximumFractionDigits),
+		number.MinFractionDigits(minFrac),
+		number.MaxFractionDigits(maxFrac),
 		number.MinIntegerDigits(opts.MinimumIntegerDigits),
 		number.Precision(opts.MaximumSignificantDigits),
 	}
@@ -392,19 +468,21 @@ func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*
 		}
 
 		scale := -1
-		if opts.MaximumFractionDigits == 0 {
+		if opts.MaximumFractionDigits == 0 && minFrac == 0 {
 			// most likely integer formatting
 			scale = 0
 		}
 
 		digits := num.Digits(nil, locale, scale)
 
+		fracDigits := max(int(digits.End-digits.Exp), minFrac)
+
 		var form plural.Form
 
 		if opts.Select == "ordinal" {
-			form = plural.Ordinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
+			form = plural.Ordinal.MatchDigits(locale, digits.Digits, int(digits.Exp), fracDigits)
 		} else {
-			form = plural.Cardinal.MatchDigits(locale, digits.Digits, int(digits.Exp), int(digits.End-digits.Exp))
+			form = plural.Cardinal.MatchDigits(locale, digits.Digits, int(digits.Exp), fracDigits)
 		}
 
 		return pluralFormString(form)
