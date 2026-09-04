@@ -83,7 +83,7 @@ func (o Options) GetInt(name string, fallback int, validate ...Validate[int]) (i
 	}
 
 	for _, f := range validate {
-		err := f(i)
+		err = f(i)
 		if err != nil {
 			return errorf("%w", err)
 		}
