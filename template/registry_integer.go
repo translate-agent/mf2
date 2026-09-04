@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"math"
 
 	"golang.org/x/text/language"
 )
@@ -16,7 +17,23 @@ func integerFunc(operand *ResolvedValue, options Options, locale language.Tag) (
 
 	value, err := numberFunc(operand, options, locale)
 	if err != nil {
-		return nil, fmt.Errorf("exec integer func: %w", err)
+		if value == nil {
+			return nil, fmt.Errorf("exec integer func: %w", err)
+		}
+
+		value.function = ":integer"
+
+		if v, ok := value.value.(float64); ok {
+			value.value = math.Trunc(v)
+		}
+
+		return value, fmt.Errorf("exec integer func: %w", err)
+	}
+
+	value.function = ":integer"
+
+	if v, ok := value.value.(float64); ok {
+		value.value = math.Trunc(v)
 	}
 
 	return value, nil

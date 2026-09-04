@@ -3,6 +3,8 @@ package template_test
 import (
 	"fmt"
 	"os"
+	"slices"
+	"strconv"
 
 	"go.expect.digital/mf2"
 	"go.expect.digital/mf2/template"
@@ -47,68 +49,189 @@ func ExampleTemplate_simpleMessage() {
 }
 
 func ExampleTemplate_complexMessage() {
-	// Define a MF2 string.
-	const input = `.local $age = { 42 }
-.input { $color :color style=RGB}
-{{John is { $age } years old and his favorite color is { $color }.}}`
+	// Define an MF2 complex message with input and local declarations.
+	const input = `.input { $temp :number signDisplay=always }
+.local $city = { Oslo }
+{{The current temperature in {$city} is {$temp} degrees.}}`
 
-	color := func(value *template.ResolvedValue, options template.Options, _ language.Tag) (*template.ResolvedValue, error) { //nolint:lll
-		errorf := func(format string, args ...any) (*template.ResolvedValue, error) {
-			return nil, fmt.Errorf("exec color function: "+format, args...)
-		}
+	t, err := template.New().Parse(input)
+	if err != nil {
+		panic(err)
+	}
 
+	err = t.Execute(os.Stdout, map[string]any{"temp": 18})
+	if err != nil {
+		panic(err)
+	}
+
+	// Output: The current temperature in Oslo is +18 degrees.
+}
+
+func ExampleTemplate_match() {
+	// Define an MF2 complex message with variant selection (.match).
+	const input = `.input { $count :number }
+.match $count
+one {{{$count} item}}
+*   {{{$count} items}}`
+
+	t, err := template.New().Parse(input)
+	if err != nil {
+		panic(err)
+	}
+
+	err = t.Execute(os.Stdout, map[string]any{"count": 1})
+	if err != nil {
+		panic(err)
+	}
+
+	// Output: 1 item
+}
+
+func ExampleTemplate_Sprint() {
+	const input = "Hello, {$name}!"
+
+	t, err := template.New().Parse(input)
+	if err != nil {
+		panic(err)
+	}
+
+	msg, err := t.Sprint(map[string]any{"name": "Alice"})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(msg)
+
+	// Output: Hello, Alice!
+}
+
+func ExampleWithLocale() {
+	const input = "Total: {$amount :number maximumFractionDigits=2}"
+
+	t, err := template.New(template.WithLocale(language.German)).Parse(input)
+	if err != nil {
+		panic(err)
+	}
+
+	msg, err := t.Sprint(map[string]any{"amount": 1234.5})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(msg)
+
+	// Output: Total: 1.234,5
+}
+
+func ExampleWithFunc() {
+	// Custom formatting function that formats color names into HEX or RGB.
+	color := func(
+		value *template.ResolvedValue,
+		options template.Options,
+		_ language.Tag,
+	) (*template.ResolvedValue, error) {
 		if value == nil {
-			return errorf("input is required: %w", mf2.ErrBadOperand)
+			return nil, fmt.Errorf("input is required: %w", mf2.ErrBadOperand)
 		}
 
-		color := value.String()
+		colorName := value.String()
 
 		format := func() string {
-			if len(options) == 0 {
-				return color
-			}
-
 			style, err := options.GetString("style", "RGB")
 			if err != nil {
-				return color
+				return colorName
 			}
-
-			var result string
 
 			switch style {
 			case "RGB":
-				switch color {
+				switch colorName {
 				case "red":
-					result = "255,0,0"
+					return "255, 0, 0"
 				case "green":
-					result = "0,255,0"
+					return "0, 255, 0"
 				case "blue":
-					result = "0,0,255"
+					return "0, 0, 255"
 				}
-			case "HEX": // Other Implementations
-			case "HSL": // Other Implementations
+			case "HEX":
+				switch colorName {
+				case "red":
+					return "#FF0000"
+				case "green":
+					return "#00FF00"
+				case "blue":
+					return "#0000FF"
+				}
 			}
 
-			return result
+			return colorName
 		}
 
-		return template.NewResolvedValue(color, template.WithFormat(format)), nil
+		return template.NewResolvedValue(colorName, template.WithFormat(format)), nil
 	}
 
-	// Parse template.
+	const input = "Favorite color: { $color :color style=HEX }."
+
 	t, err := template.New(template.WithFunc("color", color)).Parse(input)
 	if err != nil {
 		panic(err)
 	}
 
-	// Execute the template.
-	err = t.Execute(os.Stdout, map[string]any{"color": "red"})
+	msg, err := t.Sprint(map[string]any{"color": "red"})
 	if err != nil {
 		panic(err)
 	}
 
-	// Output: John is 42 years old and his favorite color is 255,0,0.
+	fmt.Println(msg)
+
+	// Output: Favorite color: #FF0000.
 }
 
-// TODO(mvilks): come up with a good example of the ResolvedValue usage that requires access to the raw value.
-// E.g. function ":parity" that returns a localized name for "odd"/"even".
+func ExampleWithSelectKey() {
+	// Custom selector function that matches even or odd numbers in .match expressions.
+	parity := func(operand *template.ResolvedValue, _ template.Options, _ language.Tag) (*template.ResolvedValue, error) {
+		if operand == nil {
+			return nil, fmt.Errorf("operand is required: %w", mf2.ErrBadOperand)
+		}
+
+		num, err := strconv.Atoi(operand.String())
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", mf2.ErrBadOperand, err)
+		}
+
+		selectKey := func(keys []string) string {
+			key := "odd"
+			if num%2 == 0 {
+				key = "even"
+			}
+
+			if slices.Contains(keys, key) {
+				return key
+			}
+
+			return ""
+		}
+
+		return template.NewResolvedValue(operand, template.WithSelectKey(selectKey)), nil
+	}
+
+	const input = `.input { $count }
+.local $p = { $count :parity }
+.match $p
+even {{Count {$count} is even}}
+odd  {{Count {$count} is odd}}
+*    {{Count {$count} is other}}`
+
+	t, err := template.New(template.WithFunc("parity", parity)).Parse(input)
+	if err != nil {
+		panic(err)
+	}
+
+	msg, err := t.Sprint(map[string]any{"count": 42})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(msg)
+
+	// Output: Count 42 is even
+}

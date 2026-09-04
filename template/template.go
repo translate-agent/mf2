@@ -76,14 +76,16 @@ func (t *Template) Direction() Direction {
 // ResolvedValue keeps the result of the Expression resolution with optionally
 // defined format() and selectKey() functions for Format and Select contexts.
 type ResolvedValue struct {
-	value     any
-	selectKey func(keys []string) string
-	format    func() string
-	options   Options
-	err       error
-	function  string
-	dir       Direction
-	isolate   bool
+	value      any
+	selectKey  func(keys []string) string
+	format     func() string
+	options    Options
+	err        error
+	function   string
+	dir        Direction
+	isolate    bool
+	isLiteral  bool
+	isFallback bool
 }
 
 // NewResolvedValue creates a new variable of type [*ResolvedValue].
@@ -91,7 +93,7 @@ type ResolvedValue struct {
 func NewResolvedValue(value any, options ...ResolvedValueOpt) *ResolvedValue {
 	resolved, ok := value.(*ResolvedValue)
 	if !ok {
-		resolved = &ResolvedValue{value: value}
+		resolved = &ResolvedValue{value: value, isLiteral: true}
 	}
 
 	for _, f := range options {
@@ -204,7 +206,10 @@ func withFunction(funcName string, opts Options) ResolvedValueOpt {
 
 func newFallbackValue(expr ast.Expression) *ResolvedValue {
 	wrap := func(v string) *ResolvedValue {
-		return NewResolvedValue("{" + v + "}")
+		rv := NewResolvedValue("{" + v + "}")
+		rv.isFallback = true
+
+		return rv
 	}
 
 	switch v := expr.Operand.(type) {
@@ -413,7 +418,11 @@ func (e *executer) resolveDeclarations(declarations []ast.Declaration) error { /
 		case ast.LocalDeclaration:
 			resolved, err := e.resolveExpression(d.Expression)
 			if err != nil {
-				resolved = NewResolvedValue("{" + d.Variable.String() + "}")
+				if resolved == nil || resolved.isFallback {
+					resolved = NewResolvedValue("{" + d.Variable.String() + "}")
+					resolved.isFallback = true
+				}
+
 				resolved.err = errors.Join(resolved.err, fmt.Errorf("resolve local %s: %w", d.Variable, err))
 			}
 
@@ -646,7 +655,12 @@ func (e *executer) resolveExpression(expr ast.Expression) (*ResolvedValue, error
 
 	result, err := f(NewResolvedValue(value), options, e.template.locale)
 	if err != nil {
-		return newFallbackValue(expr), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
+		if result == nil {
+			return newFallbackValue(expr), errors.Join(resolutionErr, fmt.Errorf("expression: %w", err))
+		}
+
+		result.err = errors.Join(result.err, err)
+		resolutionErr = errors.Join(resolutionErr, err)
 	}
 
 	applyDirection(result, udir, value, e.dir)
@@ -687,7 +701,23 @@ func (e *executer) resolveOptions(options []ast.Option) (Options, error) {
 			return nil, fmt.Errorf("option: %w", err)
 		}
 
-		m[opt.Identifier.String()] = NewResolvedValue(value)
+		var isLiteral bool
+
+		switch opt.Value.(type) {
+		case ast.QuotedLiteral, ast.NameLiteral:
+			isLiteral = true
+		}
+
+		rv := &ResolvedValue{
+			value:     value,
+			isLiteral: isLiteral,
+		}
+		if r, ok := value.(*ResolvedValue); ok {
+			rv.value = r.value
+			rv.err = r.err
+		}
+
+		m[opt.Identifier.String()] = rv
 	}
 
 	return m, nil
