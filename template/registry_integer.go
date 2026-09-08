@@ -9,16 +9,18 @@ import (
 	"golang.org/x/text/language"
 )
 
+var validIntegerOption = oneOf(
+	"minimumIntegerDigits", "maximumSignificantDigits", "signDisplay", "useGrouping", "select",
+)
+
 // integerFunc is the implementation of the integer function. Locale-sensitive integer formatting.
 func integerFunc(operand *ResolvedValue, options Options, locale language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
 		return nil, fmt.Errorf("%w: exec integer function: "+format, append([]any{mf2.ErrBadOption}, args...)...)
 	}
 
-	validate := oneOf("minimumIntegerDigits", "maximumSignificantDigits", "signDisplay", "useGrouping", "select")
-
 	for k := range options {
-		err := validate(k)
+		err := validIntegerOption(k)
 		if err != nil {
 			return errorf("%w", err)
 		}
@@ -36,7 +38,7 @@ func integerFunc(operand *ResolvedValue, options Options, locale language.Tag) (
 		cp.options = make(Options)
 
 		for k, v := range operand.options {
-			if validate(k) == nil {
+			if validIntegerOption(k) == nil {
 				cp.options[k] = v
 			}
 		}

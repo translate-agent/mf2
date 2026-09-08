@@ -1,12 +1,43 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"go.expect.digital/intl"
 	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
+)
+
+const (
+	minFractionalDigits = 1
+	medFractionalDigits = 2
+	maxFractionalDigits = 3
+)
+
+var (
+	validDatetimeOption = oneOf(
+		"calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
+		"month", "hour", "minute", "second", "fractionalSecondDigits",
+		"dateStyle", "timeStyle", "timeZone", "year", "day", "timeZoneName",
+		"dateLength", "timePrecision", "dateFields", "hour12", "timeZoneStyle",
+	)
+	validDatetimeDateStyle        = oneOf("full", "long", "medium", "short")
+	validDatetimeTimeStyle        = oneOf("full", "long", "medium", "short")
+	validDatetimeTimePrecision    = oneOf("hour", "minute", "second")
+	validDatetimeHourCycle        = oneOf("h11", "h12", "h23", "h24")
+	validDatetimeDayPeriod        = oneOf("short", "long")
+	validDatetimeWeekday          = oneOf("narrow", "short", "long")
+	validDatetimeEra              = oneOf("narrow", "short", "long")
+	validDatetimeYear             = oneOf("numeric", "2-digit")
+	validDatetimeMonth            = oneOf("numeric", "2-digit", "narrow", "short", "long")
+	validDatetimeDay              = oneOf("numeric", "2-digit")
+	validDatetimeHour             = oneOf("numeric", "2-digit")
+	validDatetimeMinute           = oneOf("numeric", "2-digit")
+	validDatetimeSecond           = oneOf("numeric", "2-digit")
+	validDatetimeFractionalDigits = oneOf(minFractionalDigits, medFractionalDigits, maxFractionalDigits)
+	validDatetimeTimeZoneName     = oneOf("long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric")
 )
 
 type datetimeOptions struct {
@@ -46,6 +77,8 @@ type datetimeOptions struct {
 	// The localized representation of the time zone name
 	// (long, short, shortOffset, longOffset, shortGeneric, longGeneric).
 	TimeZoneName string
+	// The fields to display (weekday, day-weekday, month-day, month-day-weekday, year-month-day, year-month-day-weekday).
+	DateFields string
 	// The number of fractional seconds to display (1, 2, 3).
 	FractionalSecondDigits int
 }
@@ -79,15 +112,8 @@ func parseDatetimeOperand(operand *ResolvedValue) (time.Time, error) {
 }
 
 func validateDatetimeOptions(options Options) error {
-	validate := oneOf(
-		"calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
-		"month", "hour", "minute", "second", "fractionalSecondDigits",
-		"dateStyle", "timeStyle", "timeZone", "year", "day", "timeZoneName",
-		"dateLength", "timePrecision", "dateFields", "hour12", "timeZoneStyle",
-	)
-
 	for opt := range options {
-		err := validate(opt)
+		err := validDatetimeOption(opt)
 		if err != nil {
 			return err
 		}
@@ -95,8 +121,19 @@ func validateDatetimeOptions(options Options) error {
 		switch opt {
 		case "calendar", "numberingSystem", "hourCycle", "dayPeriod", "weekday", "era",
 			"month", "hour", "minute", "second", "fractionalSecondDigits",
-			"dateFields", "hour12", "timeZoneStyle":
+			"hour12", "timeZoneStyle":
 			return fmt.Errorf(`option "%s" is not implemented`, opt)
+		case "dateFields":
+			if !options.isLiteral("dateFields") {
+				return errors.New(`option "dateFields" value must be a literal`)
+			}
+
+			val, err := options.GetString("dateFields", "", validDateFields)
+			if err != nil {
+				return err
+			}
+
+			return fmt.Errorf(`option "dateFields" with value "%s" is not implemented`, val)
 		}
 	}
 
@@ -123,23 +160,18 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 		precision string
 	)
 
-	dateStyles := oneOf("full", "long", "medium", "short")
-
 	if _, ok := options["dateLength"]; ok && options["dateStyle"] == nil {
-		opts.DateStyle, err = options.GetString("dateLength", "", dateStyles)
+		opts.DateStyle, err = options.GetString("dateLength", "", validDatetimeDateStyle)
 	} else {
-		opts.DateStyle, err = options.GetString("dateStyle", "", dateStyles)
+		opts.DateStyle, err = options.GetString("dateStyle", "", validDatetimeDateStyle)
 	}
 
 	if err != nil {
 		return errorf(err)
 	}
 
-	timeStyles := oneOf("full", "long", "medium", "short")
-	timePrecisions := oneOf("hour", "minute", "second")
-
 	if _, ok := options["timePrecision"]; ok && options["timeStyle"] == nil {
-		precision, err = options.GetString("timePrecision", "", timePrecisions)
+		precision, err = options.GetString("timePrecision", "", validDatetimeTimePrecision)
 		if err != nil {
 			return errorf(err)
 		}
@@ -151,7 +183,7 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 			opts.TimeStyle = "short"
 		}
 	} else {
-		opts.TimeStyle, err = options.GetString("timeStyle", "", timeStyles)
+		opts.TimeStyle, err = options.GetString("timeStyle", "", validDatetimeTimeStyle)
 		if err != nil {
 			return errorf(err)
 		}
@@ -162,91 +194,62 @@ func parseDatetimeOptions(options Options) (*datetimeOptions, error) {
 		return errorf(err)
 	}
 
-	hourCycles := oneOf("h11", "h12", "h23", "h24")
-
-	opts.HourCycle, err = options.GetString("hourCycle", "", hourCycles)
+	opts.HourCycle, err = options.GetString("hourCycle", "", validDatetimeHourCycle)
 	if err != nil {
 		return errorf(err)
 	}
 
-	dayPeriods := oneOf("short", "long")
-
-	opts.DayPeriod, err = options.GetString("dayPeriod", "", dayPeriods)
+	opts.DayPeriod, err = options.GetString("dayPeriod", "", validDatetimeDayPeriod)
 	if err != nil {
 		return errorf(err)
 	}
 
-	weekdays := oneOf("narrow", "short", "long")
-
-	opts.Weekday, err = options.GetString("weekday", "", weekdays)
+	opts.Weekday, err = options.GetString("weekday", "", validDatetimeWeekday)
 	if err != nil {
 		return errorf(err)
 	}
 
-	eras := oneOf("narrow", "short", "long")
-
-	opts.Era, err = options.GetString("era", "", eras)
+	opts.Era, err = options.GetString("era", "", validDatetimeEra)
 	if err != nil {
 		return errorf(err)
 	}
 
-	years := oneOf("numeric", "2-digit")
-
-	opts.Year, err = options.GetString("year", "", years)
+	opts.Year, err = options.GetString("year", "", validDatetimeYear)
 	if err != nil {
 		return errorf(err)
 	}
 
-	months := oneOf("numeric", "2-digit", "narrow", "short", "long")
-
-	opts.Month, err = options.GetString("month", "", months)
+	opts.Month, err = options.GetString("month", "", validDatetimeMonth)
 	if err != nil {
 		return errorf(err)
 	}
 
-	days := oneOf("numeric", "2-digit")
-
-	opts.Day, err = options.GetString("day", "", days)
+	opts.Day, err = options.GetString("day", "", validDatetimeDay)
 	if err != nil {
 		return errorf(err)
 	}
 
-	hours := oneOf("numeric", "2-digit")
-
-	opts.Hour, err = options.GetString("hour", "", hours)
+	opts.Hour, err = options.GetString("hour", "", validDatetimeHour)
 	if err != nil {
 		return errorf(err)
 	}
 
-	minutes := oneOf("numeric", "2-digit")
-
-	opts.Minute, err = options.GetString("minute", "", minutes)
+	opts.Minute, err = options.GetString("minute", "", validDatetimeMinute)
 	if err != nil {
 		return errorf(err)
 	}
 
-	seconds := oneOf("numeric", "2-digit")
-
-	opts.Second, err = options.GetString("second", "", seconds)
+	opts.Second, err = options.GetString("second", "", validDatetimeSecond)
 	if err != nil {
 		return errorf(err)
 	}
 
-	const (
-		minFractionalDigits = 1
-		medFractionalDigits = 2
-		maxFractionalDigits = 3
-	)
-
-	opts.FractionalSecondDigits, err = options.GetInt("fractionalSecondDigits", 0,
-		oneOf(minFractionalDigits, medFractionalDigits, maxFractionalDigits))
+	opts.FractionalSecondDigits, err = options.GetInt("fractionalSecondDigits", 0, validDatetimeFractionalDigits)
 	if err != nil {
 		return errorf(err)
 	}
 
-	timeZoneNames := oneOf("long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric")
-
-	opts.TimeZoneName, err = options.GetString("timeZoneName", "", timeZoneNames)
+	opts.TimeZoneName, err = options.GetString("timeZoneName", "", validDatetimeTimeZoneName)
 	if err != nil {
 		return errorf(err)
 	}

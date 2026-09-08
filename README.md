@@ -41,11 +41,11 @@ List of the default functions registered in the function registry. The functions
 | currency | format    | trailingZeroDisplay (auto, stripIfInteger)                                                        |   ❌   |
 | currency | format    | useGrouping (auto, always, never, min2)                                                            |   ❌   |
 | date     | format    | calendar                                                                                          |   ❌   |
-| date     | format    | fields (weekday, day-weekday, month-day, month-day-weekday, year-month-day, year-month-day-weekday) |   ❌   |
+| date     | format    | fields (weekday ✅︎, day-weekday ✅︎, month-day ✅︎, month-day-weekday ❌, year-month-day ✅︎, year-month-day-weekday ❌) |   ❌   |
 | date     | format    | length (long, medium, short)                                                                      |   ❌   |
 | date     | format    | timeZone                                                                                          |   ❌   |
 | datetime | format    | calendar                                                                                          |   ❌   |
-| datetime | format    | dateFields (weekday, day-weekday, month-day, month-day-weekday, year-month-day, year-month-day-weekday) |   ❌   |
+| datetime | format    | dateFields (weekday ✅︎, day-weekday ✅︎, month-day ✅︎, month-day-weekday ❌, year-month-day ✅︎, year-month-day-weekday ❌) |   ❌   |
 | datetime | format    | dateLength (long, medium, short)                                                                  |   ❌   |
 | datetime | format    | hour12 (true, false)                                                                              |   ❌   |
 | datetime | format    | timePrecision (hour, minute, second)                                                              |   ❌   |

@@ -8,6 +8,12 @@ import (
 	"golang.org/x/text/language"
 )
 
+var (
+	validTimeOption    = oneOf("style", "precision", "timeZone", "calendar", "hour12", "timeZoneStyle")
+	validTimeStyle     = oneOf("full", "long", "medium", "short")
+	validTimePrecision = oneOf("hour", "minute", "second")
+)
+
 type timeOptions struct {
 	// (default is UTC)
 	//
@@ -25,10 +31,8 @@ func parseTimeOptions(options Options) (*timeOptions, error) {
 		return nil, fmt.Errorf("%w: parse options: "+format, append([]any{mf2.ErrBadOption}, args...)...)
 	}
 
-	validate := oneOf("style", "precision", "timeZone", "calendar", "hour12", "timeZoneStyle")
-
 	for k := range options {
-		err := validate(k)
+		err := validTimeOption(k)
 		if err != nil {
 			return errorf("%w", err)
 		}
@@ -45,11 +49,8 @@ func parseTimeOptions(options Options) (*timeOptions, error) {
 		err       error
 	)
 
-	styles := oneOf("full", "long", "medium", "short")
-	precisions := oneOf("hour", "minute", "second")
-
 	if _, ok := options["precision"]; ok && options["style"] == nil {
-		precision, err = options.GetString("precision", "minute", precisions)
+		precision, err = options.GetString("precision", "minute", validTimePrecision)
 		if err != nil {
 			return errorf("%w", err)
 		}
@@ -61,7 +62,7 @@ func parseTimeOptions(options Options) (*timeOptions, error) {
 			opts.Style = "short"
 		}
 	} else {
-		opts.Style, err = options.GetString("style", "short", styles)
+		opts.Style, err = options.GetString("style", "short", validTimeStyle)
 		if err != nil {
 			return errorf("%w", err)
 		}
