@@ -63,7 +63,7 @@ List of the default functions registered in the function registry. The functions
 | number   | format    | minimumFractionDigits                                                                             |  ✅︎   |
 | number   | format    | minimumIntegerDigits                                                                              |  ✅︎   |
 | number   | format    | minimumSignificantDigits                                                                          |  ✅︎   |
-| number   | format    | roundingIncrement                                                                                 |   ❌   |
+| number   | format    | roundingIncrement                                                                                 |  ✅︎   |
 | number   | format    | roundingMode (ceil, floor, expand, trunc, halfCeil, halfFloor, halfExpand, halfTrunc, halfEven)          |   ❌   |
 | number   | format    | roundingPriority (auto, morePrecision, lessPrecision)                                             |   ❌   |
 | number   | format    | signDisplay (auto, always, exceptZero, negative, never)                                           |  ✅︎   |

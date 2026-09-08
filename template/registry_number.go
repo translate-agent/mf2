@@ -16,6 +16,31 @@ import (
 	"golang.org/x/text/number"
 )
 
+var (
+	validNumberSelect = oneOf("plural", "ordinal", "exact")
+
+	validNumberOption = oneOf(
+		"compactDisplay", "currency", "currencyDisplay", "currencySign", "notation", "numberingSystem",
+		"signDisplay", "style", "unit", "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits",
+		"maximumFractionDigits", "minimumSignificantDigits", "maximumSignificantDigits", "roundingIncrement",
+		"select", "useGrouping",
+	)
+
+	validNumberUseGrouping     = oneOf("auto", "always", "never", "min2")
+	validNumberCompactDisplay  = oneOf("short", "long")
+	validNumberCurrencyDisplay = oneOf("code", "symbol", "narrowSymbol", "name")
+	validNumberCurrencySign    = oneOf("standard", "accounting")
+	validNumberNotation        = oneOf("standard", "scientific", "engineering", "compact")
+	validNumberNumberingSystem = oneOf(
+		"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru", "hanidec", "khmr",
+		"knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec", "telu", "thai", "tibt",
+	)
+	validNumberSignDisplay       = oneOf("auto", "always", "exceptZero", "negative", "never")
+	validNumberStyle             = oneOf("decimal", "percent")
+	validNumberUnitDisplay       = oneOf("short", "narrow", "long")
+	validNumberRoundingIncrement = oneOf(1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000) //nolint:mnd
+)
+
 // parseNumberOperand parses resolved operand value.
 func parseNumberOperand(operand *ResolvedValue) (float64, error) {
 	errorf := func(format string, args ...any) (float64, error) {
@@ -131,6 +156,8 @@ type numberOptions struct {
 	MinimumSignificantDigits int
 	// The maximum number of significant digits to use.
 	MaximumSignificantDigits int
+	// The increment by which the number should be rounded.
+	RoundingIncrement int
 }
 
 func parseSelectOption(opts Options, options *numberOptions) error {
@@ -148,11 +175,9 @@ func parseSelectOption(opts Options, options *numberOptions) error {
 		return nil
 	}
 
-	validate := oneOf("plural", "ordinal", "exact")
-
 	var err error
 
-	options.Select, err = opts.GetString("select", "plural", validate)
+	options.Select, err = opts.GetString("select", "plural", validNumberSelect)
 	if err != nil {
 		return fmt.Errorf("%w: %w", mf2.ErrBadOption, err)
 	}
@@ -165,14 +190,8 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		return nil, fmt.Errorf("%w: "+format, append([]any{mf2.ErrBadOption}, args...)...)
 	}
 
-	validate := oneOf(
-		"compactDisplay", "currency", "currencyDisplay", "currencySign", "notation", "numberingSystem",
-		"signDisplay", "style", "unit", "unitDisplay", "minimumIntegerDigits", "minimumFractionDigits",
-		"maximumFractionDigits", "minimumSignificantDigits", "maximumSignificantDigits", "select", "useGrouping",
-	)
-
 	for k := range opts {
-		err := validate(k)
+		err := validNumberOption(k)
 		if err != nil {
 			return errorf("%w", err)
 		}
@@ -188,16 +207,12 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		return nil, err
 	}
 
-	useGroupings := oneOf("auto", "always", "never", "min2")
-
-	options.UseGrouping, err = opts.GetString("useGrouping", "auto", useGroupings)
+	options.UseGrouping, err = opts.GetString("useGrouping", "auto", validNumberUseGrouping)
 	if err != nil {
 		return errorf("%w", err)
 	}
 
-	compactDisplays := oneOf("short", "long")
-
-	options.CompactDisplay, err = opts.GetString("compactDisplay", "short", compactDisplays)
+	options.CompactDisplay, err = opts.GetString("compactDisplay", "short", validNumberCompactDisplay)
 	if err != nil {
 		return errorf("%w", err)
 	}
@@ -220,47 +235,32 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		}
 	}
 
-	currencyDisplays := oneOf("code", "symbol", "narrowSymbol", "name")
-
-	options.CurrencyDisplay, err = opts.GetString("currencyDisplay", "", currencyDisplays)
+	options.CurrencyDisplay, err = opts.GetString("currencyDisplay", "", validNumberCurrencyDisplay)
 	if err != nil {
 		return errorf("%w", err)
 	}
 
-	currencySigns := oneOf("standard", "accounting")
-
-	options.CurrencySign, err = opts.GetString("currencySign", "standard", currencySigns)
+	options.CurrencySign, err = opts.GetString("currencySign", "standard", validNumberCurrencySign)
 	if err != nil {
 		return errorf("%w", err)
 	}
 
-	notations := oneOf("standard", "scientific", "engineering", "compact")
-
-	options.Notation, err = opts.GetString("notation", "standard", notations)
+	options.Notation, err = opts.GetString("notation", "standard", validNumberNotation)
 	if err != nil {
 		return errorf("%w", err)
 	}
 
-	numberingSystems := oneOf(
-		"arab", "arabext", "bali", "beng", "deva", "fullwide", "gujr", "guru", "hanidec", "khmr",
-		"knda", "laoo", "latn", "limb", "mlym", "mong", "mymr", "orya", "tamldec", "telu", "thai", "tibt",
-	)
-
-	options.NumberingSystem, err = opts.GetString("numberingSystem", "", numberingSystems)
+	options.NumberingSystem, err = opts.GetString("numberingSystem", "", validNumberNumberingSystem)
 	if err != nil {
 		return errorf("%w", err)
 	}
 
-	signDisplays := oneOf("auto", "always", "exceptZero", "negative", "never")
-
-	options.SignDisplay, err = opts.GetString("signDisplay", "auto", signDisplays)
+	options.SignDisplay, err = opts.GetString("signDisplay", "auto", validNumberSignDisplay)
 	if err != nil {
 		return errorf("%w", err)
 	}
 
-	styles := oneOf("decimal", "percent")
-
-	options.Style, err = opts.GetString("style", "decimal", styles)
+	options.Style, err = opts.GetString("style", "decimal", validNumberStyle)
 	if err != nil {
 		return errorf("%w", err)
 	}
@@ -270,9 +270,12 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 		return errorf("%w", err)
 	}
 
-	unitDisplays := oneOf("short", "narrow", "long")
+	options.UnitDisplay, err = opts.GetString("unitDisplay", "short", validNumberUnitDisplay)
+	if err != nil {
+		return errorf("%w", err)
+	}
 
-	options.UnitDisplay, err = opts.GetString("unitDisplay", "short", unitDisplays)
+	options.RoundingIncrement, err = opts.GetInt("roundingIncrement", 1, validNumberRoundingIncrement)
 	if err != nil {
 		return errorf("%w", err)
 	}
@@ -311,6 +314,27 @@ func parseDigitOptions(opts Options, options *numberOptions) error {
 	if options.MaximumSignificantDigits > 0 && options.MinimumSignificantDigits > options.MaximumSignificantDigits {
 		return fmt.Errorf("minimumSignificantDigits (%d) cannot be greater than maximumSignificantDigits (%d)",
 			options.MinimumSignificantDigits, options.MaximumSignificantDigits)
+	}
+
+	if options.RoundingIncrement > 1 {
+		if options.MinimumSignificantDigits > 0 || options.MaximumSignificantDigits != -1 {
+			return fmt.Errorf("%w: roundingIncrement cannot be used with significant digits", mf2.ErrBadOption)
+		}
+
+		maxFractionDigits := options.MinimumFractionDigits
+
+		options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, eqOrGreaterThan(0))
+		if err != nil {
+			return err
+		}
+
+		if options.MaximumFractionDigits != options.MinimumFractionDigits {
+			return fmt.Errorf("%w: maximumFractionDigits (%d) must equal minimumFractionDigits (%d) "+
+				"when roundingIncrement is set",
+				mf2.ErrBadOption, options.MaximumFractionDigits, options.MinimumFractionDigits)
+		}
+
+		return nil
 	}
 
 	var maxFractionDigits int
@@ -385,6 +409,37 @@ func applySignDisplay(result string, signDisplay string, value float64) string {
 	return result
 }
 
+// roundToIncrement rounds val to the nearest multiple of inc at scale 10^-frac using half-expand rounding.
+func roundToIncrement(val float64, inc, frac int) float64 {
+	if inc <= 1 || math.IsNaN(val) || math.IsInf(val, 0) {
+		return val
+	}
+
+	scale := math.Pow10(frac)
+	v := val * scale
+	q := v / float64(inc)
+
+	return (math.Round(q) * float64(inc)) / scale
+}
+
+// mergeOperandOptions merges options from operand if operand was produced by :number or :integer.
+func mergeOperandOptions(operand *ResolvedValue, options Options) (Options, bool) {
+	if operand == nil || (operand.function != ":number" && operand.function != ":integer") || operand.options == nil {
+		return options, false
+	}
+
+	merged := maps.Clone(operand.options)
+
+	var selectInherited bool
+	if _, ok := merged["select"]; ok && (options == nil || options["select"] == nil) {
+		selectInherited = true
+	}
+
+	maps.Copy(merged, options)
+
+	return merged, selectInherited
+}
+
 // numberFunc is the implementation of the number function. Locale-sensitive number formatting.
 func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*ResolvedValue, error) {
 	errorf := func(format string, args ...any) (*ResolvedValue, error) {
@@ -397,17 +452,7 @@ func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*
 	}
 
 	// Merge options from operand if operand was produced by :number or :integer
-	var selectInheritedFromOperand bool
-
-	if operand != nil && (operand.function == ":number" || operand.function == ":integer") && operand.options != nil {
-		merged := maps.Clone(operand.options)
-		if _, ok := merged["select"]; ok && (options == nil || options["select"] == nil) {
-			selectInheritedFromOperand = true
-		}
-
-		maps.Copy(merged, options)
-		options = merged
-	}
+	options, selectInheritedFromOperand := mergeOperandOptions(operand, options)
 
 	opts, err := parseNumberOptions(options)
 	if err != nil {
@@ -419,20 +464,38 @@ func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*
 		opts.DisableSelect = true
 	}
 
+	const percentMultiplier = 100
+
 	calcVal := value
 
 	if opts.Style == "percent" {
-		const percentMultiplier = 100
-
 		calcVal = value * percentMultiplier
 	}
 
-	minFrac := max(opts.MinimumFractionDigits,
-		minFractionDigitsForSigDigits(calcVal, opts.MinimumSignificantDigits, opts.MaximumSignificantDigits))
+	var (
+		formattedVal = value
+		minFrac      int
+		maxFrac      int
+	)
 
-	maxFrac := opts.MaximumFractionDigits
-	if maxFrac >= 0 && minFrac > maxFrac {
-		maxFrac = minFrac
+	if opts.RoundingIncrement > 1 {
+		minFrac = opts.MinimumFractionDigits
+		maxFrac = opts.MaximumFractionDigits
+
+		rounded := roundToIncrement(calcVal, opts.RoundingIncrement, minFrac)
+		if opts.Style == "percent" {
+			formattedVal = rounded / percentMultiplier
+		} else {
+			formattedVal = rounded
+		}
+	} else {
+		minFrac = max(opts.MinimumFractionDigits,
+			minFractionDigitsForSigDigits(calcVal, opts.MinimumSignificantDigits, opts.MaximumSignificantDigits))
+
+		maxFrac = opts.MaximumFractionDigits
+		if maxFrac >= 0 && minFrac > maxFrac {
+			maxFrac = minFrac
+		}
 	}
 
 	p := message.NewPrinter(locale)
@@ -449,13 +512,13 @@ func numberFunc(operand *ResolvedValue, options Options, locale language.Tag) (*
 	default:
 		return errorf(`option style "%s" is not implemented`, opts.Style)
 	case "decimal":
-		num = number.Decimal(value, numberOpts...)
+		num = number.Decimal(formattedVal, numberOpts...)
 	case "percent":
-		num = number.Percent(value, numberOpts...)
+		num = number.Percent(formattedVal, numberOpts...)
 	}
 
 	format := func() string {
-		return applySignDisplay(p.Sprint(num), opts.SignDisplay, value)
+		return applySignDisplay(p.Sprint(num), opts.SignDisplay, formattedVal)
 	}
 
 	selectKey := func(keys []string) string {
