@@ -211,9 +211,9 @@ func Test_Datetime_NonLiteral(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
 		options Options
 		wantErr error
+		name    string
 	}{
 		{
 			name: "non-literal dateFields",
@@ -240,9 +240,9 @@ func Test_Datetime_Template(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
+		input   map[string]any
 		name    string
 		message string
-		input   map[string]any
 		wantErr bool
 	}{
 		{

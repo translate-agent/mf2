@@ -325,7 +325,8 @@ func parseDigitOptions(opts Options, options *numberOptions) error {
 
 		maxFractionDigits := options.MinimumFractionDigits
 
-		options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, validNumberEqOrGreaterThan0)
+		options.MaximumFractionDigits, err = opts.GetInt(
+			"maximumFractionDigits", maxFractionDigits, validNumberEqOrGreaterThan0)
 		if err != nil {
 			return err
 		}
@@ -350,7 +351,8 @@ func parseDigitOptions(opts Options, options *numberOptions) error {
 		maxFractionDigits = 0
 	}
 
-	options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, validNumberEqOrGreaterThan0)
+	options.MaximumFractionDigits, err = opts.GetInt(
+		"maximumFractionDigits", maxFractionDigits, validNumberEqOrGreaterThan0)
 	if err != nil {
 		return err
 	}

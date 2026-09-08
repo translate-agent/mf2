@@ -48,8 +48,7 @@ func parseDateOptions(options Options) (*dateOptions, error) {
 			return errorf("%w", err)
 		}
 
-		switch k {
-		case "calendar":
+		if k == "calendar" {
 			return errorf(`option "%s" is not implemented`, k)
 		}
 	}
@@ -139,6 +138,7 @@ func dateFunc(operand *ResolvedValue, options Options, locale language.Tag) (*Re
 		}
 	case "day-weekday":
 		intlOpts.Day = intl.DayNumeric
+
 		switch opts.Style {
 		case "full", "long":
 			intlOpts.Weekday = intl.WeekdayLong
@@ -147,6 +147,7 @@ func dateFunc(operand *ResolvedValue, options Options, locale language.Tag) (*Re
 		}
 	case "month-day":
 		intlOpts.Day = intl.DayNumeric
+
 		switch opts.Style {
 		case "full", "long":
 			intlOpts.Month = intl.MonthLong
@@ -157,6 +158,7 @@ func dateFunc(operand *ResolvedValue, options Options, locale language.Tag) (*Re
 		}
 	case "year-month-day":
 		intlOpts.Day = intl.DayNumeric
+
 		switch opts.Style {
 		case "full", "long":
 			intlOpts.Year = intl.YearNumeric

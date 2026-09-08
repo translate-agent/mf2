@@ -238,9 +238,9 @@ func Test_Date_NonLiteral(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
 		options Options
 		wantErr error
+		name    string
 	}{
 		{
 			name: "non-literal fields",

@@ -1,12 +1,19 @@
 package template
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"go.expect.digital/intl"
 	"go.expect.digital/mf2"
 	"golang.org/x/text/language"
+)
+
+const (
+	minFractionalDigits = 1
+	medFractionalDigits = 2
+	maxFractionalDigits = 3
 )
 
 var (
@@ -29,7 +36,7 @@ var (
 	validDatetimeHour             = oneOf("numeric", "2-digit")
 	validDatetimeMinute           = oneOf("numeric", "2-digit")
 	validDatetimeSecond           = oneOf("numeric", "2-digit")
-	validDatetimeFractionalDigits = oneOf(1, 2, 3)
+	validDatetimeFractionalDigits = oneOf(minFractionalDigits, medFractionalDigits, maxFractionalDigits)
 	validDatetimeTimeZoneName     = oneOf("long", "short", "shortOffset", "longOffset", "shortGeneric", "longGeneric")
 )
 
@@ -118,7 +125,7 @@ func validateDatetimeOptions(options Options) error {
 			return fmt.Errorf(`option "%s" is not implemented`, opt)
 		case "dateFields":
 			if !options.isLiteral("dateFields") {
-				return fmt.Errorf(`option "dateFields" value must be a literal`)
+				return errors.New(`option "dateFields" value must be a literal`)
 			}
 
 			val, err := options.GetString("dateFields", "", validDateFields)

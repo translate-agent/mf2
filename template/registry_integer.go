@@ -9,7 +9,9 @@ import (
 	"golang.org/x/text/language"
 )
 
-var validIntegerOption = oneOf("minimumIntegerDigits", "maximumSignificantDigits", "signDisplay", "useGrouping", "select")
+var validIntegerOption = oneOf(
+	"minimumIntegerDigits", "maximumSignificantDigits", "signDisplay", "useGrouping", "select",
+)
 
 // integerFunc is the implementation of the integer function. Locale-sensitive integer formatting.
 func integerFunc(operand *ResolvedValue, options Options, locale language.Tag) (*ResolvedValue, error) {
