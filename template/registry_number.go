@@ -39,6 +39,8 @@ var (
 	validNumberStyle             = oneOf("decimal", "percent")
 	validNumberUnitDisplay       = oneOf("short", "narrow", "long")
 	validNumberRoundingIncrement = oneOf(1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000) //nolint:mnd
+	validNumberEqOrGreaterThan0  = eqOrGreaterThan(0)
+	validNumberEqOrGreaterThan1  = eqOrGreaterThan(1)
 )
 
 // parseNumberOperand parses resolved operand value.
@@ -291,22 +293,22 @@ func parseNumberOptions(opts Options) (*numberOptions, error) {
 func parseDigitOptions(opts Options, options *numberOptions) error {
 	var err error
 
-	options.MinimumIntegerDigits, err = opts.GetInt("minimumIntegerDigits", 1, eqOrGreaterThan(1))
+	options.MinimumIntegerDigits, err = opts.GetInt("minimumIntegerDigits", 1, validNumberEqOrGreaterThan1)
 	if err != nil {
 		return err
 	}
 
-	options.MinimumFractionDigits, err = opts.GetInt("minimumFractionDigits", 0, eqOrGreaterThan(0))
+	options.MinimumFractionDigits, err = opts.GetInt("minimumFractionDigits", 0, validNumberEqOrGreaterThan0)
 	if err != nil {
 		return err
 	}
 
-	options.MinimumSignificantDigits, err = opts.GetInt("minimumSignificantDigits", 0, eqOrGreaterThan(1))
+	options.MinimumSignificantDigits, err = opts.GetInt("minimumSignificantDigits", 0, validNumberEqOrGreaterThan1)
 	if err != nil {
 		return err
 	}
 
-	options.MaximumSignificantDigits, err = opts.GetInt("maximumSignificantDigits", -1, eqOrGreaterThan(1))
+	options.MaximumSignificantDigits, err = opts.GetInt("maximumSignificantDigits", -1, validNumberEqOrGreaterThan1)
 	if err != nil {
 		return err
 	}
@@ -323,7 +325,7 @@ func parseDigitOptions(opts Options, options *numberOptions) error {
 
 		maxFractionDigits := options.MinimumFractionDigits
 
-		options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, eqOrGreaterThan(0))
+		options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, validNumberEqOrGreaterThan0)
 		if err != nil {
 			return err
 		}
@@ -348,7 +350,7 @@ func parseDigitOptions(opts Options, options *numberOptions) error {
 		maxFractionDigits = 0
 	}
 
-	options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, eqOrGreaterThan(0))
+	options.MaximumFractionDigits, err = opts.GetInt("maximumFractionDigits", maxFractionDigits, validNumberEqOrGreaterThan0)
 	if err != nil {
 		return err
 	}

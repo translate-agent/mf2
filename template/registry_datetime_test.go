@@ -108,9 +108,33 @@ func Test_Datetime(t *testing.T) {
 			wantErr: mf2.ErrBadOption,
 		},
 		{
-			name:    "unimplemented dateFields",
+			name:    "unimplemented dateFields month-day",
 			input:   testDate,
 			options: map[string]any{"dateFields": "month-day"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "unimplemented dateFields weekday",
+			input:   testDate,
+			options: map[string]any{"dateFields": "weekday"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "unimplemented dateFields year-month-day",
+			input:   testDate,
+			options: map[string]any{"dateFields": "year-month-day"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "illegal dateFields",
+			input:   testDate,
+			options: map[string]any{"dateFields": "invalid"},
+			wantErr: mf2.ErrBadOption,
+		},
+		{
+			name:    "invalid dateFields year",
+			input:   testDate,
+			options: map[string]any{"dateFields": "year"},
 			wantErr: mf2.ErrBadOption,
 		},
 		{
@@ -178,6 +202,69 @@ func Test_Datetime(t *testing.T) {
 			got := v.format()
 			if test.want != got {
 				t.Errorf("want '%s', got '%s'", test.want, got)
+			}
+		})
+	}
+}
+
+func Test_Datetime_NonLiteral(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		options Options
+		wantErr error
+	}{
+		{
+			name: "non-literal dateFields",
+			options: Options{
+				"dateFields": &ResolvedValue{value: "month-day", isLiteral: false},
+			},
+			wantErr: mf2.ErrBadOption,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := datetimeFunc(NewResolvedValue(testDate), test.options, language.AmericanEnglish)
+			if !errors.Is(err, test.wantErr) {
+				t.Errorf("want %v, got %v", test.wantErr, err)
+			}
+		})
+	}
+}
+
+func Test_Datetime_Template(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		message string
+		input   map[string]any
+		wantErr bool
+	}{
+		{
+			name:    "non-literal dateFields variable error",
+			message: ".local $f = {|month-day|} {{Date: {$d :datetime dateFields=$f}}}",
+			input:   map[string]any{"d": testDate},
+			wantErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			tpl, err := New().Parse(test.message)
+			if err != nil {
+				t.Fatalf("unexpected parse error: %v", err)
+			}
+
+			_, err = tpl.Sprint(test.input)
+			if test.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
 			}
 		})
 	}
