@@ -2,3 +2,5 @@ go.expect.digital/intl v0.1.0 h1:zzKhh7CXh6p5NOiDn4oK9aSfNcXfyKzTsJyCAQs101Y=
 go.expect.digital/intl v0.1.0/go.mod h1:l8w4O+D6VpMDcKRsxY4qaetRiAuI2xJf7Nd162I29Q4=
 golang.org/x/text v0.41.0 h1:vz/seA0lnX87Othu2f/0L24RcgrXD9/YFTSuGjj3rH8=
 golang.org/x/text v0.41.0/go.mod h1:jvf1O8ajNzZqhSrQBPbutR/EB83Cc0CFrezNQIwbb5M=
+golang.org/x/text v0.43.0 h1:1QivrlhwAsnMOcqgOdl9my7s9OyZl8O5/UGUTJVXoWc=
+golang.org/x/text v0.43.0/go.mod h1:hbSIYA/amXcRXTFSZqh8tWHEoqRvvbKPJ2uz/KU+a+s=
