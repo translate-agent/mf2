@@ -2,7 +2,7 @@ module go.expect.digital/mf2
 
 go 1.25.0
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require (
 	go.expect.digital/intl v0.1.0
